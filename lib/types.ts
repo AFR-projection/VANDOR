@@ -1,0 +1,114 @@
+import type { InferUITool, UIMessage } from "ai";
+import { z } from "zod";
+import type { ArtifactKind } from "@/components/chat/artifact";
+import type { createDocument } from "./ai/tools/create-document";
+import type { createDocx } from "./ai/tools/create-docx";
+import type { createPdf } from "./ai/tools/create-pdf";
+import type { createSpreadsheet } from "./ai/tools/create-spreadsheet";
+import type { generateImage } from "./ai/tools/generate-image";
+import type { getCurrentTime } from "./ai/tools/get-current-time";
+import type { makeGetLocation } from "./ai/tools/get-location";
+import type { getWeather } from "./ai/tools/get-weather";
+import type { requestSuggestions } from "./ai/tools/request-suggestions";
+import type { updateDocument } from "./ai/tools/update-document";
+import type { showMap } from "./ai/tools/show-map";
+import type { webSearch } from "./ai/tools/web-search";
+import type { makeAssistantTools } from "./ai/tools/assistant-tools";
+import type { RichContent, WebSearchOutput } from "./search/types";
+import type { Suggestion } from "./db/schema";
+
+export const messageMetadataSchema = z.object({
+  createdAt: z.string(),
+});
+
+export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
+
+type weatherTool = InferUITool<typeof getWeather>;
+type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
+type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
+type requestSuggestionsTool = InferUITool<
+  ReturnType<typeof requestSuggestions>
+>;
+type getCurrentTimeTool = InferUITool<typeof getCurrentTime>;
+type getLocationTool = InferUITool<ReturnType<typeof makeGetLocation>>;
+type webSearchTool = InferUITool<typeof webSearch>;
+type showMapTool = InferUITool<typeof showMap>;
+type createPdfTool = InferUITool<typeof createPdf>;
+type createDocxTool = InferUITool<typeof createDocx>;
+type createSpreadsheetTool = InferUITool<typeof createSpreadsheet>;
+type generateImageTool = InferUITool<typeof generateImage>;
+type AssistantTools = ReturnType<typeof makeAssistantTools>;
+type saveMemoryTool = InferUITool<AssistantTools["saveMemory"]>;
+type getMemoryTool = InferUITool<AssistantTools["getMemory"]>;
+type searchDbTool = InferUITool<AssistantTools["searchDb"]>;
+type createNoteTool = InferUITool<AssistantTools["createNote"]>;
+type updateTaskTool = InferUITool<AssistantTools["updateTask"]>;
+
+export type ChatTools = {
+  getWeather: weatherTool;
+  createDocument: createDocumentTool;
+  updateDocument: updateDocumentTool;
+  requestSuggestions: requestSuggestionsTool;
+  getCurrentTime: getCurrentTimeTool;
+  getLocation: getLocationTool;
+  webSearch: webSearchTool;
+  showMap: showMapTool;
+  createPdf: createPdfTool;
+  createDocx: createDocxTool;
+  createSpreadsheet: createSpreadsheetTool;
+  generateImage: generateImageTool;
+  saveMemory: saveMemoryTool;
+  getMemory: getMemoryTool;
+  searchDb: searchDbTool;
+  createNote: createNoteTool;
+  updateTask: updateTaskTool;
+};
+
+export type ModelMeta = {
+  modelId: string;
+  requestedModelId: string;
+  overridden: boolean;
+  reason: string | null;
+  attachments?: Array<{
+    name: string;
+    kind: string;
+    bytes: number;
+    extracted: boolean;
+    truncated: boolean;
+    error?: string;
+  }>;
+};
+
+export type CustomUIDataTypes = {
+  textDelta: string;
+  imageDelta: string;
+  sheetDelta: string;
+  codeDelta: string;
+  suggestion: Suggestion;
+  appendMessage: string;
+  id: string;
+  title: string;
+  kind: ArtifactKind;
+  clear: null;
+  finish: null;
+  "chat-title": string;
+  "model-meta": ModelMeta;
+  "search-status": {
+    status: "searching" | "complete" | "idle";
+    query?: string;
+  };
+  "web-sources": WebSearchOutput;
+  "rich-content": RichContent;
+};
+
+export type ChatMessage = UIMessage<
+  MessageMetadata,
+  CustomUIDataTypes,
+  ChatTools
+>;
+
+export type Attachment = {
+  name: string;
+  url: string;
+  contentType: string;
+};

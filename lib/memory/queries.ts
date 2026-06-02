@@ -1,0 +1,459 @@
+import "server-only";
+
+import { and, eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import type { MemoryCategory } from "@/lib/db/schema";
+import { userMemory } from "@/lib/db/schema";
+import { getEmbeddingOptionsForUser } from "./embedding-options";
+import { embedText, embeddingToSql } from "./embeddings";
+
+const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
+const db = drizzle(client);
+
+export type MemoryRecord = {
+  id: string;
+  content: string;
+  category: MemoryCategory;
+  importance: number;
+  similarity?: number;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+};
+
+function isVisualMemory(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object") {
+    return false;
+  }
+  return (metadata as { visual?: boolean }).visual === true;
+}
+
+export async function searchMemories({
+  userId,
+  query,
+  limit = 8,
+  minSimilarity = 0.72,
+  includeVisual = true,
+  enabledCategories,
+}: {
+  userId: string;
+  query: string;
+  limit?: number;
+  minSimilarity?: number;
+  includeVisual?: boolean;
+  enabledCategories?: Record<MemoryCategory, boolean>;
+}): Promise<MemoryRecord[]> {
+  if (!query.trim() || !process.env.POSTGRES_URL) {
+    return [];
+  }
+
+  try {
+    const embedOpts = await getEmbeddingOptionsForUser(userId);
+    const vector = await embedText(query, {
+      apiKey: embedOpts.apiKey ?? undefined,
+      model: embedOpts.model,
+    });
+    const vectorSql = embeddingToSql(vector);
+
+    const fetchLimit = Math.min(limit * 3, 36);
+
+    const rows = await client<{
+      id: string;
+      content: string;
+      category: MemoryCategory;
+      importance: number;
+      similarity: number;
+      metadata: unknown;
+    }[]>`
+      SELECT
+        id,
+        content,
+        category,
+        importance,
+        metadata,
+        1 - (embedding <=> ${vectorSql}::vector) AS similarity
+      FROM "UserMemory"
+      WHERE "userId" = ${userId}::uuid
+        AND embedding IS NOT NULL
+      ORDER BY embedding <=> ${vectorSql}::vector
+      LIMIT ${fetchLimit}
+    `;
+
+    return rows
+      .filter((r) => {
+        if (r.similarity < minSimilarity) {
+          return false;
+        }
+        if (enabledCategories && !enabledCategories[r.category]) {
+          return false;
+        }
+        if (!includeVisual && isVisualMemory(r.metadata)) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, limit)
+      .map((r) => ({
+        id: r.id,
+        content: r.content,
+        category: r.category,
+        importance: r.importance,
+        similarity: r.similarity,
+        metadata: r.metadata as Record<string, unknown> | null,
+      }));
+  } catch (error) {
+    console.error("Memory search failed:", error);
+    return [];
+  }
+}
+
+export async function saveMemory({
+  userId,
+  content,
+  category = "fact",
+  importance = 5,
+  sourceChatId,
+  metadata,
+}: {
+  userId: string;
+  content: string;
+  category?: MemoryCategory;
+  importance?: number;
+  sourceChatId?: string;
+  metadata?: Record<string, unknown>;
+}): Promise<string | null> {
+  if (!content.trim() || !process.env.POSTGRES_URL) {
+    return null;
+  }
+
+  try {
+    const existing = await searchMemories({
+      userId,
+      query: content,
+      limit: 1,
+      minSimilarity: 0.92,
+    });
+    if (existing.length > 0) {
+      return existing[0].id;
+    }
+
+    const embedOpts = await getEmbeddingOptionsForUser(userId);
+    const vector = await embedText(content, {
+      apiKey: embedOpts.apiKey ?? undefined,
+      model: embedOpts.model,
+    });
+    const vectorSql = embeddingToSql(vector);
+
+    const [row] = await client<{ id: string }[]>`
+      INSERT INTO "UserMemory" (
+        "userId",
+        "content",
+        "embedding",
+        "category",
+        "importance",
+        "sourceChatId",
+        "metadata"
+      )
+      VALUES (
+        ${userId}::uuid,
+        ${content.trim()},
+        ${vectorSql}::vector,
+        ${category},
+        ${importance},
+        ${sourceChatId ?? null},
+        ${metadata ? JSON.stringify(metadata) : null}
+      )
+      RETURNING id
+    `;
+
+    return row?.id ?? null;
+  } catch (error) {
+    console.error("Save memory failed:", error);
+    return null;
+  }
+}
+
+export async function getMemoryById({
+  userId,
+  memoryId,
+}: {
+  userId: string;
+  memoryId: string;
+}): Promise<MemoryRecord | null> {
+  try {
+    const rows = await db
+      .select({
+        id: userMemory.id,
+        content: userMemory.content,
+        category: userMemory.category,
+        importance: userMemory.importance,
+      })
+      .from(userMemory)
+      .where(and(eq(userMemory.id, memoryId), eq(userMemory.userId, userId)))
+      .limit(1);
+
+    const row = rows.at(0);
+    if (!row) return null;
+    return {
+      id: row.id,
+      content: row.content,
+      category: row.category as MemoryCategory,
+      importance: row.importance,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function searchAllUserData({
+  userId,
+  query,
+  limit = 8,
+}: {
+  userId: string;
+  query: string;
+  limit?: number;
+}): Promise<{
+  memories: MemoryRecord[];
+  notes: Array<{ id: string; title: string; content: string }>;
+  tasks: Array<{ id: string; title: string; status: string }>;
+}> {
+  const [memories, notes, tasks] = await Promise.all([
+    searchMemories({ userId, query, limit, minSimilarity: 0.55 }),
+    import("./assistant-db").then((m) => m.listNotes(userId, limit)),
+    import("./assistant-db").then((m) => m.listTasks(userId, limit)),
+  ]);
+
+  const q = query.toLowerCase();
+  const filteredNotes = notes.filter(
+    (n) =>
+      n.title.toLowerCase().includes(q) ||
+      n.content.toLowerCase().includes(q)
+  );
+  const filteredTasks = tasks.filter((t) =>
+    t.title.toLowerCase().includes(q)
+  );
+
+  return {
+    memories,
+    notes: filteredNotes.slice(0, limit),
+    tasks: filteredTasks.slice(0, limit),
+  };
+}
+
+export async function listRecentMemories({
+  userId,
+  limit = 12,
+  includeVisual = true,
+  enabledCategories,
+}: {
+  userId: string;
+  limit?: number;
+  includeVisual?: boolean;
+  enabledCategories?: Record<MemoryCategory, boolean>;
+}): Promise<MemoryRecord[]> {
+  try {
+    const rows = await db
+      .select({
+        id: userMemory.id,
+        content: userMemory.content,
+        category: userMemory.category,
+        importance: userMemory.importance,
+        metadata: userMemory.metadata,
+        createdAt: userMemory.createdAt,
+        updatedAt: userMemory.updatedAt,
+      })
+      .from(userMemory)
+      .where(eq(userMemory.userId, userId))
+      .orderBy(sql`${userMemory.importance} DESC, ${userMemory.updatedAt} DESC`)
+      .limit(limit * 3);
+
+    return rows
+      .filter((r) => {
+        const cat = r.category as MemoryCategory;
+        if (enabledCategories && !enabledCategories[cat]) {
+          return false;
+        }
+        if (!includeVisual && isVisualMemory(r.metadata)) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, limit)
+      .map((r) => ({
+        id: r.id,
+        content: r.content,
+        category: r.category as MemoryCategory,
+        importance: r.importance,
+        metadata: r.metadata as Record<string, unknown> | null,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function listAllMemories({
+  userId,
+  limit = 100,
+  offset = 0,
+  category,
+  visualOnly,
+}: {
+  userId: string;
+  limit?: number;
+  offset?: number;
+  category?: MemoryCategory;
+  visualOnly?: boolean;
+}): Promise<MemoryRecord[]> {
+  try {
+    const rows = await db
+      .select({
+        id: userMemory.id,
+        content: userMemory.content,
+        category: userMemory.category,
+        importance: userMemory.importance,
+        metadata: userMemory.metadata,
+        createdAt: userMemory.createdAt,
+        updatedAt: userMemory.updatedAt,
+      })
+      .from(userMemory)
+      .where(eq(userMemory.userId, userId))
+      .orderBy(sql`${userMemory.updatedAt} DESC`)
+      .limit(limit + offset);
+
+    return rows
+      .filter((r) => {
+        if (category && r.category !== category) {
+          return false;
+        }
+        const visual = isVisualMemory(r.metadata);
+        if (visualOnly === true && !visual) {
+          return false;
+        }
+        if (visualOnly === false && visual) {
+          return false;
+        }
+        return true;
+      })
+      .slice(offset, offset + limit)
+      .map((r) => ({
+        id: r.id,
+        content: r.content,
+        category: r.category as MemoryCategory,
+        importance: r.importance,
+        metadata: r.metadata as Record<string, unknown> | null,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function updateMemory({
+  userId,
+  memoryId,
+  content,
+  category,
+  importance,
+}: {
+  userId: string;
+  memoryId: string;
+  content?: string;
+  category?: MemoryCategory;
+  importance?: number;
+}): Promise<boolean> {
+  try {
+    const existing = await getMemoryById({ userId, memoryId });
+    if (!existing) {
+      return false;
+    }
+
+    const nextContent = content?.trim() ?? existing.content;
+    const embedOpts = await getEmbeddingOptionsForUser(userId);
+    const vector = await embedText(nextContent, {
+      apiKey: embedOpts.apiKey ?? undefined,
+      model: embedOpts.model,
+    });
+    const vectorSql = embeddingToSql(vector);
+
+    await client`
+      UPDATE "UserMemory"
+      SET
+        content = ${nextContent},
+        category = ${category ?? existing.category},
+        importance = ${importance ?? existing.importance},
+        embedding = ${vectorSql}::vector,
+        "updatedAt" = now()
+      WHERE id = ${memoryId}::uuid AND "userId" = ${userId}::uuid
+    `;
+    return true;
+  } catch (error) {
+    console.error("Update memory failed:", error);
+    return false;
+  }
+}
+
+export async function deleteMemory({
+  userId,
+  memoryId,
+}: {
+  userId: string;
+  memoryId: string;
+}): Promise<boolean> {
+  try {
+    const deleted = await db
+      .delete(userMemory)
+      .where(and(eq(userMemory.id, memoryId), eq(userMemory.userId, userId)))
+      .returning({ id: userMemory.id });
+    return deleted.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteAllMemories({
+  userId,
+  visualOnly,
+}: {
+  userId: string;
+  visualOnly?: boolean;
+}): Promise<number> {
+  try {
+    if (!visualOnly) {
+      const deleted = await db
+        .delete(userMemory)
+        .where(eq(userMemory.userId, userId))
+        .returning({ id: userMemory.id });
+      return deleted.length;
+    }
+
+    const rows = await listAllMemories({
+      userId,
+      limit: 500,
+      visualOnly: true,
+    });
+    let count = 0;
+    for (const row of rows) {
+      const ok = await deleteMemory({ userId, memoryId: row.id });
+      if (ok) {
+        count += 1;
+      }
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+export async function countVisualMemories(userId: string): Promise<number> {
+  const rows = await listAllMemories({
+    userId,
+    limit: 500,
+    visualOnly: true,
+  });
+  return rows.length;
+}
