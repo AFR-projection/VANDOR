@@ -5,7 +5,10 @@ import type { createDocument } from "./ai/tools/create-document";
 import type { createDocx } from "./ai/tools/create-docx";
 import type { createPdf } from "./ai/tools/create-pdf";
 import type { createSpreadsheet } from "./ai/tools/create-spreadsheet";
-import type { generateImage } from "./ai/tools/generate-image";
+import type {
+  makeEditImageTool,
+  makeGenerateImageTool,
+} from "./ai/tools/media-tools";
 import type { getCurrentTime } from "./ai/tools/get-current-time";
 import type { makeGetLocation } from "./ai/tools/get-location";
 import type { getWeather } from "./ai/tools/get-weather";
@@ -36,7 +39,8 @@ type showMapTool = InferUITool<typeof showMap>;
 type createPdfTool = InferUITool<typeof createPdf>;
 type createDocxTool = InferUITool<typeof createDocx>;
 type createSpreadsheetTool = InferUITool<typeof createSpreadsheet>;
-type generateImageTool = InferUITool<typeof generateImage>;
+type generateImageTool = InferUITool<ReturnType<typeof makeGenerateImageTool>>;
+type editImageTool = InferUITool<ReturnType<typeof makeEditImageTool>>;
 type AssistantTools = ReturnType<typeof makeAssistantTools>;
 type saveMemoryTool = InferUITool<AssistantTools["saveMemory"]>;
 type getMemoryTool = InferUITool<AssistantTools["getMemory"]>;
@@ -57,6 +61,7 @@ export type ChatTools = {
   createDocx: createDocxTool;
   createSpreadsheet: createSpreadsheetTool;
   generateImage: generateImageTool;
+  editImage: editImageTool;
   saveMemory: saveMemoryTool;
   getMemory: getMemoryTool;
   searchDb: searchDbTool;
@@ -67,8 +72,17 @@ export type ChatTools = {
 export type ModelMeta = {
   modelId: string;
   requestedModelId: string;
+  chatMode?: "gratis" | "hemat" | "seimbang" | "premium";
+  modelTier?: "gratis" | "hemat" | "seimbang" | "premium";
+  agentId?: string | null;
+  agentName?: string | null;
   overridden: boolean;
   reason: string | null;
+  /** True when startup fallback picked a different model than primary. */
+  fallbackUsed?: boolean;
+  attemptIndex?: number;
+  attemptTotal?: number;
+  fallbackChain?: string[];
   attachments?: Array<{
     name: string;
     kind: string;

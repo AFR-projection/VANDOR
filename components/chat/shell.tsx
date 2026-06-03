@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { useBreakpoint } from "@/hooks/use-breakpoint";
+import { useVisualViewportInset } from "@/hooks/use-visual-viewport-inset";
 import {
   initialArtifactData,
   useArtifact,
@@ -31,6 +32,7 @@ import { DataStreamHandler } from "./data-stream-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import { MobileChatEffects } from "./mobile-chat-effects";
 import { SourcePanel } from "./source-panel";
 
 export function ChatShell() {
@@ -65,6 +67,7 @@ export function ChatShell() {
   const { setArtifact } = useArtifact();
   const { closeSourcePanel } = useSourcePanel();
   const { isMobile, isTablet } = useBreakpoint();
+  const keyboardInset = useVisualViewportInset();
 
   useEffect(() => {
     setHasMounted(true);
@@ -90,17 +93,18 @@ export function ChatShell() {
 
   return (
     <>
-      <div className="flex h-dvh w-full flex-row overflow-hidden">
+      <MobileChatEffects />
+      <div className="vandor-chat-shell flex w-full flex-row overflow-hidden">
         <div
           className={cn(
-            "flex min-w-0 flex-col bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
+            "flex min-h-0 min-w-0 flex-col bg-sidebar max-md:transition-none transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]",
             showSidePanel && !useOverlayPanel && "w-full lg:w-[42%] xl:w-[40%]",
             (!showSidePanel || useOverlayPanel) && "w-full"
           )}
         >
           <ChatHeader />
 
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:rounded-tl-[12px] md:border-t md:border-l md:border-border/40">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background max-md:rounded-none md:rounded-tl-[12px] md:border-t md:border-l md:border-border/40">
             <Messages
               addToolApprovalResponse={addToolApprovalResponse}
               chatId={chatId}
@@ -124,7 +128,12 @@ export function ChatShell() {
               votes={votes}
             />
 
-            <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-gradient-to-t from-background from-85% to-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-4 sm:pb-4">
+            <div
+              className="sticky bottom-0 z-10 mx-auto flex w-full max-w-4xl shrink-0 gap-2 border-t-0 bg-gradient-to-t from-background from-90% to-transparent px-2 pt-1.5 max-md:from-95% sm:px-4 sm:pt-2 sm:pb-4"
+              style={{
+                paddingBottom: `max(0.5rem, calc(env(safe-area-inset-bottom) + ${keyboardInset}px))`,
+              }}
+            >
               {!isReadonly && (
                 <MultimodalInput
                   attachments={attachments}

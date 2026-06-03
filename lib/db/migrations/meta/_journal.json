@@ -64,6 +64,13 @@
       "when": 1749600000000,
       "tag": "0008_user_secrets",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1749700000000,
+      "tag": "0009_numpad_login_sessions",
+      "breakpoints": true
     }
   ]
 }

@@ -170,9 +170,11 @@ export function buildFilesContextBlock(files: ExtractedFile[]): string {
       ? `[error: ${f.error}]`
       : f.text
         ? `[${f.bytes} bytes, extracted${f.truncated ? ", truncated" : ""}]`
-        : f.kind === "image" || f.kind === "video" || f.kind === "audio"
-          ? "[sent to model as native media]"
-          : `[${f.kind}, no text extraction]`;
+        : f.kind === "image"
+          ? `[sent to model as native media; editImage imageUrl: ${f.url}]`
+          : f.kind === "video" || f.kind === "audio"
+            ? "[sent to model as native media]"
+            : `[${f.kind}, no text extraction]`;
     return `- ${f.name} (${f.mime}, ${f.kind}) ${status}`;
   });
 

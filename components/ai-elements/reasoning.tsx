@@ -8,10 +8,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { cjk } from "@streamdown/cjk";
-import { code } from "@streamdown/code";
-import { math } from "@streamdown/math";
-import { mermaid } from "@streamdown/mermaid";
+import {
+  streamdownPlugins,
+  vandorStreamdownLinkSafety,
+} from "@/components/chat/streamdown-config";
 import { ChevronDownIcon } from "lucide-react";
 import {
   createContext,
@@ -201,7 +201,6 @@ export type ReasoningContentProps = HTMLAttributes<HTMLDivElement> & {
   children: string;
 };
 
-const streamdownPlugins = { cjk, code, math, mermaid };
 
 export const ReasoningContent = memo(
   ({ className, children }: ReasoningContentProps) => {
@@ -227,7 +226,12 @@ export const ReasoningContent = memo(
           ref={scrollRef}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          <Streamdown plugins={streamdownPlugins}>{children}</Streamdown>
+          <Streamdown
+            linkSafety={vandorStreamdownLinkSafety}
+            plugins={streamdownPlugins}
+          >
+            {children}
+          </Streamdown>
         </div>
       </div>
     );

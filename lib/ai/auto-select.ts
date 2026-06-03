@@ -1,5 +1,6 @@
 import "server-only";
 
+import { OPENROUTER_FREE_MODEL_POOL } from "@/lib/ai/free-models";
 import { chatModels, getCapabilities, IGNORED_FREE_PROVIDERS } from "./models";
 import type { FileKind } from "@/lib/files/mime";
 
@@ -10,6 +11,10 @@ export type AutoSelectInput = {
   attachmentKinds: FileKind[];
   /** Total length of injected text (extracted from attachments + user text). */
   contextChars: number;
+  /** Vision model from settings (free or auto). */
+  visionModelId?: string;
+  /** Long-context model when context exceeds threshold. */
+  longContextModelId?: string;
 };
 
 export type AutoSelectResult = {
@@ -24,18 +29,18 @@ export type AutoSelectResult = {
  * specified family even when these :free variants are rate-limited because
  * we also pass a `fallbacks` chain.
  */
-const VISION_DEFAULT = "meta-llama/llama-3.2-90b-vision-instruct:free";
+const VISION_DEFAULT = "moonshotai/kimi-k2.6:free";
 const VISION_FALLBACKS = [
+  "moonshotai/kimi-k2.6:free",
   "meta-llama/llama-3.2-90b-vision-instruct:free",
-  "meta-llama/llama-3.2-11b-vision-instruct:free",
-  "qwen/qwen-2.5-vl-72b-instruct:free",
-  "google/gemini-2.0-flash-exp:free",
+  ...OPENROUTER_FREE_MODEL_POOL,
 ];
 
-const LONG_CONTEXT_DEFAULT = "google/gemini-2.0-flash-exp:free";
+const LONG_CONTEXT_DEFAULT = "nvidia/nemotron-3-super-120b-a12b:free";
 const LONG_CONTEXT_FALLBACKS = [
-  "google/gemini-2.0-flash-exp:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "moonshotai/kimi-k2.6:free",
+  ...OPENROUTER_FREE_MODEL_POOL,
 ];
 
 /** Per-result hint for the streamText `models` fallback array. */
@@ -47,7 +52,13 @@ export const fallbacksFor: Record<string, string[] | undefined> = {
 export async function autoSelectModel(
   input: AutoSelectInput
 ): Promise<AutoSelectResult> {
-  const { selectedModelId, attachmentKinds, contextChars } = input;
+  const {
+    selectedModelId,
+    attachmentKinds,
+    contextChars,
+    visionModelId = VISION_DEFAULT,
+    longContextModelId = LONG_CONTEXT_DEFAULT,
+  } = input;
   const hasImage = attachmentKinds.includes("image");
   const hasMedia =
     attachmentKinds.includes("video") || attachmentKinds.includes("audio");
@@ -65,7 +76,7 @@ export async function autoSelectModel(
       };
     }
     return {
-      modelId: VISION_DEFAULT,
+      modelId: visionModelId,
       reason: hasImage
         ? "Auto: model dengan kemampuan vision untuk gambar terlampir"
         : "Auto: model multimodal untuk media terlampir",
@@ -76,7 +87,7 @@ export async function autoSelectModel(
   // Long-context route for big documents.
   if (isLargeContext) {
     // Gemini Flash has 1M ctx; safe pick for >25k chars of attached text.
-    if (selectedModelId === LONG_CONTEXT_DEFAULT) {
+    if (selectedModelId === longContextModelId) {
       return {
         modelId: selectedModelId,
         reason: null,
@@ -84,7 +95,7 @@ export async function autoSelectModel(
       };
     }
     return {
-      modelId: LONG_CONTEXT_DEFAULT,
+      modelId: longContextModelId,
       reason: `Auto: long-context model untuk ${Math.round(contextChars / 1000)}k karakter`,
       overridden: true,
     };

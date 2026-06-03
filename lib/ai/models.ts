@@ -1,4 +1,13 @@
-export const DEFAULT_CHAT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+import { OPENROUTER_FREE_MODEL_POOL } from "@/lib/ai/free-models";
+import { DEFAULT_CHAT_MODE, FREE_TIER_MODEL } from "./chat-modes";
+import {
+  DEFAULT_MODEL_TIER,
+  isVandorTierMode,
+  normalizeModelTier,
+  tierCookieValue,
+} from "./model-tiers";
+
+export const DEFAULT_CHAT_MODEL = DEFAULT_CHAT_MODE;
 
 export const titleModel = {
   id: "openrouter/free",
@@ -27,11 +36,7 @@ export type ChatModel = {
   fallbacks?: string[];
 };
 
-const FREE_FALLBACK_CHAIN = [
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "moonshotai/kimi-k2.6:free",
-  "openrouter/free",
-];
+const FREE_FALLBACK_CHAIN = [...OPENROUTER_FREE_MODEL_POOL];
 
 /** Curated favorites — shown first in the UI */
 export const chatModels: ChatModel[] = [
@@ -263,16 +268,17 @@ export async function isAllowedModelId(modelId: string): Promise<boolean> {
 export async function resolveChatModelId(
   selectedModelId: string
 ): Promise<string> {
-  if (await isAllowedModelId(selectedModelId)) {
-    return selectedModelId;
+  const trimmed = selectedModelId.trim();
+  if (!trimmed) {
+    return tierCookieValue(DEFAULT_MODEL_TIER);
   }
-  if (await isAllowedModelId(DEFAULT_CHAT_MODEL)) {
-    return DEFAULT_CHAT_MODEL;
+  if (isVandorTierMode(trimmed)) {
+    return tierCookieValue(normalizeModelTier(trimmed));
   }
-  const remote = await fetchOpenRouterModels();
-  const fallback =
-    remote.find((m) => isFreeModel(m))?.id ?? remote[0]?.id ?? DEFAULT_CHAT_MODEL;
-  return fallback;
+  if (isValidModelId(trimmed)) {
+    return tierCookieValue(DEFAULT_MODEL_TIER);
+  }
+  return tierCookieValue(DEFAULT_MODEL_TIER);
 }
 
 /** @deprecated use isAllowedModelId */

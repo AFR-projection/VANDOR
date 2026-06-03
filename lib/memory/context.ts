@@ -2,24 +2,13 @@ import "server-only";
 
 import type { MemoryCategory } from "@/lib/db/schema";
 import type { MemorySettings } from "@/lib/settings/types";
-import { listRecentMemories, type MemoryRecord, searchMemories } from "./queries";
-
-const CATEGORY_WEIGHT: Record<string, number> = {
-  preference: 1.25,
-  goal: 1.2,
-  person: 1.15,
-  instruction: 1.15,
-  event: 1.05,
-  fact: 1.0,
-};
-
-function scoreOf(m: MemoryRecord, isRecent: boolean): number {
-  const sim = m.similarity ?? 0;
-  const importance = (m.importance ?? 5) / 10;
-  const recencyBoost = isRecent ? 0.15 : 0;
-  const categoryMul = CATEGORY_WEIGHT[m.category] ?? 1;
-  return (sim * 0.65 + importance * 0.35 + recencyBoost) * categoryMul;
-}
+import {
+  listRecentMemories,
+  type MemoryRecord,
+  searchMemories,
+  touchMemories,
+} from "./queries";
+import { scoreMemory } from "./scoring";
 
 export async function buildMemoryContext({
   userId,
@@ -45,16 +34,16 @@ export async function buildMemoryContext({
   }
 
   const categories = memorySettings?.enabledCategories;
-  const semanticLimit = memorySettings?.semanticSearchLimit ?? 12;
-  const recentLimit = memorySettings?.recentMemoriesLimit ?? 8;
-  const minSim = memorySettings?.minSimilarity ?? 0.72;
+  const semanticLimit = memorySettings?.semanticSearchLimit ?? 14;
+  const recentLimit = memorySettings?.recentMemoriesLimit ?? 10;
+  const minSim = memorySettings?.minSimilarity ?? 0.68;
 
   const [semantic, recent] = await Promise.all([
     searchMemories({
       userId,
       query,
       limit: semanticLimit,
-      minSimilarity: Math.min(minSim, 0.65),
+      minSimilarity: Math.min(minSim, 0.62),
       includeVisual,
       enabledCategories: categories as Record<MemoryCategory, boolean> | undefined,
     }),
@@ -76,7 +65,7 @@ export async function buildMemoryContext({
     seen.add(key);
     candidates.push({
       record: m,
-      score: scoreOf(m, recentIds.has(m.id)),
+      score: scoreMemory(m, { isRecentList: recentIds.has(m.id) }),
     });
   }
 
@@ -85,9 +74,13 @@ export async function buildMemoryContext({
   }
 
   candidates.sort((a, b) => b.score - a.score);
-  const top = candidates.slice(0, 14);
+  const top = candidates.slice(0, 16);
 
-  // Group by category for readability
+  touchMemories({
+    userId,
+    memoryIds: top.map((t) => t.record.id),
+  }).catch(() => null);
+
   const byCategory = new Map<string, MemoryRecord[]>();
   for (const { record } of top) {
     const list = byCategory.get(record.category) ?? [];
@@ -116,9 +109,10 @@ export async function buildMemoryContext({
     return `### ${cat}\n${items}`;
   });
 
-  return `## Long-term memory (VANDOR Memory v1.5)
+  return `## Long-term memory (VANDOR Memory v2)
 Use these facts naturally. Do not say "according to my memory" unless asked.
 Reference them only when relevant to the current message.
+When the user says "ingat" / "remember", call saveMemory immediately with high importance.
 
 ${sections.join("\n\n")}`;
 }

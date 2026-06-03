@@ -278,10 +278,42 @@ function n(num: number): number {
   return Math.ceil(num);
 }
 
+function isValidWeather(data: unknown): data is WeatherAtLocation {
+  if (!data || typeof data !== "object") return false;
+  const w = data as Partial<WeatherAtLocation>;
+  return (
+    typeof w.current?.temperature_2m === "number" &&
+    Array.isArray(w.hourly?.temperature_2m) &&
+    Array.isArray(w.hourly?.time) &&
+    Array.isArray(w.daily?.sunrise) &&
+    Array.isArray(w.daily?.sunset)
+  );
+}
+
 export function Weather({
-  weatherAtLocation = SAMPLE,
+  weatherAtLocation,
 }: {
-  weatherAtLocation?: WeatherAtLocation;
+  weatherAtLocation?: WeatherAtLocation | { error?: string } | null;
+}) {
+  if (weatherAtLocation && !isValidWeather(weatherAtLocation)) {
+    const message =
+      (weatherAtLocation as { error?: string }).error ??
+      "Data cuaca tidak tersedia untuk lokasi ini.";
+    return (
+      <div className="flex w-full items-center gap-2 rounded-2xl bg-muted px-4 py-3 text-muted-foreground text-sm">
+        <CloudIcon size={18} />
+        <span>{message}</span>
+      </div>
+    );
+  }
+
+  return <WeatherCard weatherAtLocation={weatherAtLocation ?? SAMPLE} />;
+}
+
+function WeatherCard({
+  weatherAtLocation,
+}: {
+  weatherAtLocation: WeatherAtLocation;
 }) {
   const currentHigh = Math.max(
     ...weatherAtLocation.hourly.temperature_2m.slice(0, 24)

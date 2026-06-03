@@ -1,3 +1,4 @@
+import { DEFAULT_MODEL_TIER } from "@/lib/ai/model-tiers";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { requireClientAccess } from "@/lib/security/client-access";
@@ -58,17 +59,14 @@ export async function GET(request: Request) {
       integrations: settings.integrations,
     },
     gate: {
-      ttlSeconds: Number(process.env.VANDOR_GATE_TTL_SECONDS ?? "3600"),
+      ttlSeconds: Number(process.env.VANDOR_GATE_TTL_SECONDS ?? "2592000"),
     },
     envRequired: {
       postgres: Boolean(process.env.POSTGRES_URL),
       authSecret: Boolean(process.env.AUTH_SECRET),
       ownerEmail: Boolean(process.env.VANDOR_OWNER_EMAIL),
     },
-    defaults: {
-      embeddingModel:
-        process.env.MEMORY_EMBEDDING_MODEL ?? "openai/text-embedding-3-small",
-    },
+    defaultModelTier: DEFAULT_MODEL_TIER,
   });
 }
 

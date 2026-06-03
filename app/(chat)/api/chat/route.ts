@@ -5,7 +5,6 @@ import {
   createUIMessageStreamResponse,
   generateId,
   stepCountIs,
-  streamText,
 } from "ai";
 import { checkBotId } from "botid/server";
 import { after } from "next/server";
@@ -18,12 +17,10 @@ import {
 import {
   chatModels,
   getCapabilities,
-  IGNORED_FREE_PROVIDERS,
   resolveChatModelId,
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import {
-  getLanguageModel,
   resolveOpenRouterApiKeyForUser,
 } from "@/lib/ai/providers";
 import {
@@ -43,16 +40,23 @@ import { buildRichContent, hasRichContent } from "@/lib/search/rich";
 import { generateRelatedQuestions } from "@/lib/search/related";
 import { geocodePlace } from "@/lib/search/geocode";
 import { buildMemoryContext } from "@/lib/memory/build-context";
-import { extractAndStoreMemories } from "@/lib/memory/extract";
+import {
+  extractAndStoreMemories,
+  preExtractUserMemories,
+} from "@/lib/memory/extract";
+import { isExplicitRememberRequest } from "@/lib/memory/remember";
 import { maybeSummarizeChat } from "@/lib/memory/summarize";
 import { captureVisualMemories } from "@/lib/memory/visual-memory";
 import { getUserSettings } from "@/lib/settings/queries";
 import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
+import { isFreeTier, isOrchestratorTier } from "@/lib/ai/chat-modes";
+import { normalizeModelTier } from "@/lib/ai/model-tiers";
+import { resolveIntegrationModels } from "@/lib/ai/integration-models";
 import {
-  classifyTaskIntent,
-  mergeModelSelection,
-  routeModelForTask,
-} from "@/lib/ai/router";
+  isHeavyForFreeMode,
+  planOrchestrator,
+  resolveFreeModeModel,
+} from "@/lib/ai/orchestrator";
 import { polishResponse } from "@/lib/ai/polish";
 import {
   getCachedResponse,
@@ -72,13 +76,23 @@ import { getClientIp } from "@/lib/security/gate-edge";
 import { lookupIpGeo } from "@/lib/security/geo";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
+import { formatOpenRouterError } from "@/lib/ai/model-fallbacks";
+import { buildFreeModeAttemptChain } from "@/lib/ai/openrouter-routing";
+import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
+import { classifyTaskIntent } from "@/lib/ai/router";
 import { buildFilesContextBlock, extractAll } from "@/lib/files/extract";
 import { inlineLocalAttachments } from "@/lib/files/inline";
 import { classify, type FileKind } from "@/lib/files/mime";
 import { createDocx } from "@/lib/ai/tools/create-docx";
 import { createPdf } from "@/lib/ai/tools/create-pdf";
 import { createSpreadsheet } from "@/lib/ai/tools/create-spreadsheet";
-import { generateImage } from "@/lib/ai/tools/generate-image";
+import {
+  makeEditImageTool,
+  makeGenerateImageTool,
+  makeGenerateVideoTool,
+  makeGenerateVoiceTool,
+  makeTranscribeAudioTool,
+} from "@/lib/ai/tools/media-tools";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -278,11 +292,47 @@ export async function POST(request: Request) {
       session.user.id
     );
 
-    const memoryContext = await buildMemoryContext({
-      userId: session.user.id,
-      query: lastUserText,
-      chatId: id,
-    });
+    if (!openRouterApiKey?.trim()) {
+      return new ChatbotError(
+        "bad_request:api",
+        "OpenRouter API key belum dikonfigurasi. Isi di Pengaturan → API & integrasi, atau set OPENROUTER_API_KEY di .env.local lalu restart server."
+      ).toResponse();
+    }
+
+    const memoryEnabled = userSettings.memory.enabled;
+    const memoryAutoExtract = userSettings.memory.autoExtract;
+    const preExtractOn =
+      memoryEnabled &&
+      memoryAutoExtract &&
+      userSettings.memory.preExtractFromUser !== false;
+
+    const mergeSimilar = userSettings.memory.mergeSimilarMemories !== false;
+
+    const preExtractPromise = preExtractOn
+      ? preExtractUserMemories({
+          userId: session.user.id,
+          userMessage: lastUserText,
+          chatId: id,
+          maxPerTurn: Math.min(userSettings.memory.maxExtractPerTurn, 2),
+          openRouterApiKey,
+          mergeSimilar,
+        }).catch(() => null)
+      : Promise.resolve();
+
+    if (isExplicitRememberRequest(lastUserText)) {
+      await preExtractPromise;
+    }
+
+    const memoryContext = await Promise.all([
+      preExtractOn && !isExplicitRememberRequest(lastUserText)
+        ? preExtractPromise
+        : Promise.resolve(),
+      buildMemoryContext({
+        userId: session.user.id,
+        query: lastUserText,
+        chatId: id,
+      }),
+    ]).then(([, ctx]) => ctx);
 
     let webSearchDetection =
       !isToolApprovalFlow && lastUserText.trim()
@@ -326,15 +376,94 @@ export async function POST(request: Request) {
       webSearchActive: webSearchDetection.needed,
     });
 
-    const auto = await autoSelectModel({
-      selectedModelId: initialChatModel,
+    const activeTier = normalizeModelTier(initialChatModel);
+    const integrationModels = resolveIntegrationModels(
+      userSettings.integrations,
+      activeTier
+    );
+
+    const contextChars =
+      lastUserText.length + filesBlock.length + memoryContext.length;
+    const autoSelectBase = {
       attachmentKinds,
-      contextChars:
-        lastUserText.length + filesBlock.length + memoryContext.length,
-    });
-    const router = routeModelForTask(taskIntent, initialChatModel);
-    const merged = mergeModelSelection(auto, router, initialChatModel);
-    const chatModel = merged.modelId;
+      contextChars,
+      visionModelId:
+        integrationModels.visionModel ||
+        integrationModels.chatModel ||
+        "google/gemini-2.5-flash",
+      longContextModelId:
+        integrationModels.longContextModel ||
+        integrationModels.chatModel ||
+        "google/gemini-2.5-flash",
+    };
+
+    let chatModel: string;
+    let orchestratorAgentId: string | null = null;
+    let orchestratorAgentName: string | null = null;
+    let selectionReason: string | null = null;
+    let selectionOverridden = false;
+    let freeModeFallbacks: string[] = [];
+    let freeHeavyReason: string | null = null;
+    const requestedMode = initialChatModel;
+
+    const freeAttemptChainEarly = isFreeTier(initialChatModel)
+      ? buildFreeModeAttemptChain({
+          freeModel1: integrationModels.freeModel1,
+          freeModel2: integrationModels.freeModel2,
+          freeModel3: integrationModels.freeModel3,
+        })
+      : undefined;
+
+    if (isFreeTier(initialChatModel)) {
+      const freePick = resolveFreeModeModel(attachmentKinds, integrationModels, {
+        userText: lastUserText,
+        contextChars,
+      });
+      chatModel = freeAttemptChainEarly?.[0] ?? freePick.modelId;
+      freeModeFallbacks = freePick.fallbacks;
+      selectionReason =
+        freePick.reason ??
+        `Gratis: rotasi ${freeAttemptChainEarly?.length ?? 15} model :free`;
+
+      const heavy = isHeavyForFreeMode({
+        userText: lastUserText,
+        attachmentKinds,
+        contextChars,
+      });
+      if (heavy.heavy) {
+        freeHeavyReason = heavy.reason;
+        selectionReason = `Gratis: ${heavy.reason} — coba tier Hemat atau Seimbang`;
+      }
+    } else if (isOrchestratorTier(initialChatModel)) {
+      const plan = planOrchestrator({
+        userText: lastUserText,
+        attachmentKinds,
+        contextChars,
+        webSearchActive: webSearchDetection.needed,
+        integrationModels,
+      });
+      orchestratorAgentId = plan.agentId;
+      orchestratorAgentName = plan.agentName;
+      selectionReason = plan.reason;
+
+      const auto = await autoSelectModel({
+        ...autoSelectBase,
+        selectedModelId: plan.modelId,
+      });
+      chatModel = auto.overridden ? auto.modelId : plan.modelId;
+      if (auto.reason) {
+        selectionReason = auto.reason;
+        selectionOverridden = true;
+      }
+    } else {
+      const auto = await autoSelectModel({
+        ...autoSelectBase,
+        selectedModelId: initialChatModel,
+      });
+      chatModel = auto.overridden ? auto.modelId : initialChatModel;
+      selectionReason = auto.reason;
+      selectionOverridden = auto.overridden;
+    }
 
     const modelConfig = chatModels.find((m) => m.id === chatModel);
     const modelCapabilities = await getCapabilities();
@@ -342,11 +471,28 @@ export async function POST(request: Request) {
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools !== false;
 
-    const autoFallbacks =
-      fallbacksFor[chatModel] ??
-      (modelConfig?.fallbacks && modelConfig.fallbacks.length > 0
-        ? modelConfig.fallbacks
-        : undefined);
+    const freeModeActive = isFreeTier(initialChatModel);
+    const treatAsFreeTier =
+      freeModeActive ||
+      modelConfig?.tier === "free" ||
+      chatModel.includes(":free") ||
+      chatModel === "openrouter/free";
+
+    const fallbackExtras = freeModeActive
+      ? freeModeFallbacks.filter((id) => id && id !== chatModel)
+      : [
+          ...(fallbacksFor[chatModel] ?? []),
+          integrationModels.chatModel,
+          integrationModels.reasoningModel,
+        ].filter((id, i, arr) => id && id !== chatModel && arr.indexOf(id) === i);
+
+    const documentModelId = freeModeActive
+      ? chatModel
+      : integrationModels.documentModel ||
+        integrationModels.codingModel ||
+        chatModel;
+
+    const freeAttemptChain = freeAttemptChainEarly;
 
     // Replace `/storage/...` URLs (unreachable from external LLM providers)
     // with inline base64 data URLs so the model actually receives the bytes.
@@ -373,9 +519,14 @@ export async function POST(request: Request) {
           type: "data-model-meta",
           data: {
             modelId: chatModel,
-            requestedModelId: initialChatModel,
-            overridden: merged.overridden,
-            reason: merged.reason ?? auto.reason,
+            requestedModelId: requestedMode,
+            chatMode: activeTier,
+            modelTier: activeTier,
+            agentId: orchestratorAgentId,
+            agentName: orchestratorAgentName,
+            overridden: selectionOverridden,
+            reason: selectionReason,
+            fallbackChain: freeAttemptChain,
             attachments: extractedFiles.map((f) => ({
               name: f.name,
               kind: f.kind,
@@ -508,24 +659,47 @@ export async function POST(request: Request) {
           webSearchContextBlock.length > 0
             ? getWebSearchSynthesisModel(
                 chatModel,
-                userSettings.integrations.webSearchModel
+                integrationModels.researchModel
               )
             : chatModel;
 
-        const result = streamText({
-          model: getLanguageModel(synthesisModelId, openRouterApiKey, {
+        const streamPrimaryId = freeModeActive
+          ? (freeAttemptChain?.[0] ?? synthesisModelId)
+          : synthesisModelId;
+
+        const { stream, resolvedModelId, attemptIndex, attemptedModels } =
+          await streamTextWithModelFallback({
+          primaryModelId: streamPrimaryId,
+          apiKey: openRouterApiKey,
+          meta: {
             appName: userSettings.integrations.openrouterAppName,
             appUrl: userSettings.integrations.openrouterAppUrl,
-          }),
-          system: systemPrompt({
-            requestHints,
-            supportsTools,
-            memoryContext,
-            filesContext: filesBlock,
-            webSearchContext: webSearchContextBlock,
-            responseMode,
-            persona: userSettings.persona,
-          }),
+          },
+          freeMode: freeModeActive,
+          isFreeTier: treatAsFreeTier,
+          extraFallbacks: fallbackExtras,
+          attemptModelIds: freeAttemptChain,
+          reasoningEffort:
+            !freeModeActive && modelConfig?.reasoningEffort
+              ? modelConfig.reasoningEffort
+              : undefined,
+          system:
+            systemPrompt({
+              requestHints,
+              supportsTools,
+              memoryContext,
+              filesContext: filesBlock,
+              webSearchContext: webSearchContextBlock,
+              responseMode,
+              persona: userSettings.persona,
+            }) +
+            (freeModeActive
+              ? `\n\n=== TIER GRATIS ===\nVANDOR mencoba ${freeAttemptChain?.length ?? 15} model :free bergantian (Llama 3.3, GPT-OSS, Nemotron, Kimi, dll.) sampai ada respons.${
+                  freeHeavyReason
+                    ? ` Permintaan ini terdeteksi berat (${freeHeavyReason}). Kerjakan seadanya secara singkat, lalu SARANKAN tier Hemat atau Seimbang di picker model untuk hasil lebih stabil.`
+                    : " Jawab ringkas dan to the point."
+                }`
+              : ""),
           messages: modelMessages,
           maxOutputTokens:
             webSearchContextBlock.length > 0
@@ -535,21 +709,6 @@ export async function POST(request: Request) {
           stopWhen: stepCountIs(5),
           experimental_activeTools:
             isReasoningModel && !supportsTools ? [] : activeTools,
-          providerOptions: {
-            openrouter: {
-              ...(autoFallbacks && { models: autoFallbacks }),
-              provider: {
-                allow_fallbacks: true,
-                ...(modelConfig?.tier === "free" && {
-                  ignore: [...IGNORED_FREE_PROVIDERS],
-                  sort: "throughput",
-                }),
-              },
-              ...(modelConfig?.reasoningEffort && {
-                reasoning: { effort: modelConfig.reasoningEffort },
-              }),
-            },
-          },
           tools: {
             getCurrentTime,
             getLocation: makeGetLocation(ipGeo),
@@ -560,13 +719,13 @@ export async function POST(request: Request) {
             createDocument: createDocument({
               session,
               dataStream,
-              modelId: chatModel,
+              modelId: documentModelId,
             }),
             editDocument: editDocument({ dataStream, session }),
             updateDocument: updateDocument({
               session,
               dataStream,
-              modelId: chatModel,
+              modelId: documentModelId,
             }),
             requestSuggestions: requestSuggestions({
               session,
@@ -576,7 +735,16 @@ export async function POST(request: Request) {
             createPdf,
             createDocx,
             createSpreadsheet,
-            generateImage,
+            generateImage: makeGenerateImageTool(session.user.id),
+            editImage: makeEditImageTool(
+              session.user.id,
+              extractedFiles
+                .filter((f) => f.kind === "image")
+                .map((f) => f.url)
+            ),
+            generateVideo: makeGenerateVideoTool(session.user.id),
+            generateVoice: makeGenerateVoiceTool(session.user.id),
+            transcribeAudio: makeTranscribeAudioTool(session.user.id),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
@@ -584,8 +752,39 @@ export async function POST(request: Request) {
           },
         });
 
+        if (attemptIndex > 0 || resolvedModelId !== synthesisModelId) {
+          dataStream.write({
+            type: "data-model-meta",
+            data: {
+              modelId: resolvedModelId,
+              requestedModelId: requestedMode,
+              chatMode: activeTier,
+              modelTier: activeTier,
+              agentId: orchestratorAgentId,
+              agentName: orchestratorAgentName,
+              overridden: true,
+              fallbackUsed: true,
+              attemptIndex,
+              attemptTotal: attemptedModels.length,
+              fallbackChain: attemptedModels,
+              reason:
+                freeModeActive && attemptIndex > 0
+                  ? `Rotasi Gratis: model #${attemptIndex + 1} dari ${attemptedModels.length} (${resolvedModelId.split("/").pop()})`
+                  : selectionReason,
+              attachments: extractedFiles.map((f) => ({
+                name: f.name,
+                kind: f.kind,
+                bytes: f.bytes,
+                extracted: Boolean(f.text),
+                truncated: f.truncated,
+                error: f.error,
+              })),
+            },
+          });
+        }
+
         dataStream.merge(
-          result.toUIMessageStream({ sendReasoning: isReasoningModel })
+          stream.toUIMessageStream({ sendReasoning: isReasoningModel })
         );
 
         if (relatedPromise) {
@@ -720,10 +919,7 @@ export async function POST(request: Request) {
               }
             }
 
-            if (
-              userSettings.memory.enabled &&
-              userSettings.memory.autoExtract
-            ) {
+            if (memoryEnabled && memoryAutoExtract) {
             extractAndStoreMemories({
               userId: session.user.id,
               userMessage: lastUserText,
@@ -731,6 +927,7 @@ export async function POST(request: Request) {
               chatId: id,
               maxPerTurn: userSettings.memory.maxExtractPerTurn,
               openRouterApiKey,
+              mergeSimilar,
             }).catch(() => null);
             }
 
@@ -759,26 +956,9 @@ export async function POST(request: Request) {
         }
       },
       onError: (error) => {
-        const msg = error instanceof Error ? error.message : "";
-        if (
-          msg.includes("Insufficient credits") ||
-          msg.includes("402") ||
-          msg.includes("credit")
-        ) {
-          return "OpenRouter: saldo/kredit tidak cukup. Tambah kredit atau pilih model gratis (Auto Free).";
-        }
-        if (
-          msg.includes("rate-limited") ||
-          msg.includes("rate limit") ||
-          msg.includes("429")
-        ) {
-          return "Semua provider free sedang rate-limit. Coba lagi 30 detik atau pilih model lain di pemilih model.";
-        }
-        if (msg.includes("No endpoints found")) {
-          return "Model ini tidak tersedia di OpenRouter. Pilih model lain.";
-        }
+        const msg = error instanceof Error ? error.message : String(error);
         console.error("Chat stream error:", error);
-        return "Maaf, ada error pada model. Coba ganti model atau ulangi.";
+        return formatOpenRouterError(msg, chatModel);
       },
     });
 

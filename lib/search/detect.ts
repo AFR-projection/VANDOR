@@ -3,7 +3,7 @@ const SKIP_PATTERNS = [
   /^(hi|halo|hello|hey|thanks|thank you|terima kasih|makasih|ok|oke|sip|noted|good|bagus|mantap)\s*[!.?]*$/i,
   /^(write|buatkan|generate|create)\s+(me\s+)?(a\s+)?(code|script|function|program|gambar|image|logo|pdf|docx)/i,
   /^\/\w+/,
-  // Image generation / editing (handled by generateImage tool)
+  // Image generation / editing (handled by generateImage / editImage tools)
   /\b(edit|edot|editan|photoshop|manipulasi|inpaint|ganti background|ubah foto|ubah gambar|retouch|airbrush)\b/i,
   /\b(buatkan gambar|generate image|draw|gambarin|ilustrasi|logo)\b/i,
   // Identity / meta about the assistant

@@ -2,7 +2,9 @@ import { tool } from "ai";
 import { z } from "zod";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
-const USER_AGENT = "VANDOR/3.1 (personal-assistant; contact@localhost)";
+import { APP_USER_AGENT } from "@/lib/version";
+
+const USER_AGENT = `${APP_USER_AGENT}; contact@localhost`;
 
 export type MapMarker = {
   lat: number;

@@ -27,7 +27,13 @@ import {
   type PersonaTonePreset,
 } from "@/lib/settings/persona-presets";
 import type { IntegrationsSettings, PersonaSettings } from "@/lib/settings/types";
+import { LoginHistoryPanel } from "./login-history-panel";
 import { SettingSlider } from "./setting-row";
+import { ModelAiPanel } from "./model-ai-panel";
+import { normalizeModelTier, type ModelTierId } from "@/lib/ai/model-tiers";
+import { getTierUi } from "@/lib/ai/tier-styles";
+import { cn } from "@/lib/utils";
+import { APP_NAME, APP_VERSION } from "@/lib/version";
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -59,11 +65,12 @@ type GeneralPayload = {
     authSecret: boolean;
     ownerEmail: boolean;
   };
-  defaults: { embeddingModel: string };
+  defaultModelTier: ModelTierId;
 };
 
 const tabs = [
   { id: "persona", label: "Gaya bicara", icon: MessageCircleIcon },
+  { id: "model", label: "Model & AI", icon: SparklesIcon },
   { id: "api", label: "API & integrasi", icon: ServerIcon },
   { id: "security", label: "Keamanan", icon: ShieldIcon },
 ] as const;
@@ -220,7 +227,7 @@ export function GeneralSettingsPage() {
     );
   }
 
-  const { secrets, settings, gate, envRequired, defaults } = data;
+  const { secrets, settings, gate, envRequired } = data;
   const p = settings.persona;
   const int = settings.integrations;
   const preview =
@@ -239,7 +246,8 @@ export function GeneralSettingsPage() {
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-semibold tracking-tight">Pengaturan</h1>
           <p className="text-xs text-muted-foreground">
-            Gaya bicara AI, API keys, dan keamanan — tanpa edit .env untuk API
+            Model AI, gaya bicara, API keys, dan keamanan · {APP_NAME}{" "}
+            <span className="font-mono text-[10px]">v{APP_VERSION}</span>
           </p>
         </div>
         <Button asChild size="sm" type="button" variant="outline">
@@ -260,19 +268,34 @@ export function GeneralSettingsPage() {
         <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border/40 p-2 md:w-52 md:flex-col md:border-b-0 md:border-r md:p-3">
           {tabs.map((t) => {
             const Icon = t.icon;
+            const tierUi =
+              t.id === "model"
+                ? getTierUi(normalizeModelTier(int.modelTier))
+                : null;
             return (
               <button
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                className={cn(
+                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
                   tab === t.id
                     ? "bg-primary/10 font-medium text-primary"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                }`}
+                )}
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 type="button"
               >
                 <Icon className="size-4 shrink-0" />
-                {t.label}
+                <span className="flex-1">{t.label}</span>
+                {tierUi ? (
+                  <span
+                    className={cn(
+                      "rounded px-1.5 py-px text-[9px] font-semibold uppercase",
+                      tierUi.chip
+                    )}
+                  >
+                    {tierUi.label}
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -480,6 +503,15 @@ export function GeneralSettingsPage() {
               </>
             )}
 
+            {tab === "model" && (
+              <ModelAiPanel
+                modelTier={normalizeModelTier(int.modelTier)}
+                onOpenApiTab={() => setTab("api")}
+                onTierChange={(tier) => patchIntegrations({ modelTier: tier })}
+                saving={saving}
+              />
+            )}
+
             {tab === "api" && (
               <>
                 <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-muted-foreground">
@@ -532,64 +564,11 @@ export function GeneralSettingsPage() {
                 />
 
                 <section className="space-y-3 rounded-xl border border-border/40 bg-card/30 p-4">
-                  <div className="flex items-center gap-2">
-                    <KeyRoundIcon className="size-4 text-primary" />
-                    <h2 className="text-sm font-semibold">Model & OpenRouter</h2>
-                  </div>
-                  <label className="block text-xs font-medium" htmlFor="emb">
-                    Model embedding memori
-                  </label>
-                  <Input
-                    className="font-mono text-sm"
-                    id="emb"
-                    onBlur={() =>
-                      patchIntegrations({ embeddingModel: int.embeddingModel })
-                    }
-                    onChange={(e) =>
-                      mutate(
-                        {
-                          ...data,
-                          settings: {
-                            ...data.settings,
-                            integrations: {
-                              ...int,
-                              embeddingModel: e.target.value,
-                            },
-                          },
-                        },
-                        false
-                      )
-                    }
-                    placeholder={defaults.embeddingModel}
-                    value={int.embeddingModel}
-                  />
-                  <label className="block text-xs font-medium" htmlFor="ws">
-                    Model web search (kosong = model chat)
-                  </label>
-                  <Input
-                    className="font-mono text-sm"
-                    id="ws"
-                    onBlur={() =>
-                      patchIntegrations({ webSearchModel: int.webSearchModel })
-                    }
-                    onChange={(e) =>
-                      mutate(
-                        {
-                          ...data,
-                          settings: {
-                            ...data.settings,
-                            integrations: {
-                              ...int,
-                              webSearchModel: e.target.value,
-                            },
-                          },
-                        },
-                        false
-                      )
-                    }
-                    placeholder="anthropic/claude-sonnet-4"
-                    value={int.webSearchModel}
-                  />
+                  <h2 className="text-sm font-semibold">Header OpenRouter</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Tier model di tab Model & AI. Di sini hanya nama app untuk
+                    analytics OpenRouter.
+                  </p>
                   <label className="block text-xs font-medium" htmlFor="appn">
                     Nama app (header OpenRouter)
                   </label>
@@ -657,8 +636,8 @@ export function GeneralSettingsPage() {
                     <h2 className="text-sm font-semibold">PIN numpad</h2>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Sesi gate: {Math.round(gate.ttlSeconds / 60)} menit · Sumber:{" "}
-                    <SourceBadge source={secrets.pin.source} />
+                    Sesi login: {Math.round(gate.ttlSeconds / 86400)} hari ·
+                    Sumber: <SourceBadge source={secrets.pin.source} />
                   </p>
                   <label className="block text-xs font-medium" htmlFor="cur-pin">
                     PIN saat ini (wajib untuk simpan API)
@@ -701,6 +680,7 @@ export function GeneralSettingsPage() {
                     Simpan PIN baru
                   </Button>
                 </section>
+                <LoginHistoryPanel />
                 <p className="text-[11px] text-muted-foreground">
                   API key dienkripsi AES-256-GCM dengan{" "}
                   <code className="rounded bg-muted px-1">AUTH_SECRET</code>.

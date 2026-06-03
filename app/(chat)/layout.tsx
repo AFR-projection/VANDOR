@@ -1,8 +1,7 @@
 import { cookies } from "next/headers";
-import Script from "next/script";
 import { Suspense } from "react";
-import { Toaster } from "sonner";
 import { AppSidebar } from "@/components/chat/app-sidebar";
+import { ChatToaster } from "@/components/chat/chat-toaster";
 import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { ChatLayoutContent } from "@/components/chat/chat-layout-content";
 import { GateWatchdog } from "@/components/security/gate-watchdog";
@@ -12,10 +11,6 @@ import { auth } from "../(auth)/auth";
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <Script
-        src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"
-        strategy="lazyOnload"
-      />
       <DataStreamProvider>
         <Suspense fallback={<div className="flex h-dvh bg-sidebar" />}>
           <SidebarShell>{children}</SidebarShell>
@@ -33,15 +28,8 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider defaultOpen={!isCollapsed}>
       <GateWatchdog />
       <AppSidebar user={session?.user} />
-      <SidebarInset>
-        <Toaster
-          position="top-center"
-          theme="system"
-          toastOptions={{
-            className:
-              "!bg-card !text-foreground !border-border/50 !shadow-[var(--shadow-float)]",
-          }}
-        />
+      <SidebarInset className="h-dvh max-h-dvh min-h-0 overflow-hidden">
+        <ChatToaster />
         <Suspense fallback={<div className="flex h-dvh" />}>
           <ChatLayoutContent>{children}</ChatLayoutContent>
         </Suspense>

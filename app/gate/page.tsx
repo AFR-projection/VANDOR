@@ -2,7 +2,7 @@
 
 import { LockKeyholeIcon, ShieldCheckIcon, SparklesIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 
@@ -31,20 +31,27 @@ function GateForm() {
   const reason = searchParams.get("reason");
   const wasRevoked =
     searchParams.get("revoked") === "1" || reason === "revoked";
-  const ipChanged = reason === "ip_changed" || reason === "ip";
+  const sessionExpired = reason === "expired";
 
-  const { data: status, mutate: refetchStatus } = useSWR<GateStatus>(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/gate/status`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { refreshInterval: 1000, revalidateOnFocus: true }
-  );
-
+  const submitInFlight = useRef(false);
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
   const [success, setSuccess] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+
+  const statusKey =
+    loading || success
+      ? null
+      : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/gate/status`;
+
+  const { data: status, mutate: refetchStatus } = useSWR<GateStatus>(
+    statusKey,
+    (url: string) =>
+      fetch(url, { credentials: "same-origin" }).then((r) => r.json()),
+    { refreshInterval: 2000, revalidateOnFocus: true }
+  );
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -57,49 +64,71 @@ function GateForm() {
 
   const submit = useCallback(
     async (value: string) => {
-      if (value.length !== PIN_LENGTH) {
+      if (
+        value.length !== PIN_LENGTH ||
+        submitInFlight.current ||
+        success
+      ) {
         return;
       }
+      submitInFlight.current = true;
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/gate/verify`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ pin: value }),
-          }
-        );
+        const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+        const target = redirectUrl.startsWith("/") ? redirectUrl : "/";
+        const res = await fetch(`${base}/api/gate/verify`, {
+          method: "POST",
+          credentials: "same-origin",
+          redirect: "follow",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: value, redirectUrl: target }),
+        });
+
+        if (res.redirected && res.url) {
+          setSuccess(true);
+          window.location.assign(res.url);
+          return;
+        }
+
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           setError(data.error ?? "Akses ditolak");
           setShake(true);
           setPin("");
+          submitInFlight.current = false;
           await refetchStatus();
           setTimeout(() => setShake(false), 500);
           return;
         }
+
         setSuccess(true);
-        const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-        const target = redirectUrl.startsWith("/") ? redirectUrl : "/";
-        window.location.href = `${base}${target}`;
+        window.location.assign(`${base}${target}`);
       } catch {
         setError("Koneksi gagal");
         setShake(true);
+        submitInFlight.current = false;
         setTimeout(() => setShake(false), 500);
       } finally {
-        setLoading(false);
+        if (!success) {
+          setLoading(false);
+        }
       }
     },
-    [redirectUrl, refetchStatus]
+    [redirectUrl, refetchStatus, success]
   );
 
   useEffect(() => {
-    if (pin.length === PIN_LENGTH && !locked && !loading) {
-      submit(pin);
+    if (
+      pin.length === PIN_LENGTH &&
+      !locked &&
+      !loading &&
+      !success &&
+      !submitInFlight.current
+    ) {
+      void submit(pin);
     }
-  }, [pin, submit, locked, loading]);
+  }, [pin, submit, locked, loading, success]);
 
   const onKey = (key: string) => {
     if (locked || loading || success) {
@@ -150,21 +179,22 @@ function GateForm() {
         <p className="mt-2 max-w-xs text-[13px] text-muted-foreground leading-relaxed">
           {locked
             ? "Akses diblokir karena 3x percobaan gagal."
-            : "Masukkan kode akses 4 digit"}
+            : "Masukkan PIN 4 digit untuk login"}
         </p>
       </div>
 
-      {ipChanged && !locked && (
-        <div className="mb-5 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-center text-[12px] text-primary">
-          Alamat IP berubah atau sesi kedaluwarsa. Masukkan PIN lagi untuk
-          melanjutkan.
+      {sessionExpired && !locked && (
+        <div className="mb-5 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-center text-[12px] leading-relaxed text-primary">
+          Sesi tidak valid atau cookie login belum terpasang. Masukkan PIN lagi
+          untuk melanjutkan.
         </div>
       )}
 
-      {wasRevoked && !locked && !ipChanged && (
-        <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-center text-[12px] text-amber-700 dark:text-amber-300">
-          Sesi diakhiri karena perangkat lain masuk. Masukkan PIN untuk
-          mengambil alih.
+      {wasRevoked && !locked && !sessionExpired && (
+        <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-center text-[12px] leading-relaxed text-amber-700 dark:text-amber-300">
+          Akun ini hanya aktif di satu perangkat. Anda login di perangkat lain
+          atau sesi diakhiri — perangkat ini keluar otomatis. Masukkan PIN untuk
+          lanjut di sini.
         </div>
       )}
 
@@ -226,7 +256,7 @@ function GateForm() {
 
       <p className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70">
         <ShieldCheckIcon className="size-3" />
-        Per-perangkat · 1 sesi aktif · 1 jam
+        Login PIN · satu perangkat aktif · sesi 30 hari
       </p>
     </div>
   );

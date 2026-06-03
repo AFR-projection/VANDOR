@@ -1,27 +1,29 @@
-# VANDOR v3.1 — Personal AI Assistant
+# VANDOR v3.2 — Personal AI Assistant
 
-VANDOR adalah asisten pribadi (gaya Jarvis) berbasis **Next.js 16**, **OpenRouter**, **Neon Postgres** + **pgvector**, dan **AI SDK**. Satu pemilik, gate PIN, allowlist IP, memori jangka panjang, dan pengaturan dari UI.
+Lihat [CHANGELOG.md](./CHANGELOG.md) untuk riwayat rilis.
+
+VANDOR adalah asisten pribadi (gaya Jarvis) berbasis **Next.js 16**, **OpenRouter**, **Neon Postgres** + **pgvector**, dan **AI SDK**. Satu pemilik, login PIN numpad, memori jangka panjang, dan pengaturan dari UI.
 
 ## Fitur utama
 
 | Fitur | Deskripsi |
 |-------|-----------|
 | **Chat multi-model** | OpenRouter — model gratis (`:free`) hingga flagship, pilih di UI |
-| **Keamanan berlapis** | Allowlist IP (realtime) + gate PIN 4 digit terikat IP + sesi owner tunggal |
+| **Keamanan** | Login PIN 4 digit (numpad), **satu perangkat aktif**, riwayat login di pengaturan |
 | **Memory v1** | Embedding + pgvector, ekstraksi otomatis, visual memory |
 | **Rich answers** | Web search (Tavily / fallback), kartu sumber, galeri, peta |
 | **Pengaturan UI** | Gaya bicara AI, API keys terenkripsi, PIN, model embedding — tanpa edit `.env` untuk API |
 | **Pengaturan Memori** | Retrieval, kategori, kelola memori, hero visual neural core |
 | **Artifacts** | Dokumen/kode/sheet di panel samping + export PDF/DOCX/XLSX |
 
-## Keamanan (realtime)
+## Keamanan
 
-Setiap request (halaman + API) menjalankan:
+1. **Login PIN (numpad)** — Halaman `/gate`, 4 digit. Sesi bertahan **30 hari** (atur via `VANDOR_GATE_TTL_SECONDS`). Tidak terikat IP — aman saat jaringan/VPN berubah.
+2. **Satu perangkat** — Login PIN di perangkat baru otomatis logout perangkat lama (~20 detik). Cookie perangkat + sesi DB; akhiri sesi manual dari **Pengaturan → Riwayat login**.
+3. **Owner tunggal** — `VANDOR_OWNER_EMAIL` / `PASSWORD`; register dinonaktifkan.
+4. **Rate limit** — 3x PIN salah → blokir perangkat 1 jam.
 
-1. **IP allowlist** — `VANDOR_ALLOWED_IPS` (kosong = semua IP). Jika IP tidak diizinkan → `/denied`.
-2. **Gate PIN** — Cookie gate terikat **IP saat login**. IP berubah (VPN, jaringan lain) → cookie dihapus → **PIN lagi** di `/gate`.
-3. **Watchdog client** — Tab chat mem-poll `/api/gate/status` setiap ~8 detik + saat tab fokus; redirect otomatis jika IP/gate tidak valid.
-4. **Owner tunggal** — `VANDOR_OWNER_EMAIL` / `PASSWORD`; register dinonaktifkan.
+Akses utama lewat **PIN gate** (bukan IP allowlist).
 
 ## Tools AI (hanya yang real)
 
@@ -60,7 +62,6 @@ OPENROUTER_APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 VANDOR_GATE_TTL_SECONDS=3600
-VANDOR_ALLOWED_IPS=localhost         # atau IP publik kamu; kosong = allow all
 VANDOR_DISABLE_MESSAGE_LIMIT=true
 ```
 
@@ -94,7 +95,6 @@ npm.cmd run build
 ```env
 NEXT_PUBLIC_APP_URL=https://nama-projek.vercel.app
 OPENROUTER_APP_URL=https://nama-projek.vercel.app
-VANDOR_ALLOWED_IPS=203.0.113.42    # IP publik kamu (cek /api/whoami)
 ```
 
 4. Deploy. Log build harus: `Migrations completed`.
@@ -108,8 +108,6 @@ VANDOR_ALLOWED_IPS=203.0.113.42    # IP publik kamu (cek /api/whoami)
 | `VANDOR_NUMPAD_PIN` | Ya (fallback; bisa ganti di UI) |
 | `NEXT_PUBLIC_APP_URL` | Ya |
 | `OPENROUTER_API_KEY` | Opsional (UI) |
-| `VANDOR_ALLOWED_IPS` | Sangat disarankan |
-
 Opsional file upload production: `BLOB_READ_WRITE_TOKEN` (Vercel Blob) — tanpa ini export file pakai `public/storage` lokal.
 
 ## Struktur penting
@@ -140,7 +138,7 @@ proxy.ts             # IP + gate pada setiap request
 
 | Masalah | Solusi |
 |---------|--------|
-| Redirect `/denied` | Tambah IP ke `VANDOR_ALLOWED_IPS` atau kosongkan untuk allow-all |
+| Gate / sesi | Cek cookie gate + `POSTGRES_URL`; lihat Pengaturan → Riwayat login |
 | PIN lagi setelah ganti jaringan | Normal — gate terikat IP; masukkan PIN |
 | `Login owner gagal` | Cek `VANDOR_OWNER_EMAIL` / `PASSWORD` |
 | Build gagal migrasi | Set `POSTGRES_URL` di Vercel sebelum build |

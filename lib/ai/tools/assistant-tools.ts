@@ -18,7 +18,7 @@ import {
 export function makeAssistantTools(userId: string, chatId: string) {
   const saveMemoryTool = tool({
     description:
-      "Save an important fact about the user to long-term memory. Use when user says 'remember', shares preferences, name, projects, goals, or standing instructions.",
+      "Save or update an important fact in long-term memory. REQUIRED when user says ingat/jangan lupa/remember. Also use for preferences, name, job, goals, relationships. Similar facts merge automatically.",
     inputSchema: z.object({
       content: z.string().min(3).max(500),
       category: z
@@ -31,8 +31,9 @@ export function makeAssistantTools(userId: string, chatId: string) {
         userId,
         content,
         category: category ?? "fact",
-        importance: importance ?? 7,
+        importance: importance ?? 8,
         sourceChatId: chatId,
+        mergeSimilar: true,
       });
       return { ok: Boolean(id), memoryId: id, content };
     },
@@ -111,24 +112,4 @@ export function makeAssistantTools(userId: string, chatId: string) {
     createNote: createNoteTool,
     updateTask: updateTaskTool,
   };
-}
-
-/** Alias for semantic memory search only */
-export function makeSearchMemoriesTool(userId: string) {
-  return tool({
-    description: "Search long-term memories by meaning (semantic vector search).",
-    inputSchema: z.object({
-      query: z.string().min(2),
-      limit: z.number().int().min(1).max(10).optional(),
-    }),
-    execute: async ({ query, limit }) => {
-      const memories = await searchMemories({
-        userId,
-        query,
-        limit: limit ?? 6,
-        minSimilarity: 0.55,
-      });
-      return { memories };
-    },
-  });
 }

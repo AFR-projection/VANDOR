@@ -5,6 +5,8 @@ import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
 import { artifactDefinitions } from "./artifact";
+import { toast } from "@/components/chat/toast";
+import { displayOpenRouterModelName } from "@/lib/ai/model-display";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 
@@ -28,7 +30,21 @@ export function DataStreamHandler() {
         continue;
       }
       if (delta.type === "data-model-meta") {
-        setLatestModelMeta(delta.data);
+        setLatestModelMeta((prev) => {
+          const next = delta.data;
+          if (
+            next.fallbackUsed &&
+            (!prev?.fallbackUsed || prev.modelId !== next.modelId)
+          ) {
+            toast({
+              type: "success",
+              description:
+                next.reason ??
+                `Memakai ${displayOpenRouterModelName(next.modelId)} — cadangan OpenRouter`,
+            });
+          }
+          return next;
+        });
         continue;
       }
       const artifactDefinition = artifactDefinitions.find(

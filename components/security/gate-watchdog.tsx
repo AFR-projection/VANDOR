@@ -1,25 +1,19 @@
 "use client";
 
+import { signOut } from "next-auth/react";
 import { useEffect, useRef } from "react";
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-/** Realtime IP + gate check while the app is open */
-const POLL_INTERVAL = 8_000;
-const FIRST_CHECK_DELAY = 2_000;
+/** Poll session — perangkat lama cepat tahu kalau login terjadi di tempat lain. */
+const POLL_INTERVAL = 20_000;
+const FIRST_CHECK_DELAY = 8_000;
 
 type GateStatusPayload = {
   configured?: boolean;
-  ipAllowed?: boolean;
-  requiresPin?: boolean;
-  ipMismatch?: boolean;
   sessionRevoked?: boolean;
 };
 
-/**
- * Polls /api/gate/status on an interval and when the tab regains focus.
- * If IP leaves the allowlist → /denied. If IP changes or gate invalid → /gate (PIN lagi).
- */
 export function GateWatchdog() {
   const kicked = useRef(false);
 
@@ -32,6 +26,7 @@ export function GateWatchdog() {
           method: "POST",
           credentials: "same-origin",
         });
+        await signOut({ redirect: false });
       } catch {
         /* ignore */
       }
@@ -48,25 +43,11 @@ export function GateWatchdog() {
         const data = (await res.json()) as GateStatusPayload;
         if (!data.configured) return;
 
-        if (data.ipAllowed === false) {
-          kicked.current = true;
-          window.location.href = `${base()}/denied`;
-          return;
-        }
-
-        if (
-          data.requiresPin === true ||
-          data.ipMismatch === true ||
-          data.sessionRevoked === true
-        ) {
+        // Hanya logout paksa jika sesi dicabut (login di perangkat lain), bukan saat cookie belum terbaca.
+        if (data.sessionRevoked === true) {
           kicked.current = true;
           await revokeGate();
-          const reason = data.ipMismatch
-            ? "ip_changed"
-            : data.sessionRevoked
-              ? "revoked"
-              : "expired";
-          window.location.href = `${base()}/gate?reason=${reason}`;
+          window.location.href = `${base()}/gate?reason=revoked`;
         }
       } catch {
         /* network blip */

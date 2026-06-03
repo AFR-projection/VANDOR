@@ -593,3 +593,30 @@ textarea:focus-visible {
 [data-testid="artifact"] {
   isolation: isolate;
 }
+
+/* Mobile chat: full viewport, no page bounce behind composer */
+html.vandor-chat-mobile {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+html.vandor-chat-mobile body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vandor-chat-shell {
+  height: 100dvh;
+  max-height: 100dvh;
+  touch-action: manipulation;
+}
+
+@supports (height: 100svh) {
+  .vandor-chat-shell {
+    height: 100svh;
+    max-height: 100svh;
+  }
+}

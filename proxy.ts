@@ -11,16 +11,9 @@ import {
 } from "./lib/security/gate-edge";
 
 const PUBLIC_PATHS = ["/gate", "/api/gate", "/api/auth"];
-const ALLOWLIST_BYPASS_PATHS = ["/denied", "/api/whoami"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
-}
-
-function isAllowlistBypassPath(pathname: string): boolean {
-  return ALLOWLIST_BYPASS_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
 }
@@ -43,27 +36,6 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const snapshot = await getClientAccessSnapshot(request);
-
-  // ── Layer 1: IP allowlist (re-checked every request) ─────────────
-  if (snapshot.ipAllowlistEnabled && !isAllowlistBypassPath(pathname)) {
-    if (!snapshot.ipAllowed) {
-      if (pathname.startsWith("/api/")) {
-        return clearGateCookieOnResponse(
-          NextResponse.json(
-            { error: "IP not allowed", ip: snapshot.ip, requiresPin: true },
-            { status: 403 }
-          ),
-          secureCookie
-        );
-      }
-      return clearGateCookieOnResponse(
-        NextResponse.redirect(new URL(`${base}/denied`, request.url)),
-        secureCookie
-      );
-    }
-  }
-
   if (pathname === "/register" || pathname.startsWith("/register/")) {
     return NextResponse.redirect(new URL(`${base}/gate`, request.url));
   }
@@ -75,25 +47,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Layer 2: Gate PIN bound to current IP (realtime) ───────────────
+  const snapshot = await getClientAccessSnapshot(request);
+
   if (isGateConfigured()) {
     if (snapshot.requiresPin) {
-      const reason = !snapshot.ipAllowed
-        ? "ip"
-        : snapshot.ipMismatch
-          ? "ip_changed"
-          : snapshot.sessionRevoked
-            ? "revoked"
-            : "expired";
+      const reason = snapshot.sessionRevoked ? "revoked" : "expired";
 
       if (pathname.startsWith("/api/")) {
         return clearGateCookieOnResponse(
           NextResponse.json(
             {
-              error: "Gate required",
+              error: "Login required",
               reason,
               requiresPin: true,
-              ipMismatch: snapshot.ipMismatch,
             },
             { status: 401 }
           ),
@@ -122,6 +88,18 @@ export async function proxy(request: NextRequest) {
     }
     if (hasOwnerCredentials()) {
       const redirectUrl = encodeURIComponent(pathname);
+      if (
+        isGateConfigured() &&
+        snapshot.gateValid &&
+        !snapshot.sessionRevoked
+      ) {
+        return NextResponse.redirect(
+          new URL(
+            `${base}/api/gate/sync-auth?redirectUrl=${redirectUrl}`,
+            request.url
+          )
+        );
+      }
       return NextResponse.redirect(
         new URL(`${base}/gate?redirectUrl=${redirectUrl}`, request.url)
       );

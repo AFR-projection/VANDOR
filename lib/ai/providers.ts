@@ -36,14 +36,19 @@ export function getLanguageModel(
   return client(modelId);
 }
 
-export function getTitleModel(apiKey?: string, meta?: OpenRouterClientMeta) {
+export function getTitleModel(
+  apiKey?: string,
+  meta?: OpenRouterClientMeta,
+  modelId?: string
+) {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
   const client = apiKey
     ? createOpenRouterClient(apiKey, meta)
     : openrouter;
-  return client(titleModel.id);
+  const id = modelId?.trim() || titleModel.id;
+  return client(id);
 }
 
 export async function resolveOpenRouterApiKeyForUser(

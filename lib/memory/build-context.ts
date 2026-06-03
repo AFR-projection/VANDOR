@@ -47,7 +47,8 @@ ${summary}`);
   parts.push(`## Memory usage
 - Weave memory naturally — e.g. "Kalau tidak salah kamu pernah bilang…" when relevant.
 - Do not dump all memories at once.
-- Use saveMemory tool when user shares something worth remembering long-term.`);
+- On "ingat", "jangan lupa", "remember this" → call saveMemory immediately (importance 8–10).
+- Similar facts are merged automatically; prefer updating via saveMemory when the user corrects something.`);
 
   return parts.join("\n\n");
 }

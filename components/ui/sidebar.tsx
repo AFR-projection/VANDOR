@@ -179,7 +179,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="inset-x-0 bottom-0 top-auto h-[70dvh] w-full rounded-t-2xl border-t border-border/30 bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="inset-x-0 bottom-0 top-auto h-[min(85dvh,640px)] w-full rounded-t-2xl border-t border-border/30 bg-sidebar p-0 text-sidebar-foreground overscroll-contain [&>button]:hidden"
           showCloseButton={false}
           side="bottom"
         >

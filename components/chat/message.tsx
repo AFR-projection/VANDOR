@@ -359,8 +359,9 @@ const PurePreviewMessage = ({
       );
     }
 
-    if (type === "tool-generateImage") {
+    if (type === "tool-generateImage" || type === "tool-editImage") {
       const { toolCallId, state } = part;
+      const isEdit = type === "tool-editImage";
       const output = part.output as
         | {
             ok?: boolean;
@@ -369,17 +370,20 @@ const PurePreviewMessage = ({
             bytes?: number;
             model?: string;
             prompt?: string;
+            instruction?: string;
             aspectRatio?: string;
             error?: string;
           }
         | undefined;
+      const imageAlt =
+        output?.instruction ?? output?.prompt ?? (isEdit ? "Edited image" : "Generated image");
       return (
         <div className="w-[min(100%,520px)]" key={toolCallId}>
           <Tool className="w-full" defaultOpen={false}>
             <ToolHeader
               state={state}
-              title="Generate gambar"
-              type="tool-generateImage"
+              title={isEdit ? "Edit gambar" : "Generate gambar"}
+              type={type}
             />
             <ToolContent>
               {state === "input-available" && (
@@ -388,7 +392,7 @@ const PurePreviewMessage = ({
               {state === "output-available" && output?.ok && output.url && (
                 <div className="space-y-2">
                   <img
-                    alt={output.prompt ?? "Generated image"}
+                    alt={imageAlt}
                     className="w-full rounded-lg border border-border/40"
                     src={output.url}
                   />
@@ -413,7 +417,8 @@ const PurePreviewMessage = ({
               )}
               {state === "output-available" && output && !output.ok && (
                 <div className="rounded-md bg-destructive/10 p-3 text-destructive text-xs">
-                  {output.error ?? "Image generation failed."}
+                  {output.error ??
+                    (isEdit ? "Image edit failed." : "Image generation failed.")}
                 </div>
               )}
             </ToolContent>

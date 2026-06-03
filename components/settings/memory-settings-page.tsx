@@ -188,6 +188,24 @@ export function MemorySettingsPage() {
                     }
                   />
                   <SettingToggle
+                    checked={m.preExtractFromUser !== false}
+                    description="Ambil fakta dari pesan user sebelum jawaban (paralel). Wajib tunggu jika kamu bilang “ingat”."
+                    id="memory-pre"
+                    label="Pre-extract (Memory v2)"
+                    onCheckedChange={(preExtractFromUser) =>
+                      patch({ memory: { ...m, preExtractFromUser } })
+                    }
+                  />
+                  <SettingToggle
+                    checked={m.mergeSimilarMemories !== false}
+                    description="Gabungkan atau perbarui memori mirip, bukan duplikat."
+                    id="memory-merge"
+                    label="Gabung memori serupa"
+                    onCheckedChange={(mergeSimilarMemories) =>
+                      patch({ memory: { ...m, mergeSimilarMemories } })
+                    }
+                  />
+                  <SettingToggle
                     checked={m.injectInPrompt}
                     description="Sisipkan memori relevan ke konteks AI sebelum menjawab."
                     id="memory-inject"

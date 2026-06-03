@@ -5,10 +5,6 @@ import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
 import {
   ArrowUpIcon,
-  BrainIcon,
-  EyeIcon,
-  SparklesIcon,
-  WrenchIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -24,24 +20,11 @@ import {
 } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
-import {
-  ModelSelector,
-  ModelSelectorContent,
-  ModelSelectorGroup,
-  ModelSelectorInput,
-  ModelSelectorItem,
-  ModelSelectorList,
-  ModelSelectorLogo,
-  ModelSelectorName,
-  ModelSelectorTrigger,
-} from "@/components/ai-elements/model-selector";
-import {
-  type ChatModel,
-  chatModels,
-  DEFAULT_CHAT_MODEL,
-  type ModelCapabilities,
-} from "@/lib/ai/models";
+import { ChatModelStatusStrip } from "@/components/chat/chat-model-status";
+import { OpenRouterModelPicker } from "@/components/chat/openrouter-model-picker";
+import { DEFAULT_CHAT_MODEL, type ModelCapabilities } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -111,16 +94,16 @@ function PureMultimodalInput({
   const { setTheme, resolvedTheme } = useTheme();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
+  const isMobile = useIsMobile();
   const hasAutoFocused = useRef(false);
   useEffect(() => {
-    if (!hasAutoFocused.current && width) {
-      const timer = setTimeout(() => {
-        textareaRef.current?.focus();
-        hasAutoFocused.current = true;
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [width]);
+    if (isMobile || !width || hasAutoFocused.current) return;
+    const timer = setTimeout(() => {
+      textareaRef.current?.focus();
+      hasAutoFocused.current = true;
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [width, isMobile]);
 
   const [localStorageInput, setLocalStorageInput] = useLocalStorage(
     "input",
@@ -369,7 +352,12 @@ function PureMultimodalInput({
   }, [handlePaste]);
 
   return (
-    <div className={cn("relative flex w-full flex-col gap-4", className)}>
+    <div
+      className={cn(
+        "relative flex w-full touch-manipulation flex-col gap-2 md:gap-4",
+        className
+      )}
+    >
       {editingMessage && onCancelEdit && (
         <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
           <span>Editing message</span>
@@ -386,7 +374,8 @@ function PureMultimodalInput({
         </div>
       )}
 
-      {!editingMessage &&
+      {!isMobile &&
+        !editingMessage &&
         !isLoading &&
         messages.length === 0 &&
         attachments.length === 0 &&
@@ -420,7 +409,7 @@ function PureMultimodalInput({
       </div>
 
       <PromptInput
-        className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
+        className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:border-primary/25 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
         onSubmit={() => {
           if (input.startsWith("/")) {
             const query = input.slice(1).trim();
@@ -440,6 +429,10 @@ function PureMultimodalInput({
           }
         }}
       >
+        <ChatModelStatusStrip
+          selectedModelId={selectedModelId}
+          status={status}
+        />
         {(attachments.length > 0 || uploadQueue.length > 0) && (
           <div
             className="flex w-full self-start flex-row gap-2 overflow-x-auto px-3 pt-3 no-scrollbar"
@@ -474,7 +467,7 @@ function PureMultimodalInput({
           </div>
         )}
         <PromptInputTextarea
-          className="min-h-24 text-[13px] leading-relaxed px-4 pt-3.5 pb-1.5 placeholder:text-muted-foreground/35"
+          className="min-h-[3.25rem] text-base leading-relaxed px-3 pt-3 pb-1 placeholder:text-muted-foreground/35 md:min-h-24 md:px-4 md:pt-3.5 md:text-[13px]"
           data-testid="multimodal-input"
           onChange={handleInput}
           onKeyDown={(e) => {
@@ -516,7 +509,7 @@ function PureMultimodalInput({
           ref={textareaRef}
           value={input}
         />
-        <PromptInputFooter className="px-3 pb-3">
+        <PromptInputFooter className="px-2.5 pb-2.5 md:px-3 md:pb-3">
           <PromptInputTools>
             <AttachmentsButton
               fileInputRef={fileInputRef}
@@ -602,7 +595,7 @@ function PureAttachmentsButton({
 
   const caps: Record<string, ModelCapabilities> | undefined =
     modelsResponse?.capabilities ?? modelsResponse;
-  const hasVision = caps?.[selectedModelId]?.vision ?? false;
+  const hasVision = caps?.[selectedModelId]?.vision ?? true;
 
   return (
     <Button
@@ -634,162 +627,11 @@ function PureModelSelectorCompact({
   selectedModelId: string;
   onModelChange?: (modelId: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const { data: modelsData } = useSWR(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
-    (url: string) => fetch(url).then((r) => r.json()),
-    { revalidateOnFocus: false, dedupingInterval: 3_600_000 }
-  );
-
-  const capabilities: Record<string, ModelCapabilities> | undefined =
-    modelsData?.capabilities ?? modelsData;
-  const dynamicModels: ChatModel[] | undefined = modelsData?.models;
-  const activeModels = dynamicModels ?? chatModels;
-
-  const selectedModel =
-    activeModels.find((m: ChatModel) => m.id === selectedModelId) ??
-    activeModels.find((m: ChatModel) => m.id === DEFAULT_CHAT_MODEL) ??
-    activeModels[0];
-  const [provider] = selectedModel.id.split("/");
-
   return (
-    <ModelSelector onOpenChange={setOpen} open={open}>
-      <ModelSelectorTrigger asChild>
-        <Button
-          className="h-7 max-w-[200px] justify-between gap-1.5 rounded-lg px-2 text-[12px] text-muted-foreground transition-colors hover:text-foreground"
-          data-testid="model-selector"
-          variant="ghost"
-        >
-          {provider && <ModelSelectorLogo provider={provider} />}
-          <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
-        </Button>
-      </ModelSelectorTrigger>
-      <ModelSelectorContent>
-        <ModelSelectorInput placeholder="Search models..." />
-        <ModelSelectorList>
-          {(() => {
-            const curatedIds = new Set(chatModels.map((m) => m.id));
-            const remoteList: ChatModel[] = dynamicModels ?? [];
-            const seen = new Set<string>();
-            const allModels: ChatModel[] = [];
-
-            for (const model of chatModels) {
-              if (!seen.has(model.id)) {
-                seen.add(model.id);
-                allModels.push(model);
-              }
-            }
-            for (const model of remoteList) {
-              if (!seen.has(model.id)) {
-                seen.add(model.id);
-                allModels.push(model);
-              }
-            }
-
-            const grouped: Record<string, ChatModel[]> = {};
-            for (const model of allModels) {
-              let key: string;
-              if (curatedIds.has(model.id)) {
-                key = "_favorites";
-              } else if (model.tier === "free" || model.id.includes(":free")) {
-                key = "_free";
-              } else {
-                key = model.provider;
-              }
-              if (!grouped[key]) {
-                grouped[key] = [];
-              }
-              grouped[key].push(model);
-            }
-
-            const sortedKeys = Object.keys(grouped).sort((a, b) => {
-              const order = ["_favorites", "_free"];
-              const ai = order.indexOf(a);
-              const bi = order.indexOf(b);
-              if (ai !== -1 || bi !== -1) {
-                return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-              }
-              return a.localeCompare(b);
-            });
-
-            const groupLabels: Record<string, string> = {
-              _favorites: "Favorit VANDOR",
-              _free: "Gratis (OpenRouter)",
-            };
-
-            const providerNames: Record<string, string> = {
-              alibaba: "Alibaba",
-              anthropic: "Anthropic",
-              deepseek: "DeepSeek",
-              google: "Google",
-              meta: "Meta",
-              "meta-llama": "Meta Llama",
-              mistralai: "Mistral",
-              moonshotai: "Moonshot",
-              openai: "OpenAI",
-              "x-ai": "xAI",
-              xai: "xAI",
-            };
-
-            return sortedKeys.map((key) => (
-              <ModelSelectorGroup
-                heading={groupLabels[key] ?? (providerNames[key] ?? key)}
-                key={key}
-              >
-                {grouped[key].map((model) => {
-                  const logoProvider = model.id.split("/")[0];
-                  const isFree =
-                    model.tier === "free" || model.id.includes(":free");
-                  return (
-                    <ModelSelectorItem
-                      className={cn(
-                        "flex w-full",
-                        model.id === selectedModel.id &&
-                          "border-b border-dashed border-foreground/50"
-                      )}
-                      key={model.id}
-                      onSelect={() => {
-                        onModelChange?.(model.id);
-                        setCookie("chat-model", model.id);
-                        setOpen(false);
-                        setTimeout(() => {
-                          document
-                            .querySelector<HTMLTextAreaElement>(
-                              "[data-testid='multimodal-input']"
-                            )
-                            ?.focus();
-                        }, 50);
-                      }}
-                      value={model.id}
-                    >
-                      <ModelSelectorLogo provider={logoProvider} />
-                      <ModelSelectorName>{model.name}</ModelSelectorName>
-                      <div className="ml-auto flex items-center gap-2 text-foreground/70">
-                        {isFree && (
-                          <SparklesIcon
-                            aria-label="Gratis"
-                            className="size-3 text-emerald-500"
-                          />
-                        )}
-                        {capabilities?.[model.id]?.tools && (
-                          <WrenchIcon className="size-3.5" />
-                        )}
-                        {capabilities?.[model.id]?.vision && (
-                          <EyeIcon className="size-3.5" />
-                        )}
-                        {capabilities?.[model.id]?.reasoning && (
-                          <BrainIcon className="size-3.5" />
-                        )}
-                      </div>
-                    </ModelSelectorItem>
-                  );
-                })}
-              </ModelSelectorGroup>
-            ));
-          })()}
-        </ModelSelectorList>
-      </ModelSelectorContent>
-    </ModelSelector>
+    <OpenRouterModelPicker
+      onModelChange={onModelChange}
+      selectedModelId={selectedModelId}
+    />
   );
 }
 

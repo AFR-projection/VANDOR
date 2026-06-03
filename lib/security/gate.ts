@@ -1,9 +1,14 @@
 import "server-only";
 
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { gateLockout, gateSession } from "@/lib/db/schema";
+import {
+  gateLockout,
+  gateSession,
+  loginHistory,
+  numpadSession,
+} from "@/lib/db/schema";
 import { GATE_BAN_MS, GATE_MAX_ATTEMPTS } from "./gate-edge";
 
 export * from "./gate-edge";
@@ -11,13 +16,28 @@ export * from "./gate-edge";
 const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
 const db = drizzle(client);
 
+const ACTIVE_SESSION_ROW_ID = "singleton";
+
 export type LockoutStatus = {
   locked: boolean;
   lockedUntil: number | null;
   attemptsLeft: number;
 };
 
-export async function getLockoutStatus(ip: string): Promise<LockoutStatus> {
+export type LoginHistoryRow = {
+  id: string;
+  sid: string | null;
+  ip: string;
+  userAgent: string | null;
+  locationLabel: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  loggedInAt: Date;
+  active: boolean;
+};
+
+export async function getLockoutStatus(clientId: string): Promise<LockoutStatus> {
   if (!process.env.POSTGRES_URL) {
     return {
       locked: false,
@@ -29,7 +49,7 @@ export async function getLockoutStatus(ip: string): Promise<LockoutStatus> {
     const rows = await db
       .select()
       .from(gateLockout)
-      .where(eq(gateLockout.ip, ip))
+      .where(eq(gateLockout.ip, clientId))
       .limit(1);
     const row = rows[0];
     if (!row) {
@@ -62,7 +82,9 @@ export async function getLockoutStatus(ip: string): Promise<LockoutStatus> {
   }
 }
 
-export async function recordFailedAttempt(ip: string): Promise<LockoutStatus> {
+export async function recordFailedAttempt(
+  clientId: string
+): Promise<LockoutStatus> {
   if (!process.env.POSTGRES_URL) {
     return {
       locked: false,
@@ -75,7 +97,7 @@ export async function recordFailedAttempt(ip: string): Promise<LockoutStatus> {
     const maxAttempts = GATE_MAX_ATTEMPTS;
     const rows = await db
       .insert(gateLockout)
-      .values({ ip, failedAttempts: 1, lockedUntil: null })
+      .values({ ip: clientId, failedAttempts: 1, lockedUntil: null })
       .onConflictDoUpdate({
         target: gateLockout.ip,
         set: {
@@ -112,48 +134,50 @@ export async function recordFailedAttempt(ip: string): Promise<LockoutStatus> {
   }
 }
 
-export async function clearAttempts(ip: string): Promise<void> {
+export async function clearAttempts(clientId: string): Promise<void> {
   if (!process.env.POSTGRES_URL) {
     return;
   }
   try {
-    await db.delete(gateLockout).where(eq(gateLockout.ip, ip));
+    await db.delete(gateLockout).where(eq(gateLockout.ip, clientId));
   } catch {
     /* ignore */
   }
 }
 
-/**
- * Singleton "currently active session". Only one device may be logged in at
- * a time. New logins rotate this sid; old tokens with stale sid get rejected.
- */
-export async function rotateActiveSession(
-  sid: string,
-  clientId: string,
-  ip: string
-): Promise<void> {
+/** Satu sesi aktif global (baris singleton — sumber kebenaran untuk isSessionActive). */
+export async function setActiveGateSession(input: {
+  sid: string;
+  deviceId: string;
+  ip: string;
+}): Promise<void> {
   if (!process.env.POSTGRES_URL) {
     return;
   }
   try {
     await db
       .insert(gateSession)
-      .values({ id: "singleton", sid, device: clientId, ip })
+      .values({
+        id: ACTIVE_SESSION_ROW_ID,
+        sid: input.sid,
+        device: input.deviceId,
+        ip: input.ip,
+      })
       .onConflictDoUpdate({
         target: gateSession.id,
         set: {
-          sid,
-          device: clientId,
-          ip,
+          sid: input.sid,
+          device: input.deviceId,
+          ip: input.ip,
           updatedAt: sql`now()`,
         },
       });
   } catch (error) {
-    console.error("rotateActiveSession error:", error);
+    console.error("setActiveGateSession error:", error);
   }
 }
 
-export async function getActiveSessionId(): Promise<string | null> {
+export async function getActiveGateSessionId(): Promise<string | null> {
   if (!process.env.POSTGRES_URL) {
     return null;
   }
@@ -161,7 +185,7 @@ export async function getActiveSessionId(): Promise<string | null> {
     const rows = await db
       .select({ sid: gateSession.sid })
       .from(gateSession)
-      .where(eq(gateSession.id, "singleton"))
+      .where(eq(gateSession.id, ACTIVE_SESSION_ROW_ID))
       .limit(1);
     return rows[0]?.sid ?? null;
   } catch {
@@ -169,13 +193,182 @@ export async function getActiveSessionId(): Promise<string | null> {
   }
 }
 
-export async function clearActiveSession(): Promise<void> {
+/** Cabut sesi lama di NumpadSession (riwayat / perangkat lain). */
+export async function revokeAllSessionsExcept(activeSid: string): Promise<void> {
   if (!process.env.POSTGRES_URL) {
     return;
   }
   try {
-    await db.delete(gateSession).where(eq(gateSession.id, "singleton"));
+    await db
+      .update(numpadSession)
+      .set({ revokedAt: sql`now()` })
+      .where(
+        and(isNull(numpadSession.revokedAt), ne(numpadSession.sid, activeSid))
+      );
+  } catch (error) {
+    console.error("revokeAllSessionsExcept error:", error);
+  }
+}
+
+export async function registerSession(input: {
+  sid: string;
+  deviceId: string;
+  ip: string;
+  userAgent: string | null;
+  locationLabel: string;
+}): Promise<void> {
+  if (!process.env.POSTGRES_URL) {
+    return;
+  }
+  try {
+    await setActiveGateSession({
+      sid: input.sid,
+      deviceId: input.deviceId,
+      ip: input.ip,
+    });
+    await db
+      .insert(numpadSession)
+      .values({
+        sid: input.sid,
+        deviceId: input.deviceId,
+        ip: input.ip,
+        userAgent: input.userAgent,
+        locationLabel: input.locationLabel,
+      })
+      .onConflictDoUpdate({
+        target: numpadSession.sid,
+        set: {
+          deviceId: input.deviceId,
+          ip: input.ip,
+          userAgent: input.userAgent,
+          locationLabel: input.locationLabel,
+          lastSeenAt: sql`now()`,
+          revokedAt: null,
+        },
+      });
+    await revokeAllSessionsExcept(input.sid);
+  } catch (error) {
+    console.error("registerSession error:", error);
+  }
+}
+
+export async function isSessionActive(sid: string): Promise<boolean> {
+  if (!process.env.POSTGRES_URL) {
+    return true;
+  }
+  try {
+    const activeSid = await getActiveGateSessionId();
+    if (activeSid) {
+      return activeSid === sid;
+    }
+
+    const rows = await db
+      .select({ revokedAt: numpadSession.revokedAt })
+      .from(numpadSession)
+      .where(eq(numpadSession.sid, sid))
+      .limit(1);
+    const row = rows[0];
+    if (!row) {
+      return true;
+    }
+    return row.revokedAt === null;
+  } catch {
+    return true;
+  }
+}
+
+export async function touchSession(sid: string): Promise<void> {
+  if (!process.env.POSTGRES_URL) {
+    return;
+  }
+  try {
+    await db
+      .update(numpadSession)
+      .set({ lastSeenAt: sql`now()` })
+      .where(eq(numpadSession.sid, sid));
   } catch {
     /* ignore */
+  }
+}
+
+export async function revokeSession(sid: string): Promise<void> {
+  if (!process.env.POSTGRES_URL) {
+    return;
+  }
+  try {
+    await db
+      .update(numpadSession)
+      .set({ revokedAt: sql`now()` })
+      .where(eq(numpadSession.sid, sid));
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function recordLoginHistory(input: {
+  sid: string;
+  ip: string;
+  userAgent: string | null;
+  locationLabel: string;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+}): Promise<void> {
+  if (!process.env.POSTGRES_URL) {
+    return;
+  }
+  try {
+    await db.insert(loginHistory).values({
+      sid: input.sid,
+      ip: input.ip,
+      userAgent: input.userAgent,
+      locationLabel: input.locationLabel,
+      city: input.city,
+      region: input.region,
+      country: input.country,
+    });
+  } catch (error) {
+    console.error("recordLoginHistory error:", error);
+  }
+}
+
+export async function listLoginHistory(limit = 50): Promise<LoginHistoryRow[]> {
+  if (!process.env.POSTGRES_URL) {
+    return [];
+  }
+  try {
+    const rows = await db
+      .select({
+        id: loginHistory.id,
+        sid: loginHistory.sid,
+        ip: loginHistory.ip,
+        userAgent: loginHistory.userAgent,
+        locationLabel: loginHistory.locationLabel,
+        city: loginHistory.city,
+        region: loginHistory.region,
+        country: loginHistory.country,
+        loggedInAt: loginHistory.loggedInAt,
+        revokedAt: numpadSession.revokedAt,
+      })
+      .from(loginHistory)
+      .leftJoin(numpadSession, eq(loginHistory.sid, numpadSession.sid))
+      .orderBy(desc(loginHistory.loggedInAt))
+      .limit(limit);
+
+    return rows.map((row) => ({
+      id: row.id,
+      sid: row.sid,
+      ip: row.ip,
+      userAgent: row.userAgent,
+      locationLabel: row.locationLabel,
+      city: row.city,
+      region: row.region,
+      country: row.country,
+      loggedInAt: row.loggedInAt,
+      active: Boolean(row.sid && row.revokedAt === null),
+    }));
+  } catch (error) {
+    console.error("listLoginHistory error:", error);
+    return [];
   }
 }

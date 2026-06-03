@@ -22,7 +22,12 @@ import { getChatHistoryPaginationKey } from "@/components/chat/sidebar-history";
 import { toast } from "@/components/chat/toast";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { useAutoResume } from "@/hooks/use-auto-resume";
-import { chatModels, DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
+import { DEFAULT_CHAT_MODE } from "@/lib/ai/chat-modes";
+import {
+  fetchAccountModelTier,
+  setChatModelCookie,
+} from "@/lib/client/model-tier-sync";
+import { normalizeModelTier, tierCookieValue } from "@/lib/ai/model-tiers";
 import type { Vote } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
@@ -73,7 +78,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
   const chatId = chatIdFromUrl ?? newChatIdRef.current;
 
-  const [currentModelId, setCurrentModelId] = useState(DEFAULT_CHAT_MODEL);
+  const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_CHAT_MODE);
   const currentModelIdRef = useRef(currentModelId);
   useEffect(() => {
     currentModelIdRef.current = currentModelId;
@@ -159,6 +164,14 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
     },
     onError: (error) => {
       if (
+        error instanceof ChatbotError &&
+        error.cause &&
+        typeof error.cause === "string"
+      ) {
+        toast({ type: "error", description: error.cause });
+        return;
+      }
+      if (
         error.message?.includes("saldo/kredit") ||
         error.message?.includes("Insufficient credits")
       ) {
@@ -201,22 +214,44 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   }, [chatId, isNewChat, setMessages]);
 
   useEffect(() => {
-    const curatedIds = new Set(chatModels.map((m) => m.id));
+    let cancelled = false;
+
+    const syncFromCookie = (decoded: string | null) => {
+      if (decoded) {
+        const normalized = tierCookieValue(normalizeModelTier(decoded));
+        if (decoded !== normalized) {
+          setChatModelCookie(normalized);
+        }
+        setCurrentModelId(normalized);
+        return true;
+      }
+      return false;
+    };
+
     const cookieModel = document.cookie
       .split("; ")
       .find((row) => row.startsWith("chat-model="))
       ?.split("=")[1];
     const decoded = cookieModel ? decodeURIComponent(cookieModel) : null;
 
-    if (decoded && curatedIds.has(decoded)) {
-      setCurrentModelId(decoded);
+    if (syncFromCookie(decoded)) {
       return;
     }
 
-    if (decoded && !curatedIds.has(decoded)) {
-      document.cookie = `chat-model=${DEFAULT_CHAT_MODEL}; path=/; max-age=31536000`;
-      setCurrentModelId(DEFAULT_CHAT_MODEL);
-    }
+    void fetchAccountModelTier().then((tier) => {
+      if (cancelled) return;
+      if (tier) {
+        const mode = tierCookieValue(tier);
+        setChatModelCookie(mode);
+        setCurrentModelId(mode);
+      } else {
+        setCurrentModelId(DEFAULT_CHAT_MODE);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [chatData, isNewChat]);
 
   const hasAppendedQueryRef = useRef(false);

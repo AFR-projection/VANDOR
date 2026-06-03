@@ -1,68 +1,91 @@
 "use client";
 
-import { ZapIcon } from "lucide-react";
+import { ArrowRightLeftIcon, BotIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  describeModelSelection,
+  displayOpenRouterModelName,
+} from "@/lib/ai/model-display";
+import { normalizeModelTier } from "@/lib/ai/model-tiers";
+import { getTierUi } from "@/lib/ai/tier-styles";
+import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
-
-function shorten(id: string): string {
-  const last = id.split("/").pop() ?? id;
-  return last.replace(/:free$/, "").slice(0, 28);
-}
 
 export function ModelMetaBadge() {
   const { latestModelMeta: latest } = useDataStream();
 
   if (!latest) return null;
 
+  const tier = latest.modelTier
+    ? normalizeModelTier(latest.modelTier)
+    : null;
+  const ui = tier ? getTierUi(tier) : null;
+  const rotated = Boolean(latest.fallbackUsed);
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
-          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10.5px] font-medium tabular-nums ${
-            latest.overridden
-              ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-              : "border-border/50 bg-card/50 text-muted-foreground"
-          }`}
+          className={cn(
+            "inline-flex max-w-[min(100%,240px)] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-medium transition-colors",
+            rotated
+              ? "border-amber-500/45 bg-amber-500/10 text-amber-900 dark:text-amber-100"
+              : "border-border/45 bg-card/60 text-muted-foreground hover:bg-card"
+          )}
           type="button"
         >
-          {latest.overridden && <ZapIcon className="size-3" />}
-          {shorten(latest.modelId)}
+          {rotated ? (
+            <ArrowRightLeftIcon className="size-3 shrink-0 text-amber-600" />
+          ) : latest.agentName ? (
+            <BotIcon className="size-3 shrink-0 opacity-70" />
+          ) : ui ? (
+            <span className={cn("size-1.5 shrink-0 rounded-full", ui.dot)} />
+          ) : null}
+          <span className="truncate">{displayOpenRouterModelName(latest.modelId)}</span>
+          {ui ? (
+            <span
+              className={cn(
+                "shrink-0 rounded px-1 py-px text-[8px] font-bold uppercase tracking-wider",
+                ui.chip
+              )}
+            >
+              {ui.label}
+            </span>
+          ) : null}
         </button>
       </TooltipTrigger>
-      <TooltipContent className="max-w-xs" side="bottom">
-        <p className="font-medium">{latest.modelId}</p>
-        {latest.overridden ? (
-          <p className="mt-1 text-[11px] opacity-80">
-            {latest.reason ?? "Auto-selected"}
-            <br />
-            <span className="opacity-70">
-              Requested: {latest.requestedModelId}
-            </span>
+      <TooltipContent className="max-w-xs rounded-xl p-3" side="bottom">
+        <p className="text-xs font-medium leading-snug">
+          {describeModelSelection(latest)}
+        </p>
+        <p className="mt-1.5 font-mono text-[10px] text-muted-foreground">
+          {latest.modelId}
+        </p>
+        {latest.reason ? (
+          <p className="mt-2 rounded-md bg-muted/50 px-2 py-1.5 text-[11px] leading-relaxed">
+            {latest.reason}
           </p>
-        ) : (
-          <p className="mt-1 text-[11px] opacity-70">User-selected</p>
-        )}
-        {latest.attachments && latest.attachments.length > 0 && (
-          <div className="mt-2 border-t border-border/30 pt-1.5">
-            <p className="text-[10px] uppercase tracking-wider opacity-60">
-              Files
+        ) : null}
+        {latest.fallbackChain && latest.fallbackChain.length > 1 ? (
+          <div className="mt-2 border-t border-border/40 pt-2">
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Rantai cadangan
             </p>
-            <ul className="mt-1 space-y-0.5 text-[11px]">
-              {latest.attachments.map((a) => (
-                <li className="flex items-center gap-1.5" key={a.name}>
-                  <span className="rounded bg-muted px-1 py-0.5 text-[9px] uppercase">
-                    {a.kind}
-                  </span>
-                  <span className="truncate">{a.name}</span>
-                </li>
-              ))}
-            </ul>
+            <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+              {latest.fallbackChain
+                .slice(0, 4)
+                .map((id) => displayOpenRouterModelName(id))
+                .join(" → ")}
+              {latest.fallbackChain.length > 4
+                ? ` +${latest.fallbackChain.length - 4}`
+                : ""}
+            </p>
           </div>
-        )}
+        ) : null}
       </TooltipContent>
     </Tooltip>
   );

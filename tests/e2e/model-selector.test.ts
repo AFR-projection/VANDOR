@@ -1,81 +1,41 @@
 import { expect, test } from "@playwright/test";
-
-const MODEL_BUTTON_REGEX = /Kimi|Codestral|Mistral|DeepSeek|GPT|Grok/i;
+import { CHAT_MODE_OPTIONS } from "@/lib/ai/chat-modes";
+import { MODEL_TIER_IDS, tierCookieValue } from "@/lib/ai/model-tiers";
 
 test.describe("Model Selector", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });
 
-  test("displays a model button", async ({ page }) => {
-    const modelButton = page
-      .locator("button")
-      .filter({ hasText: MODEL_BUTTON_REGEX })
-      .first();
-    await expect(modelButton).toBeVisible();
+  test("displays mode button", async ({ page }) => {
+    await expect(page.getByTestId("model-selector")).toBeVisible();
   });
 
-  test("opens model selector popover on click", async ({ page }) => {
-    const modelButton = page
-      .locator("button")
-      .filter({ hasText: MODEL_BUTTON_REGEX })
-      .first();
-    await modelButton.click();
-
-    await expect(page.getByPlaceholder("Search models...")).toBeVisible();
+  test("opens picker with four tiers", async ({ page }) => {
+    await page.getByTestId("model-selector").click();
+    await expect(page.getByText("Gratis", { exact: true })).toBeVisible();
+    await expect(page.getByText("Hemat", { exact: true })).toBeVisible();
+    await expect(page.getByText("Seimbang", { exact: true })).toBeVisible();
+    await expect(page.getByText("Premium", { exact: true })).toBeVisible();
   });
 
-  test("can search for models", async ({ page }) => {
-    const modelButton = page
-      .locator("button")
-      .filter({ hasText: MODEL_BUTTON_REGEX })
-      .first();
-    await modelButton.click();
-
-    const searchInput = page.getByPlaceholder("Search models...");
-    await searchInput.fill("Llama");
-
-    await expect(page.getByText("Llama 3.3 70B").first()).toBeVisible();
+  test("can select Gratis tier", async ({ page }) => {
+    await page.getByTestId("model-selector").click();
+    await page.getByText("Gratis", { exact: true }).click();
+    await expect(page.getByTestId("model-selector")).toContainText("Gratis");
   });
 
-  test("can close model selector by clicking outside", async ({ page }) => {
-    const modelButton = page
-      .locator("button")
-      .filter({ hasText: MODEL_BUTTON_REGEX })
-      .first();
-    await modelButton.click();
-
-    await expect(page.getByPlaceholder("Search models...")).toBeVisible();
-
-    await page.keyboard.press("Escape");
-
-    await expect(page.getByPlaceholder("Search models...")).not.toBeVisible();
+  test("can select Premium tier", async ({ page }) => {
+    await page.getByTestId("model-selector").click();
+    await page.getByText("Premium", { exact: true }).click();
+    await expect(page.getByTestId("model-selector")).toContainText("Premium");
   });
 
-  test("shows model provider groups", async ({ page }) => {
-    const modelButton = page
-      .locator("button")
-      .filter({ hasText: MODEL_BUTTON_REGEX })
-      .first();
-    await modelButton.click();
-
-    await expect(page.getByText("Favorit VANDOR")).toBeVisible();
-    await expect(page.getByText("Gratis (OpenRouter)")).toBeVisible();
-  });
-
-  test("can select a different model", async ({ page }) => {
-    const modelButton = page
-      .locator("button")
-      .filter({ hasText: MODEL_BUTTON_REGEX })
-      .first();
-    await modelButton.click();
-
-    await page.getByText("Llama 3.3 70B").first().click();
-
-    await expect(page.getByPlaceholder("Search models...")).not.toBeVisible();
-
-    await expect(
-      page.locator("button").filter({ hasText: "Llama 3.3 70B" }).first()
-    ).toBeVisible();
+  test("four chat tier modes exist", () => {
+    expect(CHAT_MODE_OPTIONS).toHaveLength(4);
+    expect(CHAT_MODE_OPTIONS.map((o) => o.tier)).toEqual([...MODEL_TIER_IDS]);
+    expect(CHAT_MODE_OPTIONS.map((o) => o.id)).toEqual(
+      MODEL_TIER_IDS.map((t) => tierCookieValue(t))
+    );
   });
 });

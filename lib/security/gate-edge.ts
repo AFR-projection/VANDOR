@@ -8,13 +8,13 @@ export const GATE_MAX_ATTEMPTS = 3;
 export const GATE_BAN_MS = 60 * 60 * 1000;
 export const DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
+/** Default 30 days — session stays until logout or expiry. */
 const GATE_TTL_MS =
-  Number(process.env.VANDOR_GATE_TTL_SECONDS ?? "3600") * 1000;
+  Number(process.env.VANDOR_GATE_TTL_SECONDS ?? "2592000") * 1000;
 
 type GatePayload = {
-  ip: string;
   exp: number;
-  sid?: string;
+  sid: string;
   dev?: string;
 };
 
@@ -127,27 +127,19 @@ function decodeToken(token: string): GatePayload | null {
 }
 
 export function createGateToken(
-  ip: string,
   sid: string,
   deviceId: string | null
 ): string {
   return encodePayload({
-    ip,
     exp: Date.now() + GATE_TTL_MS,
     sid,
     dev: deviceId ?? undefined,
   });
 }
 
-export function verifyGateToken(
-  token: string | undefined,
-  ip: string
-): boolean {
+export function verifyGateToken(token: string | undefined): boolean {
   const payload = readGateToken(token);
-  if (!payload) {
-    return false;
-  }
-  return payload.ip === ip;
+  return Boolean(payload?.sid);
 }
 
 /** Decode + signature + expiry check. Returns payload or null. */
@@ -156,7 +148,7 @@ export function readGateToken(token: string | undefined): GatePayload | null {
     return null;
   }
   const payload = decodeToken(token);
-  if (!payload) {
+  if (!payload?.sid) {
     return null;
   }
   if (payload.exp < Date.now()) {

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -23,7 +23,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { useActiveChat } from "@/hooks/use-active-chat";
-import { chatModels } from "@/lib/ai/models";
+import { CHAT_MODE_OPTIONS } from "@/lib/ai/chat-modes";
 
 export function CommandPalette() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export function CommandPalette() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const models = useMemo(() => chatModels, []);
+  const modes = CHAT_MODE_OPTIONS;
 
   const run = (fn: () => void) => {
     setOpen(false);
@@ -121,20 +121,20 @@ export function CommandPalette() {
 
         <CommandSeparator />
 
-        <CommandGroup heading="Model">
-          {models.map((m) => (
+        <CommandGroup heading="Mode model">
+          {modes.map((m) => (
             <CommandItem
               key={m.id}
               onSelect={() =>
                 run(() => {
                   setCurrentModelId(m.id);
-                  document.cookie = `chat-model=${m.id}; path=/; max-age=31536000`;
+                  document.cookie = `chat-model=${encodeURIComponent(m.id)}; path=/; max-age=31536000`;
                 })
               }
-              value={`model ${m.name} ${m.id}`}
+              value={`model ${m.label} ${m.id}`}
             >
               <WandSparklesIcon className="size-3.5" />
-              <span>{m.name}</span>
+              <span>{m.label}</span>
               {currentModelId === m.id && (
                 <CommandShortcut>aktif</CommandShortcut>
               )}

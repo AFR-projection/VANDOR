@@ -21,6 +21,10 @@ export const VANDOR_CHAT_TOOLS = [
   "createDocx",
   "createSpreadsheet",
   "generateImage",
+  "editImage",
+  "generateVideo",
+  "generateVoice",
+  "transcribeAudio",
 ] as const;
 
 export type VandorChatToolName = (typeof VANDOR_CHAT_TOOLS)[number];

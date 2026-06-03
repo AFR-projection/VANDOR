@@ -1,7 +1,5 @@
 import "server-only";
 
-import { chatModels, DEFAULT_CHAT_MODEL } from "./models";
-
 export type TaskIntent = "simple" | "reasoning" | "coding" | "research";
 
 const CODING_RE =
@@ -75,14 +73,6 @@ export function routeModelForTask(
   };
 }
 
-function isFreeTierSelection(modelId: string): boolean {
-  if (modelId === DEFAULT_CHAT_MODEL || modelId.includes(":free")) {
-    return true;
-  }
-  const descriptor = chatModels.find((m) => m.id === modelId);
-  return descriptor?.tier === "free";
-}
-
 export function mergeModelSelection(
   autoResult: { modelId: string; reason: string | null; overridden: boolean },
   routerResult: { modelId: string; reason: string | null },
@@ -92,8 +82,9 @@ export function mergeModelSelection(
     return autoResult;
   }
 
-  if (!isFreeTierSelection(userSelectedId)) {
-    return { modelId: userSelectedId, reason: null, overridden: false };
+  // User explicitly picked a model in the UI — honor it (vision/long-context auto still wins above).
+  if (userSelectedId.trim()) {
+    return { modelId: userSelectedId.trim(), reason: null, overridden: false };
   }
 
   if (routerResult.modelId === userSelectedId) {

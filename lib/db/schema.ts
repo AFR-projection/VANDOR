@@ -208,6 +208,33 @@ export const gateSession = pgTable("GateSession", {
 
 export type GateSession = InferSelectModel<typeof gateSession>;
 
+export const numpadSession = pgTable("NumpadSession", {
+  sid: text("sid").primaryKey().notNull(),
+  deviceId: text("deviceId"),
+  ip: text("ip"),
+  userAgent: text("userAgent"),
+  locationLabel: text("locationLabel"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  lastSeenAt: timestamp("lastSeenAt").notNull().defaultNow(),
+  revokedAt: timestamp("revokedAt"),
+});
+
+export type NumpadSession = InferSelectModel<typeof numpadSession>;
+
+export const loginHistory = pgTable("LoginHistory", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  sid: text("sid"),
+  ip: text("ip").notNull(),
+  userAgent: text("userAgent"),
+  locationLabel: text("locationLabel"),
+  city: text("city"),
+  region: text("region"),
+  country: text("country"),
+  loggedInAt: timestamp("loggedInAt").notNull().defaultNow(),
+});
+
+export type LoginHistory = InferSelectModel<typeof loginHistory>;
+
 export const persona = pgTable("Persona", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   userId: uuid("userId")

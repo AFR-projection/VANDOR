@@ -16,9 +16,6 @@ export function createOpenRouterClient(
       ...(referer ? { "HTTP-Referer": referer } : {}),
       "X-Title": title,
     },
-    extraBody: {
-      include_reasoning: true,
-    },
   });
 }
 

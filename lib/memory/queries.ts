@@ -5,8 +5,21 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { MemoryCategory } from "@/lib/db/schema";
 import { userMemory } from "@/lib/db/schema";
+import { getOpenRouterContextForUser } from "@/lib/ai/integration-models";
 import { getEmbeddingOptionsForUser } from "./embedding-options";
 import { embedText, embeddingToSql } from "./embeddings";
+import { mergeMemoryTexts } from "./merge";
+import {
+  parseMemoryMetadata,
+  withAccessBump,
+  type MemoryMetadata,
+} from "./metadata";
+import { rerankDocuments } from "./rerank";
+
+/** At or above: update existing row instead of inserting duplicate. */
+export const MEMORY_MERGE_SIMILARITY = 0.82;
+/** At or above with identical text: return existing id only. */
+export const MEMORY_DUPLICATE_SIMILARITY = 0.92;
 
 const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
 const db = drizzle(client);
@@ -65,6 +78,7 @@ export async function searchMemories({
       importance: number;
       similarity: number;
       metadata: unknown;
+      updatedAt: Date;
     }[]>`
       SELECT
         id,
@@ -72,6 +86,7 @@ export async function searchMemories({
         category,
         importance,
         metadata,
+        "updatedAt",
         1 - (embedding <=> ${vectorSql}::vector) AS similarity
       FROM "UserMemory"
       WHERE "userId" = ${userId}::uuid
@@ -80,7 +95,7 @@ export async function searchMemories({
       LIMIT ${fetchLimit}
     `;
 
-    return rows
+    const filtered = rows
       .filter((r) => {
         if (r.similarity < minSimilarity) {
           return false;
@@ -93,7 +108,6 @@ export async function searchMemories({
         }
         return true;
       })
-      .slice(0, limit)
       .map((r) => ({
         id: r.id,
         content: r.content,
@@ -101,10 +115,65 @@ export async function searchMemories({
         importance: r.importance,
         similarity: r.similarity,
         metadata: r.metadata as Record<string, unknown> | null,
+        updatedAt: r.updatedAt,
       }));
+
+    const ctx = await getOpenRouterContextForUser(userId);
+    const rerankModel = ctx.models.rerankModel;
+    const reranked = await rerankDocuments({
+      ctx,
+      model: rerankModel,
+      query,
+      documents: filtered,
+    });
+
+    return reranked.slice(0, limit);
   } catch (error) {
     console.error("Memory search failed:", error);
     return [];
+  }
+}
+
+async function findSimilarForSave(
+  userId: string,
+  content: string
+): Promise<MemoryRecord | null> {
+  const hits = await searchMemories({
+    userId,
+    query: content,
+    limit: 1,
+    minSimilarity: MEMORY_MERGE_SIMILARITY,
+  });
+  return hits[0] ?? null;
+}
+
+export async function touchMemories({
+  userId,
+  memoryIds,
+}: {
+  userId: string;
+  memoryIds: string[];
+}): Promise<void> {
+  const unique = [...new Set(memoryIds)].filter(Boolean);
+  if (unique.length === 0 || !process.env.POSTGRES_URL) {
+    return;
+  }
+
+  try {
+    for (const memoryId of unique.slice(0, 20)) {
+      const row = await getMemoryById({ userId, memoryId });
+      if (!row) continue;
+      const meta = withAccessBump(parseMemoryMetadata(row.metadata));
+      await client`
+        UPDATE "UserMemory"
+        SET
+          metadata = ${JSON.stringify(meta)}::jsonb,
+          "updatedAt" = now()
+        WHERE id = ${memoryId}::uuid AND "userId" = ${userId}::uuid
+      `;
+    }
+  } catch (error) {
+    console.error("Touch memories failed:", error);
   }
 }
 
@@ -115,31 +184,63 @@ export async function saveMemory({
   importance = 5,
   sourceChatId,
   metadata,
+  mergeSimilar = true,
 }: {
   userId: string;
   content: string;
   category?: MemoryCategory;
   importance?: number;
   sourceChatId?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: MemoryMetadata;
+  mergeSimilar?: boolean;
 }): Promise<string | null> {
   if (!content.trim() || !process.env.POSTGRES_URL) {
     return null;
   }
 
+  const trimmed = content.trim();
+
   try {
-    const existing = await searchMemories({
-      userId,
-      query: content,
-      limit: 1,
-      minSimilarity: 0.92,
-    });
-    if (existing.length > 0) {
-      return existing[0].id;
+    if (mergeSimilar) {
+      const existing = await findSimilarForSave(userId, trimmed);
+      if (existing?.id) {
+        const sim = existing.similarity ?? 0;
+        if (sim >= MEMORY_DUPLICATE_SIMILARITY) {
+          if (existing.content.trim().toLowerCase() === trimmed.toLowerCase()) {
+            return existing.id;
+          }
+        }
+        if (sim >= MEMORY_MERGE_SIMILARITY) {
+          const merged = mergeMemoryTexts(existing.content, trimmed);
+          const prevMeta = parseMemoryMetadata(existing.metadata);
+          const ok = await updateMemory({
+            userId,
+            memoryId: existing.id,
+            content: merged,
+            category,
+            importance: Math.max(existing.importance, importance),
+          });
+          if (ok) {
+            await client`
+              UPDATE "UserMemory"
+              SET metadata = ${JSON.stringify({
+                ...prevMeta,
+                ...metadata,
+                mergedFrom: [
+                  ...(prevMeta.mergedFrom ?? []),
+                  trimmed.slice(0, 120),
+                ].slice(-5),
+              })}::jsonb
+              WHERE id = ${existing.id}::uuid AND "userId" = ${userId}::uuid
+            `;
+          }
+          return existing.id;
+        }
+      }
     }
 
     const embedOpts = await getEmbeddingOptionsForUser(userId);
-    const vector = await embedText(content, {
+    const vector = await embedText(trimmed, {
       apiKey: embedOpts.apiKey ?? undefined,
       model: embedOpts.model,
     });
@@ -157,7 +258,7 @@ export async function saveMemory({
       )
       VALUES (
         ${userId}::uuid,
-        ${content.trim()},
+        ${trimmed},
         ${vectorSql}::vector,
         ${category},
         ${importance},
@@ -188,6 +289,7 @@ export async function getMemoryById({
         content: userMemory.content,
         category: userMemory.category,
         importance: userMemory.importance,
+        metadata: userMemory.metadata,
       })
       .from(userMemory)
       .where(and(eq(userMemory.id, memoryId), eq(userMemory.userId, userId)))
@@ -200,6 +302,7 @@ export async function getMemoryById({
       content: row.content,
       category: row.category as MemoryCategory,
       importance: row.importance,
+      metadata: row.metadata as Record<string, unknown> | null,
     };
   } catch {
     return null;

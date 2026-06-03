@@ -25,10 +25,7 @@ export async function GET(request: Request) {
       pinLength: GATE_PIN_LENGTH,
       maxAttempts: GATE_MAX_ATTEMPTS,
       ip: snapshot.ip,
-      ipAllowlistEnabled: snapshot.ipAllowlistEnabled,
-      ipAllowed: snapshot.ipAllowed,
       gateValid: snapshot.gateValid,
-      ipMismatch: snapshot.ipMismatch,
       sessionRevoked: snapshot.sessionRevoked,
       requiresPin: snapshot.requiresPin,
       sessionActive:
