@@ -43,7 +43,7 @@ export async function lookupGeoIp(ip: string): Promise<GeoIpResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
     const res = await fetch(
-      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city,query`,
+      `https://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city,query`,
       { signal: controller.signal, cache: "no-store" }
     );
     clearTimeout(timeout);

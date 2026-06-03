@@ -1,4 +1,4 @@
-import { geolocation, ipAddress } from "@vercel/functions";
+import { ipAddress } from "@vercel/functions";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -72,8 +72,7 @@ import { updateDocument } from "@/lib/ai/tools/update-document";
 import { showMap } from "@/lib/ai/tools/show-map";
 import { webSearch } from "@/lib/ai/tools/web-search";
 import { requireClientAccess } from "@/lib/security/client-access";
-import { getClientIp } from "@/lib/security/gate-edge";
-import { lookupIpGeo } from "@/lib/security/geo";
+import { resolveClientGeo } from "@/lib/security/geo";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
 import { formatOpenRouterError } from "@/lib/ai/model-fallbacks";
@@ -229,22 +228,8 @@ export async function POST(request: Request) {
       ];
     }
 
-    const vercelGeo = geolocation(request);
-    const clientIp = getClientIp(request);
-    const ipGeo =
-      vercelGeo.city && vercelGeo.country
-        ? null
-        : await lookupIpGeo(clientIp);
-
-    const requestHints: RequestHints = {
-      longitude:
-        vercelGeo.longitude ?? ipGeo?.longitude?.toString() ?? undefined,
-      latitude:
-        vercelGeo.latitude ?? ipGeo?.latitude?.toString() ?? undefined,
-      city: vercelGeo.city ?? ipGeo?.city ?? undefined,
-      country: vercelGeo.country ?? ipGeo?.countryCode ?? undefined,
-      timezone: ipGeo?.timezone ?? undefined,
-    };
+    const { geo: ipGeo, hints: requestHints } =
+      await resolveClientGeo(request);
 
     if (message?.role === "user") {
       await saveMessages({
