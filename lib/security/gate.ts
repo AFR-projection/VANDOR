@@ -257,23 +257,36 @@ export async function isSessionActive(sid: string): Promise<boolean> {
     return true;
   }
   try {
-    const activeSid = await getActiveGateSessionId();
-    if (activeSid) {
-      return activeSid === sid;
-    }
-
     const rows = await db
       .select({ revokedAt: numpadSession.revokedAt })
       .from(numpadSession)
       .where(eq(numpadSession.sid, sid))
       .limit(1);
     const row = rows[0];
-    if (!row) {
-      return true;
+    if (row) {
+      return row.revokedAt === null;
     }
-    return row.revokedAt === null;
+
+    const activeSid = await getActiveGateSessionId();
+    return activeSid === sid;
   } catch {
     return true;
+  }
+}
+
+/** Cabut semua sesi gate (mis. setelah ganti PIN di pengaturan). */
+export async function revokeAllGateSessions(): Promise<void> {
+  if (!process.env.POSTGRES_URL) {
+    return;
+  }
+  try {
+    await db
+      .update(numpadSession)
+      .set({ revokedAt: sql`now()` })
+      .where(isNull(numpadSession.revokedAt));
+    await db.delete(gateSession);
+  } catch (error) {
+    console.error("revokeAllGateSessions error:", error);
   }
 }
 

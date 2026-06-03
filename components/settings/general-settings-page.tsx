@@ -638,6 +638,13 @@ export function GeneralSettingsPage() {
                   <p className="text-xs text-muted-foreground">
                     Sesi login: {Math.round(gate.ttlSeconds / 86400)} hari ·
                     Sumber: <SourceBadge source={secrets.pin.source} />
+                    {secrets.pin.source === "database" && (
+                      <>
+                        {" "}
+                        · PIN dari .env tidak dipakai lagi setelah disimpan di
+                        sini
+                      </>
+                    )}
                   </p>
                   <label className="block text-xs font-medium" htmlFor="cur-pin">
                     PIN saat ini (wajib untuk simpan API)

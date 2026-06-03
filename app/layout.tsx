@@ -5,12 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
-
-const appUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+import { getAppUrl } from "@/lib/app-url";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(appUrl),
+  metadataBase: new URL(getAppUrl()),
   title: "VANDOR — Asisten Pribadi",
   description:
     "Asisten AI pribadi dengan memori jangka panjang dan model OpenRouter.",

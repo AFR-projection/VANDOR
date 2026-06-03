@@ -4,6 +4,7 @@ import { put as vercelPut } from "@vercel/blob";
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { getAppUrl } from "@/lib/app-url";
 
 export type StoredFile = {
   url: string;
@@ -34,9 +35,8 @@ function sanitize(name: string): string {
 }
 
 function publicUrl(pathname: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (base) {
-    return `${base.replace(/\/$/, "")}${pathname}`;
+  if (process.env.NEXT_PUBLIC_APP_URL?.trim()) {
+    return `${getAppUrl()}${pathname}`;
   }
   return pathname;
 }

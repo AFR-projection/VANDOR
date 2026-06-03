@@ -71,6 +71,13 @@
       "when": 1749700000000,
       "tag": "0009_numpad_login_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780526599363,
+      "tag": "0010_illegal_brother_voodoo",
+      "breakpoints": true
     }
   ]
 }

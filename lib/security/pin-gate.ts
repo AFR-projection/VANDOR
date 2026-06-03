@@ -13,8 +13,8 @@ export async function verifyNumpadPinForGate(pin: string): Promise<boolean> {
     const userId = users.at(0)?.id;
     if (userId) {
       const hash = await getNumpadPinHash(userId);
-      if (hash && verifyNumpadPinHash(pin, hash)) {
-        return true;
+      if (hash) {
+        return verifyNumpadPinHash(pin, hash);
       }
     }
   }

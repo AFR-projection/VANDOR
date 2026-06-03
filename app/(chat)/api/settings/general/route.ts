@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { GATE_PIN_LENGTH } from "@/lib/security/gate-edge";
+import { revokeAllGateSessions } from "@/lib/security/gate";
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
 import { ChatbotError } from "@/lib/errors";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
@@ -129,6 +130,10 @@ export async function PATCH(request: Request) {
       clearOpenrouter,
       clearTavily,
     });
+
+    if (newPin) {
+      await revokeAllGateSessions();
+    }
   }
 
   let savedSettings: UserSettings | null = null;
@@ -154,8 +159,10 @@ export async function PATCH(request: Request) {
       persona: settings.persona,
       integrations: settings.integrations,
     },
-    message: hasSecretsChange
-      ? "API & PIN disimpan (terenkripsi di database)."
-      : "Gaya bicara & integrasi disimpan.",
+    message: newPin
+      ? "PIN baru disimpan. Semua perangkat harus login ulang dengan PIN baru."
+      : hasSecretsChange
+        ? "API & PIN disimpan (terenkripsi di database)."
+        : "Gaya bicara & integrasi disimpan.",
   });
 }
