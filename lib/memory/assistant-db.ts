@@ -65,6 +65,94 @@ export async function listNotes(userId: string, limit = 20) {
     .limit(limit);
 }
 
+export async function getNoteById({
+  userId,
+  noteId,
+}: {
+  userId: string;
+  noteId: string;
+}) {
+  const rows = await db
+    .select()
+    .from(userNote)
+    .where(and(eq(userNote.id, noteId), eq(userNote.userId, userId)))
+    .limit(1);
+  return rows.at(0) ?? null;
+}
+
+export async function getNoteByTitle({
+  userId,
+  titleQuery,
+}: {
+  userId: string;
+  titleQuery: string;
+}) {
+  const q = titleQuery.trim().toLowerCase();
+  if (!q) {
+    return null;
+  }
+  const notes = await listNotes(userId, 50);
+  const exact = notes.find((n) => n.title.toLowerCase() === q);
+  if (exact) {
+    return exact;
+  }
+  const partial = notes.find((n) => n.title.toLowerCase().includes(q));
+  return partial ?? null;
+}
+
+export async function updateNote({
+  userId,
+  noteId,
+  title,
+  content,
+}: {
+  userId: string;
+  noteId: string;
+  title?: string;
+  content?: string;
+}) {
+  const updates: Partial<{
+    title: string;
+    content: string;
+    updatedAt: Date;
+  }> = { updatedAt: new Date() };
+  if (title?.trim()) {
+    updates.title = title.trim();
+  }
+  if (content?.trim()) {
+    updates.content = content.trim();
+  }
+  if (!updates.title && !updates.content) {
+    return null;
+  }
+
+  const [row] = await db
+    .update(userNote)
+    .set(updates)
+    .where(and(eq(userNote.id, noteId), eq(userNote.userId, userId)))
+    .returning({
+      id: userNote.id,
+      title: userNote.title,
+      content: userNote.content,
+      updatedAt: userNote.updatedAt,
+    });
+  return row ?? null;
+}
+
+export async function deleteNote({
+  userId,
+  noteId,
+}: {
+  userId: string;
+  noteId: string;
+}) {
+  const [row] = await db
+    .delete(userNote)
+    .where(and(eq(userNote.id, noteId), eq(userNote.userId, userId)))
+    .returning({ id: userNote.id, title: userNote.title });
+  return row ?? null;
+}
+
 export async function createTask({
   userId,
   title,

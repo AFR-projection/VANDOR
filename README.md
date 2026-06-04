@@ -31,7 +31,8 @@ Semua tool di bawah ini punya implementasi server (`lib/ai/tools/`):
 
 - `getCurrentTime`, `getLocation`, `getWeather`, `showMap`
 - `webSearch` (Tavily / DuckDuckGo + Wikipedia)
-- `saveMemory`, `getMemory`, `searchDb`, `createNote`, `updateTask`
+- `saveMemory`, `getMemory`, `searchDb`, `manageNotes`, `updateTask`
+- Slash skills: `/catat`, `/catatan`, `/baca`, `/todo`, `/ingat`, `/cari`, `/cuaca`, …
 - `createDocument`, `editDocument`, `updateDocument`, `requestSuggestions`
 - `createPdf`, `createDocx`, `createSpreadsheet`, `generateImage`
 

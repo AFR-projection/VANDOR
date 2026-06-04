@@ -16,6 +16,8 @@ description: >-
 - **Models list**: `lib/ai/models.ts` + `GET /api/models` (OpenRouter API)
 - **DB**: Neon Postgres via `POSTGRES_URL`, Drizzle in `lib/db/`
 - **Memory v1**: `lib/memory/` — pgvector HNSW, auto extract after replies
+- **Slash skills**: `lib/chat/slash-skills.ts`, `components/chat/slash-commands.tsx`
+- **Catatan**: `manageNotes` tool + `UserNote` table (`lib/memory/assistant-db.ts`)
 
 ## Persona
 

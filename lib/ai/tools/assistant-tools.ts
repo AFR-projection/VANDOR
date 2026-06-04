@@ -3,8 +3,12 @@ import { z } from "zod";
 import {
   createNote,
   createTask,
+  deleteNote,
+  getNoteById,
+  getNoteByTitle,
   listNotes,
   listTasks,
+  updateNote,
   updateTask,
 } from "@/lib/memory/assistant-db";
 import {
@@ -68,15 +72,88 @@ export function makeAssistantTools(userId: string, chatId: string) {
     },
   });
 
-  const createNoteTool = tool({
-    description: "Create a personal note for the user.",
+  const manageNotesTool = tool({
+    description:
+      "Personal notes (catatan): create, list titles only, get full note by title/id, update, delete. Use for /catat, 'catatan saya', or when user picks a title from the list.",
     inputSchema: z.object({
-      title: z.string().min(1).max(200),
-      content: z.string().min(1).max(5000),
+      action: z.enum(["create", "list", "get", "update", "delete"]),
+      title: z.string().min(1).max(200).optional(),
+      content: z.string().min(1).max(8000).optional(),
+      noteId: z.string().uuid().optional(),
+      limit: z.number().int().min(1).max(50).optional(),
     }),
-    execute: async ({ title, content }) => {
-      const note = await createNote({ userId, title, content });
-      return { ok: true, note };
+    execute: async ({ action, title, content, noteId, limit }) => {
+      if (action === "list") {
+        const notes = await listNotes(userId, limit ?? 30);
+        return {
+          count: notes.length,
+          notes: notes.map((n, i) => ({
+            index: i + 1,
+            id: n.id,
+            title: n.title,
+            updatedAt: n.updatedAt,
+          })),
+        };
+      }
+
+      if (action === "get") {
+        const note =
+          noteId && !title
+            ? await getNoteById({ userId, noteId })
+            : title
+              ? await getNoteByTitle({ userId, titleQuery: title })
+              : null;
+        if (!note) {
+          return { ok: false, error: "Catatan tidak ditemukan" };
+        }
+        return {
+          ok: true,
+          note: {
+            id: note.id,
+            title: note.title,
+            content: note.content,
+            updatedAt: note.updatedAt,
+          },
+        };
+      }
+
+      if (action === "create") {
+        if (!title?.trim() || !content?.trim()) {
+          return { ok: false, error: "Judul dan isi wajib untuk create" };
+        }
+        const note = await createNote({
+          userId,
+          title: title.trim(),
+          content: content.trim(),
+        });
+        return { ok: true, message: `Catatan "${note.title}" disimpan.`, note };
+      }
+
+      if (action === "update") {
+        if (!noteId) {
+          return { ok: false, error: "noteId wajib untuk update" };
+        }
+        const note = await updateNote({
+          userId,
+          noteId,
+          title: title?.trim(),
+          content: content?.trim(),
+        });
+        return { ok: Boolean(note), note };
+      }
+
+      if (action === "delete") {
+        if (!noteId) {
+          return { ok: false, error: "noteId wajib untuk delete" };
+        }
+        const removed = await deleteNote({ userId, noteId });
+        return {
+          ok: Boolean(removed),
+          deleted: removed ? { id: removed.id, title: removed.title } : null,
+        };
+      }
+
+      return { ok: false, error: "Invalid action" };
     },
   });
 
@@ -109,7 +186,7 @@ export function makeAssistantTools(userId: string, chatId: string) {
     saveMemory: saveMemoryTool,
     getMemory: getMemoryTool,
     searchDb: searchDbTool,
-    createNote: createNoteTool,
+    manageNotes: manageNotesTool,
     updateTask: updateTaskTool,
   };
 }

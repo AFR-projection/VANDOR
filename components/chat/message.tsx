@@ -613,7 +613,7 @@ const PurePreviewMessage = ({
       type === "tool-saveMemory" ||
       type === "tool-getMemory" ||
       type === "tool-searchDb" ||
-      type === "tool-createNote" ||
+      type === "tool-manageNotes" ||
       type === "tool-updateTask"
     ) {
       const { toolCallId, state } = part;
@@ -621,7 +621,7 @@ const PurePreviewMessage = ({
         "tool-saveMemory": "Menyimpan memori",
         "tool-getMemory": "Mengambil memori",
         "tool-searchDb": "Mencari memori & data",
-        "tool-createNote": "Membuat catatan",
+        "tool-manageNotes": "Catatan pribadi",
         "tool-updateTask": "Mengelola task",
       };
 

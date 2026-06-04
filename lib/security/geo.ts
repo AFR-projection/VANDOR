@@ -126,7 +126,7 @@ export async function resolveClientGeo(request: Request): Promise<{
     longitude: geo?.longitude?.toString() ?? vercelGeo.longitude,
     city: geo?.city ?? vercelGeo.city,
     country: geo?.countryCode ?? geo?.country ?? vercelGeo.country,
-    timezone: geo?.timezone,
+    timezone: geo?.timezone ?? undefined,
   };
 
   return { geo, hints };

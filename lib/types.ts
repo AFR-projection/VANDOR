@@ -45,7 +45,7 @@ type AssistantTools = ReturnType<typeof makeAssistantTools>;
 type saveMemoryTool = InferUITool<AssistantTools["saveMemory"]>;
 type getMemoryTool = InferUITool<AssistantTools["getMemory"]>;
 type searchDbTool = InferUITool<AssistantTools["searchDb"]>;
-type createNoteTool = InferUITool<AssistantTools["createNote"]>;
+type manageNotesTool = InferUITool<AssistantTools["manageNotes"]>;
 type updateTaskTool = InferUITool<AssistantTools["updateTask"]>;
 
 export type ChatTools = {
@@ -65,7 +65,7 @@ export type ChatTools = {
   saveMemory: saveMemoryTool;
   getMemory: getMemoryTool;
   searchDb: searchDbTool;
-  createNote: createNoteTool;
+  manageNotes: manageNotesTool;
   updateTask: updateTaskTool;
 };
 

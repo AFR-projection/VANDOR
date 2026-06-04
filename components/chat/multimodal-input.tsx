@@ -137,6 +137,19 @@ function PureMultimodalInput({
 
   const handleSlashSelect = (cmd: SlashCommand) => {
     setSlashOpen(false);
+
+    if (cmd.sendText && typeof sendMessage === "function") {
+      setInput("");
+      void sendMessage({ text: cmd.sendText });
+      return;
+    }
+
+    if (cmd.insertText) {
+      setInput(cmd.insertText);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+      return;
+    }
+
     setInput("");
     switch (cmd.action) {
       case "new":

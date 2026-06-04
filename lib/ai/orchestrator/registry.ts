@@ -12,6 +12,8 @@ export const SPECIALIST_AGENTS: AgentSpec[] = [
       "saveMemory",
       "getMemory",
       "searchDb",
+      "manageNotes",
+      "updateTask",
     ],
     memoryScope: "long-term",
     modelSlot: "chatModel",

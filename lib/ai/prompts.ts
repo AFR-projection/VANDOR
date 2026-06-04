@@ -3,6 +3,7 @@ import type { ArtifactKind } from "@/components/chat/artifact";
 import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
 import { generalAnswerQualityInstructions } from "@/lib/search/context";
 import type { ResponseMode } from "@/lib/search/detect";
+import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import {
   defaultUserSettings,
@@ -76,7 +77,8 @@ Tool guide:
 - \`showMap\` — peta interaktif (OpenStreetMap / Nominatim).
 - \`webSearch\` — hanya jika hasil web belum ada di konteks sistem.
 - \`saveMemory\` / \`getMemory\` / \`searchDb\` — memori jangka panjang (Neon + pgvector).
-- \`createNote\` / \`updateTask\` — catatan & task di database.
+- \`manageNotes\` — catatan pribadi (buat, list judul, buka isi, update, hapus). Slash: /catat /catatan /baca.
+- \`updateTask\` — task (create, list, update status).
 - \`createDocument\` / \`editDocument\` / \`updateDocument\` — artifact panel (teks/kode/sheet).
 - \`requestSuggestions\` — saran edit untuk dokumen artifact yang sudah ada.
 - \`createPdf\` / \`createDocx\` / \`createSpreadsheet\` — file unduhan (PDF/DOCX/XLSX).
@@ -104,6 +106,8 @@ Tool usage rules:
   updated export after editing attached spreadsheet/PDF content.
 - For memory: use \`saveMemory\` when the user says ingat/remember or shares durable facts. Use \`searchDb\` before claiming you forgot something. Similar memories merge automatically in the database.
 - Weave recalled memory naturally — e.g. "Kalau tidak salah kamu pernah bilang…" — without dumping everything at once.
+
+${NOTES_SKILL_SYSTEM_HINT}
 
 When asked to write, create, or build something, do it immediately with reasonable assumptions.`;
 
