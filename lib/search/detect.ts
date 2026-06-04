@@ -28,6 +28,17 @@ const LOCAL_TASK_PATTERNS = [
   /^\/?(tt|ytv|yts|ig)\s+\S+/i,
 ];
 
+/** Minta tautan / URL — butuh web (sering follow-up singkat). */
+const LINK_REQUEST_PATTERNS = [
+  /\b(berikan|kasih|kirim|share|bagi(?:kan)?|tolong)\s+(?:link|tautan|url)\b/i,
+  /\b(link|tautan|url)(?:nya| nya)?\s*[!.?]*$/i,
+  /^link\s*[!.?]*$/i,
+  /\b(minta|butuh|perlu|ada)\s+(?:link|tautan|url)\b/i,
+  /\b(cari(?:kan)?|temukan|carikan)\s+link\b/i,
+  /\b(playlist|link\s+(?:youtube|yt|spotify|soundcloud))\b/i,
+  /\b(open|buka)\s+(?:di\s+)?(youtube|spotify|soundcloud)\b/i,
+];
+
 /** Selalu cari web bila muncul (data live / eksternal). */
 const LIVE_DATA_PATTERNS = [
   /\b(berapa skor|skor (sekarang|terbaru|hari ini)|hasil pertandingan|live\s*score|livescore)\b/i,
@@ -62,6 +73,14 @@ export type WebSearchDetection = {
   needed: boolean;
   query: string;
   reason: string;
+};
+
+/** Konteks percakapan untuk follow-up singkat (mis. "berikan linknya"). */
+export type WebSearchConversationContext = {
+  /** Pesan user sebelumnya (tanpa pesan saat ini), terbaru di akhir. */
+  priorUserTexts?: string[];
+  /** Cuplikan jawaban asisten terakhir. */
+  lastAssistantText?: string;
 };
 
 export type ResponseMode = "simple" | "enhanced" | "rich";
@@ -128,6 +147,48 @@ function isLocalPersonalTask(text: string): boolean {
   return anyMatch(LOCAL_TASK_PATTERNS, text);
 }
 
+function isLinkOnlyRequest(text: string): boolean {
+  const t = normalizeQuery(text);
+  if (t.length > 100) {
+    return false;
+  }
+  return anyMatch(LINK_REQUEST_PATTERNS, t);
+}
+
+function buildContextualSearchQuery(
+  userText: string,
+  ctx?: WebSearchConversationContext
+): string | null {
+  const prior = ctx?.priorUserTexts?.filter((t) => t.trim().length >= 8) ?? [];
+
+  for (let i = prior.length - 1; i >= 0; i--) {
+    const prev = prior[i];
+    if (!prev || isLinkOnlyRequest(prev)) {
+      continue;
+    }
+    const topic = buildSearchQuery(prev);
+    if (isLinkOnlyRequest(userText) || /\b(link|tautan|url|playlist)\b/i.test(userText)) {
+      return `${topic} youtube soundcloud`.slice(0, 140);
+    }
+    return topic;
+  }
+
+  const assistant = ctx?.lastAssistantText?.trim();
+  if (assistant && assistant.length >= 24) {
+    const clean = assistant
+      .replace(/[#*_`]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 160);
+    const topic = buildSearchQuery(clean);
+    if (topic.length >= 8) {
+      return `${topic} official link youtube`.slice(0, 140);
+    }
+  }
+
+  return null;
+}
+
 function hasLiveIntent(text: string): boolean {
   if (anyMatch(LIVE_DATA_PATTERNS, text)) {
     return true;
@@ -160,7 +221,10 @@ export function shouldDisableWebSearchTool(userText: string): boolean {
   return reason === "local_task" || reason === "skip_pattern";
 }
 
-export function detectWebSearchNeed(userText: string): WebSearchDetection {
+export function detectWebSearchNeed(
+  userText: string,
+  conversation?: WebSearchConversationContext
+): WebSearchDetection {
   const text = normalizeQuery(userText);
   const query = buildSearchQuery(userText);
 
@@ -174,6 +238,15 @@ export function detectWebSearchNeed(userText: string): WebSearchDetection {
 
   if (isLocalPersonalTask(text)) {
     return { needed: false, query, reason: "local_task" };
+  }
+
+  if (isLinkOnlyRequest(text)) {
+    const contextual = buildContextualSearchQuery(userText, conversation);
+    return {
+      needed: true,
+      query: contextual ?? `${query || text} youtube link`.slice(0, 140),
+      reason: contextual ? "link_follow_up" : "link_request",
+    };
   }
 
   if (hasLiveIntent(text)) {
@@ -222,7 +295,9 @@ export function classifyContentIntents(userText: string): ContentIntents {
   const searchNeeded = detectWebSearchNeed(userText).needed;
 
   const news = searchNeeded && anyMatch(NEWS_PATTERNS, text);
-  const video = searchNeeded && anyMatch(VIDEO_PATTERNS, text);
+  const video =
+    searchNeeded &&
+    (anyMatch(VIDEO_PATTERNS, text) || isLinkOnlyRequest(text));
   const product = searchNeeded && anyMatch(PRODUCT_PATTERNS, text);
   const location = searchNeeded && anyMatch(LOCATION_PATTERNS, text);
   const images = searchNeeded && !news && anyMatch(STRONG_VISUAL, text);

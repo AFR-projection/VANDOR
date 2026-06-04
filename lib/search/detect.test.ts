@@ -56,6 +56,24 @@ describe("detectWebSearchNeed", () => {
     assert.equal(r.needed, true);
   });
 
+  it("detects link follow-up with prior user context", () => {
+    const r = detectWebSearchNeed("berikan linknya", {
+      priorUserTexts: [
+        "gue suka DJ vinahouse Mandarin dan English",
+      ],
+    });
+    assert.equal(r.needed, true);
+    assert.equal(r.reason, "link_follow_up");
+    assert.match(r.query, /vinahouse|DJ/i);
+    assert.match(r.query, /youtube|soundcloud/i);
+  });
+
+  it("detects bare link request", () => {
+    const r = detectWebSearchNeed("kasih link youtube playlist");
+    assert.equal(r.needed, true);
+    assert.equal(r.reason, "link_request");
+  });
+
   it("disables web search tool for local notes", () => {
     assert.equal(
       shouldDisableWebSearchTool(

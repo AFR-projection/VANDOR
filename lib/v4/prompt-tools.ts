@@ -44,6 +44,11 @@ Jangan panggil tool di luar daftar. UI menampilkan kartu/map/sumber — jangan u
     ...lines,
     "- Catatan/memori/task: jangan webSearch.",
     "- Web search sudah di konteks → jangan panggil webSearch lagi.",
+    ...(activeTools.includes("webSearch")
+      ? [
+          "- Minta link/tautan/URL/playlist: WAJIB webSearch atau pakai konteks WEB SEARCH — jangan bilang tidak bisa akses internet.",
+        ]
+      : []),
   ];
 
   if (activeTools.includes("manageNotes")) {

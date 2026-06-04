@@ -13,16 +13,29 @@ import {
   type PersonaSettings,
 } from "@/lib/settings/types";
 
-const responseModeInstructions = (mode: ResponseMode): string => {
+const responseModeInstructions = (
+  mode: ResponseMode,
+  opts?: { webSearchPreloaded?: boolean; hasWebSearchTool?: boolean }
+): string => {
   if (mode === "simple") {
     return `
 RESPONSE STYLE — SIMPLE:
 The user asked something basic. Reply in 1–3 short sentences max. No headings, no filler, no follow-up questions. UI already shows cards/sources — do not repeat them.`.trim();
   }
   if (mode === "enhanced") {
+    if (opts?.webSearchPreloaded) {
+      return `
+RESPONSE STYLE — ENHANCED (web sources in context):
+Structured answer with inline [1] citations. The app shows source cards below — do not paste a separate link list.`.trim();
+    }
+    if (opts?.hasWebSearchTool) {
+      return `
+RESPONSE STYLE — ENHANCED:
+Clear, structured answer. If the user wants links, live prices, scores, or current listings — call \`webSearch\` first (English query often works better). Never say you cannot browse or lack real-time access without calling webSearch.`.trim();
+    }
     return `
 RESPONSE STYLE — ENHANCED:
-Give a clear, well-structured answer: a brief direct intro, then short paragraphs, lists or fenced code blocks when they actually help. Be complete and helpful but not padded. Do NOT fabricate web sources, citations like [1], or links — there is no live web search for this query, so answer from your own knowledge.`.trim();
+Clear, structured answer from your knowledge. Do not invent URLs or [1] citations. If the user needs real links or live data, say they can ask "cari di google …" or enable automatic web search in Settings → Advanced.`.trim();
   }
   return "";
 };
@@ -182,7 +195,10 @@ export const systemPrompt = ({
     webSearchContext ? `\n\n${webSearchContext}` : "",
     webSearchRetryHint ? `\n\n${webSearchRetryHint}` : "",
   ].join("");
-  const modeText = responseModeInstructions(responseMode);
+  const modeText = responseModeInstructions(responseMode, {
+    webSearchPreloaded: Boolean(webSearchContext?.trim()),
+    hasWebSearchTool: activeTools?.includes("webSearch"),
+  });
   const modeBlock = modeText ? `\n\n${modeText}` : "";
   const toolsBlock = supportsTools
     ? activeTools && activeTools.length > 0

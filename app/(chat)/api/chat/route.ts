@@ -368,9 +368,23 @@ export async function POST(request: Request) {
     const memoryEnabled = userSettings.memory.enabled;
     const memoryAutoExtract = userSettings.memory.autoExtract;
 
+    const userTextsInChat = uiMessages
+      .filter((m) => m.role === "user")
+      .map((m) => getTextFromMessage(m).trim())
+      .filter(Boolean);
+    const lastAssistantInChat = [...uiMessages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    const webSearchConversation = {
+      priorUserTexts: userTextsInChat.slice(0, -1),
+      lastAssistantText: lastAssistantInChat
+        ? getTextFromMessage(lastAssistantInChat).trim()
+        : undefined,
+    };
+
     let webSearchDetection =
       !isToolApprovalFlow && lastUserText.trim()
-        ? detectWebSearchNeed(lastUserText)
+        ? detectWebSearchNeed(lastUserText, webSearchConversation)
         : { needed: false as const, query: "" };
 
     if (!userSettings.advanced.webSearchAuto) {
@@ -830,6 +844,7 @@ export async function POST(request: Request) {
           webSearchPreloaded: webSearchContextBlock.length > 0,
           webSearchDisabled: webSearchToolOff,
           supportsTools,
+          userText: lastUserText,
         });
 
         if (webSearchToolOff) {

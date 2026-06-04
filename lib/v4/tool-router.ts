@@ -2,6 +2,7 @@ import "server-only";
 
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { V4_MAX_ACTIVE_TOOLS } from "@/lib/v4/constants";
+import { detectWebSearchNeed } from "@/lib/search/detect";
 import type { VandorIntent } from "@/lib/v4/intent";
 
 const CORE: VandorChatToolName[] = ["getCurrentTime", "getLocation"];
@@ -35,6 +36,8 @@ export function selectActiveTools(input: {
   webSearchPreloaded: boolean;
   webSearchDisabled: boolean;
   supportsTools: boolean;
+  /** Pesan user saat ini — untuk link follow-up saat intent belum `search`. */
+  userText?: string;
 }): VandorChatToolName[] {
   if (!input.supportsTools) {
     return [];
@@ -59,8 +62,10 @@ export function selectActiveTools(input: {
   if (input.webSearchPreloaded) {
     set.delete("webSearch");
   } else if (
-    input.intent === "search" &&
-    !input.webSearchDisabled
+    !input.webSearchDisabled &&
+    (input.intent === "search" ||
+      (input.userText?.trim() &&
+        detectWebSearchNeed(input.userText).needed))
   ) {
     set.add("webSearch");
   }
