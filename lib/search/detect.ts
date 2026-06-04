@@ -203,11 +203,15 @@ function isSimpleQuery(text: string): boolean {
   return anyMatch(SIMPLE_PATTERNS, normalized);
 }
 
+const DETAIL_PATTERNS = [
+  /\b(jelaskan|jelasin|detail|lengkap|mendalam|analisis|bandingkan|compare|step\s+by\s+step|langkah|tutorial|panduan|pros?\s+and\s+cons|kelebihan|kekurangan)\b/i,
+];
+
 export function classifyResponseMode(userText: string): ResponseMode {
   if (detectWebSearchNeed(userText).needed) {
     return "rich";
   }
-  if (isSimpleQuery(userText)) {
+  if (isSimpleQuery(userText) && !anyMatch(DETAIL_PATTERNS, userText)) {
     return "simple";
   }
   return "enhanced";

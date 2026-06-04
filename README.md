@@ -123,6 +123,19 @@ Opsional file upload production: `BLOB_READ_WRITE_TOKEN` (Vercel Blob) — tanpa
 
 Contoh slash: `/ytv https://www.youtube.com/watch?v=...`
 
+## VANDOR v4 (speed & token efficiency)
+
+- **Command-first**: `/cuaca`, `/waktu`, `/catatan`, `/todo …`, `/cari`, `/tt` → jalankan tool/code langsung (**0 token** LLM utama).
+- **Dynamic tool loading**: maks. ~5 tool aktif per request (bukan semua 20+).
+- **Memory cap**: top 5 memori, ~3k karakter context.
+- **Chat trim**: 10 pesan terakhir + conversation summary (bukan full history).
+- **Instant status**: UI "Sedang …" <300ms sebelum stream LLM.
+- **Agent loop**: maks. 4 step tool (hard cap).
+
+Modul: `lib/v4/` (`intent`, `tool-router`, `commands`, `fast-stream`, `model-pick`, `overhead`, cache cuaca).
+
+**Hemat token tambahan:** skip polish & pre-extract untuk chat simpel; model cepat untuk intent ringan; output cap 512 token (simple) / 2048 (enhanced); cuaca di-cache 15 menit.
+
 ## Struktur penting
 
 ```

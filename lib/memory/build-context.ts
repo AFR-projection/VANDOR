@@ -44,11 +44,13 @@ ${summary}`);
     return "";
   }
 
-  parts.push(`## Memory usage
-- Weave memory naturally — e.g. "Kalau tidak salah kamu pernah bilang…" when relevant.
-- Do not dump all memories at once.
-- On "ingat", "jangan lupa", "remember this" → call saveMemory immediately (importance 8–10).
-- Similar facts are merged automatically; prefer updating via saveMemory when the user corrects something.`);
+  parts.push(`## Cara pakai memori (kualitas jawaban)
+- Satukan 1–2 fakta relevan ke dalam gaya natural ("Ingat kamu bilang…", "Sesuai preferensimu…").
+- Jangan dump semua bullet; jangan kontradiksi memori tanpa konfirmasi.
+- Pertanyaan singkat → jawaban padat; minta "jelaskan/detail/analisis" → jawaban terstruktur (heading, bullet, langkah).
+- User bilang ingat/jangan lupa → saveMemory segera (importance 8–10).
+- Klaim "kamu lupa" tentang user → searchDb/getMemory dulu.
+- Koreksi user → saveMemory (merge otomatis di DB).`);
 
   return parts.join("\n\n");
 }

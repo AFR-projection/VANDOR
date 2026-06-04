@@ -17,6 +17,7 @@ import {
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatBytes } from "@/lib/media/progress";
+import { toErrorMessage } from "@/lib/utils/error-message";
 
 export function getMediaDownloadProgressFromMessage(
   message: ChatMessage
@@ -225,8 +226,8 @@ export function MediaDownloadProgressCard({
         )}
 
         {isError && progress.error && (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
-            {progress.error}
+          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-xs leading-relaxed text-destructive">
+            {toErrorMessage(progress.error)}
           </p>
         )}
 

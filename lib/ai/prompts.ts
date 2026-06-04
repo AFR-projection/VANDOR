@@ -5,7 +5,9 @@ import { generalAnswerQualityInstructions } from "@/lib/search/context";
 import type { ResponseMode } from "@/lib/search/detect";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
 import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
+import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
+import { buildActiveToolsPrompt } from "@/lib/v4/prompt-tools";
 import {
   defaultUserSettings,
   type PersonaSettings,
@@ -15,7 +17,7 @@ const responseModeInstructions = (mode: ResponseMode): string => {
   if (mode === "simple") {
     return `
 RESPONSE STYLE — SIMPLE:
-The user asked something basic (greeting, identity, time, math, a quick definition, or a short task). Reply directly and briefly — often a single short sentence or a few. No headings, no bullet lists unless genuinely necessary, no follow-up questions, no "sources" section. Match the answer length to the question.`.trim();
+The user asked something basic. Reply in 1–3 short sentences max. No headings, no filler, no follow-up questions. UI already shows cards/sources — do not repeat them.`.trim();
   }
   if (mode === "enhanced") {
     return `
@@ -159,6 +161,7 @@ export const systemPrompt = ({
   webSearchRetryHint = "",
   responseMode = "enhanced",
   persona = defaultUserSettings.persona,
+  activeTools,
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
@@ -168,6 +171,8 @@ export const systemPrompt = ({
   webSearchRetryHint?: string;
   responseMode?: ResponseMode;
   persona?: PersonaSettings;
+  /** V4: only document enabled tools — shrinks prompt tokens. */
+  activeTools?: VandorChatToolName[];
 }) => {
   const personaPrompt = buildPersonaPromptBlock(persona);
   const requestPrompt = getRequestPromptFromHints(requestHints);
@@ -180,7 +185,15 @@ export const systemPrompt = ({
   const modeText = responseModeInstructions(responseMode);
   const modeBlock = modeText ? `\n\n${modeText}` : "";
   const toolsBlock = supportsTools
-    ? `\n\n${vandorToolsPrompt}\n\n${artifactsPrompt}`
+    ? activeTools && activeTools.length > 0
+      ? `\n\n${buildActiveToolsPrompt(activeTools)}${
+          activeTools.some((t) =>
+            ["createDocument", "editDocument", "updateDocument"].includes(t)
+          )
+            ? `\n\n${artifactsPrompt}`
+            : ""
+        }`
+      : `\n\n${vandorToolsPrompt}\n\n${artifactsPrompt}`
     : "";
 
   return `${personaPrompt}\n\n${generalAnswerQualityInstructions}\n\n${requestPrompt}${memoryBlock}${filesBlock}${webBlock}${modeBlock}${toolsBlock}`;

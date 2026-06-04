@@ -1,9 +1,16 @@
 "use client";
 
-import { ImageIcon, PencilIcon, Trash2Icon } from "lucide-react";
-import { useCallback, useState } from "react";
+import {
+  BrainIcon,
+  ImageIcon,
+  PencilIcon,
+  SearchIcon,
+  Trash2Icon,
+} from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -23,12 +30,20 @@ type MemoryItem = {
   importance: number;
   metadata?: Record<string, unknown> | null;
   createdAt?: string;
+  updatedAt?: string;
+};
+
+type MemoryStats = {
+  total: number;
+  text: number;
+  visual: number;
+  byCategory: Record<MemoryCategory, number>;
 };
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 async function fetchMemories(filter: string): Promise<MemoryItem[]> {
-  const params = new URLSearchParams({ limit: "100" });
+  const params = new URLSearchParams({ limit: "200" });
   if (filter !== "all") {
     params.set("filter", filter);
   }
@@ -40,6 +55,15 @@ async function fetchMemories(filter: string): Promise<MemoryItem[]> {
   return data.memories as MemoryItem[];
 }
 
+async function fetchStats(): Promise<MemoryStats> {
+  const res = await fetch(`${base()}/api/memory/stats`);
+  if (!res.ok) {
+    throw new Error("Gagal memuat statistik");
+  }
+  const data = await res.json();
+  return data.stats as MemoryStats;
+}
+
 const categoryLabels: Record<MemoryCategory, string> = {
   fact: "Fakta",
   preference: "Preferensi",
@@ -49,18 +73,89 @@ const categoryLabels: Record<MemoryCategory, string> = {
   instruction: "Instruksi",
 };
 
+function MemoryStatsBar({ stats }: { stats: MemoryStats }) {
+  const topCats = memoryCategories
+    .map((c) => ({ c, n: stats.byCategory[c] ?? 0 }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 4);
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary/80">
+          Total ingatan
+        </p>
+        <p className="text-2xl font-semibold tabular-nums">{stats.total}</p>
+        <p className="text-[11px] text-muted-foreground">
+          {stats.text} teks · {stats.visual} visual
+        </p>
+      </div>
+      <div className="rounded-xl border border-border/40 bg-card/30 px-3 py-2.5 sm:col-span-2">
+        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <BrainIcon className="size-3" />
+          Per kategori
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {topCats.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Belum ada</span>
+          ) : (
+            topCats.map(({ c, n }) => (
+              <span
+                className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium"
+                key={c}
+              >
+                {categoryLabels[c]} {n}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MemoryManager() {
   const [filter, setFilter] = useState<"all" | "text" | "visual">("all");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<MemoryCategory | "all">(
+    "all"
+  );
+  const [sort, setSort] = useState<"recent" | "importance">("recent");
   const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState<MemoryCategory>("fact");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+
+  const { data: stats } = useSWR("memory-stats", fetchStats, {
+    revalidateOnFocus: false,
+  });
 
   const { data: memories = [], mutate, isLoading } = useSWR(
     ["memories", filter],
     () => fetchMemories(filter),
     { revalidateOnFocus: false }
   );
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = memories;
+    if (categoryFilter !== "all") {
+      list = list.filter((m) => m.category === categoryFilter);
+    }
+    if (q) {
+      list = list.filter((m) => m.content.toLowerCase().includes(q));
+    }
+    list = [...list].sort((a, b) => {
+      if (sort === "importance") {
+        return b.importance - a.importance;
+      }
+      const ta = new Date(a.updatedAt ?? a.createdAt ?? 0).getTime();
+      const tb = new Date(b.updatedAt ?? b.createdAt ?? 0).getTime();
+      return tb - ta;
+    });
+    return list;
+  }, [memories, search, categoryFilter, sort]);
 
   const addMemory = useCallback(async () => {
     if (newContent.trim().length < 3) {
@@ -112,6 +207,7 @@ export function MemoryManager() {
         return;
       }
       mutate();
+      toast({ type: "success", description: "Memori dihapus" });
     },
     [mutate]
   );
@@ -141,6 +237,8 @@ export function MemoryManager() {
 
   return (
     <div className="space-y-4">
+      {stats && <MemoryStatsBar stats={stats} />}
+
       <div className="flex flex-wrap items-center gap-2">
         {(["all", "text", "visual"] as const).map((f) => (
           <Button
@@ -162,6 +260,45 @@ export function MemoryManager() {
         >
           Hapus {filter === "visual" ? "visual" : filter === "all" ? "semua" : ""}
         </Button>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <SearchIcon className="absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" />
+          <Input
+            className="pl-8"
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari isi memori…"
+            value={search}
+          />
+        </div>
+        <Select
+          onValueChange={(v) =>
+            setCategoryFilter(v as MemoryCategory | "all")
+          }
+          value={categoryFilter}
+        >
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectValue placeholder="Kategori" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua kategori</SelectItem>
+            {memoryCategories.map((c) => (
+              <SelectItem key={c} value={c}>
+                {categoryLabels[c]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select onValueChange={(v) => setSort(v as "recent" | "importance")} value={sort}>
+          <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recent">Terbaru</SelectItem>
+            <SelectItem value="importance">Penting</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2 rounded-xl border border-border/40 bg-card/20 p-4">
@@ -198,8 +335,14 @@ export function MemoryManager() {
         <p className="text-sm text-muted-foreground">Memuat memori…</p>
       )}
 
+      {!isLoading && (
+        <p className="text-xs text-muted-foreground">
+          Menampilkan {filtered.length} dari {memories.length} memori
+        </p>
+      )}
+
       <ul className="space-y-2">
-        {memories.map((m) => {
+        {filtered.map((m) => {
           const isVisual =
             m.metadata &&
             typeof m.metadata === "object" &&
@@ -243,7 +386,23 @@ export function MemoryManager() {
                         Visual
                       </span>
                     )}
-                    <span>Penting: {m.importance}/10</span>
+                    <span className="tabular-nums">Penting {m.importance}/10</span>
+                    {m.updatedAt && (
+                      <span>
+                        {new Intl.DateTimeFormat("id-ID", {
+                          dateStyle: "short",
+                        }).format(new Date(m.updatedAt))}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    aria-hidden
+                    className="mb-2 h-1 overflow-hidden rounded-full bg-muted"
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary/70 transition-all"
+                      style={{ width: `${(m.importance / 10) * 100}%` }}
+                    />
                   </div>
                   <p className="text-sm leading-relaxed text-foreground/90">
                     {m.content}
@@ -278,9 +437,11 @@ export function MemoryManager() {
         })}
       </ul>
 
-      {!isLoading && memories.length === 0 && (
-        <p className="text-center text-sm text-muted-foreground py-8">
-          Belum ada memori tersimpan.
+      {!isLoading && filtered.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          {search || categoryFilter !== "all"
+            ? "Tidak ada memori yang cocok dengan filter."
+            : "Belum ada memori tersimpan."}
         </p>
       )}
     </div>

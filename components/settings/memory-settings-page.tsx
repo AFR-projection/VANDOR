@@ -18,6 +18,7 @@ import type { UserSettings } from "@/lib/settings/types";
 import { MemoryBrainHero } from "./memory-brain-hero";
 import { MemoryManager } from "./memory-manager";
 import { SettingSlider, SettingToggle } from "./setting-row";
+import { TokenUsagePanel } from "./token-usage-panel";
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -339,6 +340,7 @@ export function MemorySettingsPage() {
 
             {tab === "advanced" && (
               <section className="space-y-3">
+                <TokenUsagePanel />
                 <h2 className="text-sm font-semibold">Pengaturan lanjutan</h2>
                 <p className="text-xs text-muted-foreground">
                   Postgres:{" "}
@@ -433,7 +435,16 @@ export function MemorySettingsPage() {
               </section>
             )}
 
-            {tab === "manage" && <MemoryManager />}
+            {tab === "manage" && (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Semua ingatan VANDOR — edit, hapus, atau tambah manual. Setelah
+                  chat, toast &quot;VANDOR mengingat…&quot; muncul jika ada fakta
+                  baru tersimpan.
+                </p>
+                <MemoryManager />
+              </>
+            )}
           </div>
         </div>
       </div>

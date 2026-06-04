@@ -7,7 +7,27 @@ import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
+import { assistantHasVisibleContent } from "@/lib/chat/message-visibility";
 import { PreviewMessage, ThinkingMessage } from "./message";
+
+function shouldRenderMessage(
+  message: ChatMessage,
+  index: number,
+  messages: ChatMessage[],
+  status: MessagesProps["status"]
+): boolean {
+  if (message.role !== "assistant") {
+    return true;
+  }
+  if (assistantHasVisibleContent(message)) {
+    return true;
+  }
+  const isLast = index === messages.length - 1;
+  if (isLast && (status === "streaming" || status === "submitted")) {
+    return true;
+  }
+  return false;
+}
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -77,30 +97,36 @@ function PureMessages({
         style={isArtifactVisible ? { scrollbarWidth: "none" } : undefined}
       >
         <div className="mx-auto flex min-h-full min-w-0 max-w-3xl flex-col gap-3 scroll-pb-36 px-2 py-3 sm:max-w-4xl sm:gap-5 sm:px-4 sm:py-6 md:gap-7 md:px-4 md:py-6">
-          {messages.map((message, index) => (
-            <PreviewMessage
-              addToolApprovalResponse={addToolApprovalResponse}
-              chatId={chatId}
-              isLoading={
-                status === "streaming" && messages.length - 1 === index
-              }
-              isReadonly={isReadonly}
-              key={message.id}
-              message={message}
-              onEdit={onEditMessage}
-              regenerate={regenerate}
-              requiresScrollPadding={
-                hasSentMessage && index === messages.length - 1
-              }
-              sendMessage={sendMessage}
-              setMessages={setMessages}
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
-            />
-          ))}
+          {messages.map((message, index) =>
+            shouldRenderMessage(message, index, messages, status) ? (
+              <PreviewMessage
+                addToolApprovalResponse={addToolApprovalResponse}
+                chatId={chatId}
+                isLoading={
+                  status === "streaming" && messages.length - 1 === index
+                }
+                isLatestAssistant={
+                  message.role === "assistant" &&
+                  index === messages.length - 1
+                }
+                isReadonly={isReadonly}
+                key={message.id}
+                message={message}
+                onEdit={onEditMessage}
+                regenerate={regenerate}
+                requiresScrollPadding={
+                  hasSentMessage && index === messages.length - 1
+                }
+                sendMessage={sendMessage}
+                setMessages={setMessages}
+                vote={
+                  votes
+                    ? votes.find((vote) => vote.messageId === message.id)
+                    : undefined
+                }
+              />
+            ) : null
+          )}
 
           {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
             <ThinkingMessage />

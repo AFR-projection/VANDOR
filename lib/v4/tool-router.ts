@@ -1,0 +1,77 @@
+import "server-only";
+
+import type { VandorChatToolName } from "@/lib/ai/tools/registry";
+import { V4_MAX_ACTIVE_TOOLS } from "@/lib/v4/constants";
+import type { VandorIntent } from "@/lib/v4/intent";
+
+const CORE: VandorChatToolName[] = ["getCurrentTime", "getLocation"];
+
+const BY_INTENT: Record<VandorIntent, VandorChatToolName[]> = {
+  command: [],
+  task: ["updateTask", "getCurrentTime"],
+  notes: ["manageNotes"],
+  memory: ["saveMemory", "getMemory", "searchDb"],
+  weather: ["getLocation", "getWeather", "getCurrentTime"],
+  time: ["getCurrentTime", "getLocation"],
+  search: ["webSearch"],
+  map: ["showMap", "getLocation"],
+  media: ["downloadMedia"],
+  document: [
+    "createDocument",
+    "editDocument",
+    "updateDocument",
+    "requestSuggestions",
+  ],
+  code: ["createDocument", "editDocument", "updateDocument"],
+  image: ["generateImage", "editImage"],
+  pdf: ["createPdf", "createDocx", "createSpreadsheet"],
+  chat_simple: ["getCurrentTime", "searchDb"],
+  chat_reasoning: ["searchDb", "getMemory"],
+};
+
+export function selectActiveTools(input: {
+  intent: VandorIntent;
+  hasAttachments: boolean;
+  webSearchPreloaded: boolean;
+  webSearchDisabled: boolean;
+  supportsTools: boolean;
+}): VandorChatToolName[] {
+  if (!input.supportsTools) {
+    return [];
+  }
+
+  const set = new Set<VandorChatToolName>();
+
+  if (input.intent === "command") {
+    return [];
+  }
+
+  for (const t of BY_INTENT[input.intent] ?? []) {
+    set.add(t);
+  }
+
+  if (input.hasAttachments) {
+    set.add("createPdf");
+    set.add("createDocx");
+    set.add("editImage");
+  }
+
+  if (input.webSearchPreloaded) {
+    set.delete("webSearch");
+  } else if (
+    input.intent === "search" &&
+    !input.webSearchDisabled
+  ) {
+    set.add("webSearch");
+  }
+
+  if (set.size === 0) {
+    for (const t of CORE) {
+      set.add(t);
+    }
+    set.add("searchDb");
+  }
+
+  const list = [...set].slice(0, V4_MAX_ACTIVE_TOOLS);
+  return list;
+}

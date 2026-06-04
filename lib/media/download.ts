@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 import { isUrlForPlatform } from "@/lib/chat/media-slash";
+import { formatCobaltApiError } from "@/lib/media/cobalt-error";
+import { toErrorMessage } from "@/lib/utils/error-message";
 import {
   baseProgress,
   formatBytes,
@@ -27,9 +29,28 @@ type CobaltResponse = {
   status: string;
   url?: string;
   filename?: string;
-  error?: { code?: string; context?: string };
+  error?: { code?: string; context?: unknown };
   headers?: Record<string, string>;
 };
+
+function hasCobaltBackend(): boolean {
+  return Boolean(
+    process.env.COBALT_API_URL?.trim() || process.env.COBALT_ALLOW_PUBLIC === "1"
+  );
+}
+
+function shouldTryYtDlpFirst(): boolean {
+  if (process.env.VERCEL) {
+    return false;
+  }
+  if (process.env.YT_DLP_PATH?.trim()) {
+    return true;
+  }
+  if (hasCobaltBackend() && process.env.VANDOR_PREFER_YTDLP !== "1") {
+    return false;
+  }
+  return true;
+}
 
 export type DownloadSocialMediaInput = {
   url: string;
@@ -293,11 +314,7 @@ async function downloadWithCobalt(
   const data = (await res.json()) as CobaltResponse;
 
   if (!res.ok || data.status === "error") {
-    const msg =
-      data.error?.context ??
-      data.error?.code ??
-      `Cobalt API error (${res.status})`;
-    throw new Error(msg);
+    throw new Error(formatCobaltApiError(data.error, res.status));
   }
 
   if (data.status === "picker") {
@@ -370,7 +387,10 @@ export async function downloadSocialMedia(
       })
     );
 
-    const ytdlp = await downloadWithYtDlp(url, format, onProgress, platform);
+    const ytdlp =
+      shouldTryYtDlpFirst()
+        ? await downloadWithYtDlp(url, format, onProgress, platform)
+        : null;
     if (ytdlp && ytdlp.buffer.length > 0) {
       buffer = ytdlp.buffer;
       title = ytdlp.title;
@@ -403,8 +423,7 @@ export async function downloadSocialMedia(
           process.env.COBALT_API_URL?.trim()
             ? ""
             : " Pasang yt-dlp di PATH, atau set COBALT_API_URL (instance sendiri) di env.";
-        const msg =
-          cobaltErr instanceof Error ? cobaltErr.message : String(cobaltErr);
+        const msg = toErrorMessage(cobaltErr);
         reportProgress(
           onProgress,
           baseProgress(platform, format, {
@@ -510,7 +529,7 @@ export async function downloadSocialMedia(
         error: err.message,
       };
     }
-    const message = err instanceof Error ? err.message : String(err);
+    const message = toErrorMessage(err);
     reportProgress(
       onProgress,
       baseProgress(platform, format, {
@@ -526,7 +545,8 @@ export async function downloadSocialMedia(
 
 export function formatMediaDownloadReply(result: MediaDownloadResult): string {
   if (!result.ok) {
-    return `Gagal mengunduh media (${result.platform}): ${result.error ?? "unknown error"}`;
+    const detail = toErrorMessage(result.error);
+    return `Gagal mengunduh media (${result.platform}): ${detail}`;
   }
   const sizeMb =
     result.sizeBytes != null

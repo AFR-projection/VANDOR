@@ -128,6 +128,7 @@ export function SourceCitationBar({
       <div className="grid grid-cols-1 gap-2 sm:flex sm:gap-2 sm:overflow-x-auto sm:pb-1 sm:[-ms-overflow-style:none] sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
         {sources.map((source, index) => (
           <SourceCitationPill
+            allSources={sources}
             index={index + 1}
             key={source.url}
             source={source}
@@ -141,14 +142,21 @@ export function SourceCitationBar({
 function SourceCitationPill({
   source,
   index,
+  allSources,
 }: {
   source: WebSearchSource;
   index: number;
+  allSources: WebSearchSource[];
 }) {
   const favicon = faviconUrl(source.url);
 
   return (
-    <CitationPillButton index={index} source={source} favicon={favicon} />
+    <CitationPillButton
+      allSources={allSources}
+      index={index}
+      source={source}
+      favicon={favicon}
+    />
   );
 }
 
@@ -156,17 +164,26 @@ function CitationPillButton({
   source,
   index,
   favicon,
+  allSources,
 }: {
   source: WebSearchSource;
   index: number;
   favicon: string;
+  allSources: WebSearchSource[];
 }) {
   const { openSource } = useSourcePanel();
 
   return (
     <button
       className="flex w-full min-w-0 items-center gap-2.5 rounded-xl border border-border/40 bg-background/80 px-3 py-2.5 text-left shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5 hover:shadow-md sm:min-w-[200px] sm:max-w-[280px] sm:shrink-0"
-      onClick={() => openSource({ url: source.url, title: source.title })}
+      onClick={() =>
+        openSource({
+          url: source.url,
+          title: source.title,
+          snippet: source.snippet,
+          relatedSources: allSources.filter((s) => s.url !== source.url).slice(0, 10),
+        })
+      }
       type="button"
     >
       <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-semibold tabular-nums text-muted-foreground">

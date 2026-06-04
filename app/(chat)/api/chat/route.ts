@@ -28,7 +28,7 @@ import {
   generalAnswerQualityInstructions,
   getWebSearchAnswerInstructions,
 } from "@/lib/search/context";
-import { getWebSearchSynthesisModel, WEB_SEARCH_SYNTHESIS_MAX_TOKENS } from "@/lib/search/config";
+import { getWebSearchSynthesisModel } from "@/lib/search/config";
 import {
   classifyContentIntents,
   classifyResponseMode,
@@ -45,6 +45,7 @@ import {
   extractAndStoreMemories,
   preExtractUserMemories,
 } from "@/lib/memory/extract";
+import { memorySavedDataPart } from "@/lib/memory/notice";
 import { isExplicitRememberRequest } from "@/lib/memory/remember";
 import { maybeSummarizeChat } from "@/lib/memory/summarize";
 import { captureVisualMemories } from "@/lib/memory/visual-memory";
@@ -77,10 +78,27 @@ import { showMap } from "@/lib/ai/tools/show-map";
 import { makeDownloadMediaTool } from "@/lib/ai/tools/download-media";
 import { makeWebSearch } from "@/lib/ai/tools/web-search";
 import { parseMediaSlash } from "@/lib/chat/media-slash";
+import { shouldPersistChatMessage } from "@/lib/chat/message-visibility";
 import { createMediaDownloadStreamResponse } from "@/lib/media/chat-stream";
+import {
+  executeDirectCommand,
+  parseDirectCommand,
+} from "@/lib/v4/commands";
+import { V4_MAX_AGENT_STEPS } from "@/lib/v4/constants";
+import { createFastTextStreamResponse } from "@/lib/v4/fast-stream";
+import { V4_JARVIS_OS_BLOCK } from "@/lib/v4/jarvis-prompt";
+import { resolveVandorIntent } from "@/lib/v4/intent";
+import { applyV4ModelBias } from "@/lib/v4/model-pick";
+import {
+  maxOutputTokensForTurn,
+  shouldPolishResponse,
+  shouldRunPreExtract,
+} from "@/lib/v4/overhead";
+import { selectActiveTools } from "@/lib/v4/tool-router";
+import { trimUiMessagesForModel } from "@/lib/v4/trim-messages";
+import { estimateTurnUsage } from "@/lib/v4/turn-usage";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { resolveClientGeo } from "@/lib/security/geo";
-import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
 import { formatOpenRouterError } from "@/lib/ai/model-fallbacks";
 import { buildFreeModeAttemptChain } from "@/lib/ai/openrouter-routing";
@@ -235,8 +253,9 @@ export async function POST(request: Request) {
       ];
     }
 
-    const { geo: ipGeo, hints: requestHints } =
-      await resolveClientGeo(request);
+    const { geo: ipGeo, hints: requestHints } = await resolveClientGeo(
+      request
+    );
 
     if (message?.role === "user") {
       await saveMessages({
@@ -268,28 +287,53 @@ export async function POST(request: Request) {
         ? parseMediaSlash(lastUserText)
         : null;
 
+    const consumeSseStream = async ({
+      stream: sseStream,
+    }: {
+      stream: ReadableStream;
+    }) => {
+      if (!process.env.REDIS_URL) {
+        return;
+      }
+      try {
+        const streamContext = getStreamContext();
+        if (streamContext) {
+          const streamId = generateId();
+          await createStreamId({ streamId, chatId: id });
+          await streamContext.createNewResumableStream(
+            streamId,
+            () => sseStream
+          );
+        }
+      } catch (_) {
+        /* non-critical */
+      }
+    };
+
     if (mediaSlash) {
       return createMediaDownloadStreamResponse({
         chatId: id,
         slash: mediaSlash,
-        consumeSseStream: async ({ stream: sseStream }) => {
-          if (!process.env.REDIS_URL) {
-            return;
-          }
-          try {
-            const streamContext = getStreamContext();
-            if (streamContext) {
-              const streamId = generateId();
-              await createStreamId({ streamId, chatId: id });
-              await streamContext.createNewResumableStream(
-                streamId,
-                () => sseStream
-              );
-            }
-          } catch (_) {
-            /* non-critical */
-          }
-        },
+        consumeSseStream,
+      });
+    }
+
+    const directCmd =
+      !isToolApprovalFlow && lastUserText.trim()
+        ? parseDirectCommand(lastUserText, requestHints, id)
+        : null;
+
+    if (directCmd && directCmd.kind !== "media") {
+      const executed = await executeDirectCommand(directCmd, {
+        userId: session.user.id,
+        chatId: id,
+      });
+      return createFastTextStreamResponse({
+        chatId: id,
+        instant: { label: executed.instantLabel, phase: "start" },
+        text: executed.text,
+        extraParts: executed.extraParts,
+        consumeSseStream,
       });
     }
 
@@ -323,10 +367,36 @@ export async function POST(request: Request) {
 
     const memoryEnabled = userSettings.memory.enabled;
     const memoryAutoExtract = userSettings.memory.autoExtract;
-    const preExtractOn =
-      memoryEnabled &&
-      memoryAutoExtract &&
-      userSettings.memory.preExtractFromUser !== false;
+
+    let webSearchDetection =
+      !isToolApprovalFlow && lastUserText.trim()
+        ? detectWebSearchNeed(lastUserText)
+        : { needed: false as const, query: "" };
+
+    if (!userSettings.advanced.webSearchAuto) {
+      webSearchDetection = {
+        ...webSearchDetection,
+        needed: false,
+        reason: "disabled_in_settings",
+      };
+    }
+
+    const v4Intent = resolveVandorIntent({
+      userText: lastUserText,
+      attachmentKinds,
+      webSearchActive: webSearchDetection.needed,
+    });
+
+    const explicitRemember = isExplicitRememberRequest(lastUserText);
+    const preExtractOn = shouldRunPreExtract({
+      enabled:
+        memoryEnabled &&
+        memoryAutoExtract &&
+        userSettings.memory.preExtractFromUser !== false,
+      intent: v4Intent.intent,
+      userText: lastUserText,
+      isRemember: explicitRemember,
+    });
 
     const mergeSimilar = userSettings.memory.mergeSimilarMemories !== false;
 
@@ -347,45 +417,38 @@ export async function POST(request: Request) {
     const memoryExtractionModelId =
       resolveMemoryExtractionModel(integrationModels);
 
-    const preExtractPromise = preExtractOn
-      ? preExtractUserMemories({
-          userId: session.user.id,
-          userMessage: lastUserText,
-          chatId: id,
-          maxPerTurn: Math.min(userSettings.memory.maxExtractPerTurn, 2),
-          openRouterApiKey,
-          modelId: memoryExtractionModelId,
-          meta: openRouterMeta,
-          mergeSimilar,
-        }).catch(() => null)
-      : Promise.resolve();
+    const preExtractInput = {
+      userId: session.user.id,
+      userMessage: lastUserText,
+      chatId: id,
+      maxPerTurn: Math.min(userSettings.memory.maxExtractPerTurn, 2),
+      openRouterApiKey,
+      modelId: memoryExtractionModelId,
+      meta: openRouterMeta,
+      mergeSimilar,
+    };
 
-    if (isExplicitRememberRequest(lastUserText)) {
-      await preExtractPromise;
-    }
+    let preSavedItems: Awaited<ReturnType<typeof preExtractUserMemories>> = [];
 
-    const memoryContext = await Promise.all([
-      preExtractOn && !isExplicitRememberRequest(lastUserText)
-        ? preExtractPromise
-        : Promise.resolve(),
-      buildMemoryContext({
-        userId: session.user.id,
-        query: lastUserText,
-        chatId: id,
-      }),
-    ]).then(([, ctx]) => ctx);
+    const memoryContextPromise = buildMemoryContext({
+      userId: session.user.id,
+      query: lastUserText,
+      chatId: id,
+    });
 
-    let webSearchDetection =
-      !isToolApprovalFlow && lastUserText.trim()
-        ? detectWebSearchNeed(lastUserText)
-        : { needed: false as const, query: "" };
-
-    if (!userSettings.advanced.webSearchAuto) {
-      webSearchDetection = {
-        ...webSearchDetection,
-        needed: false,
-        reason: "disabled_in_settings",
-      };
+    let memoryContext: string;
+    if (preExtractOn && explicitRemember) {
+      const [saved, ctx] = await Promise.all([
+        preExtractUserMemories(preExtractInput).catch(() => []),
+        memoryContextPromise,
+      ]);
+      preSavedItems = saved;
+      memoryContext = ctx;
+    } else {
+      if (preExtractOn) {
+        preExtractUserMemories(preExtractInput).catch(() => null);
+      }
+      memoryContext = await memoryContextPromise;
     }
 
     const allowRichUI = userSettings.advanced.richContentLevel !== "minimal";
@@ -500,6 +563,18 @@ export async function POST(request: Request) {
       selectionOverridden = auto.overridden;
     }
 
+    const v4Model = applyV4ModelBias({
+      modelId: chatModel,
+      intent: v4Intent.intent,
+      models: integrationModels,
+      webSearchPreloaded: webSearchDetection.needed,
+      useOrchestrator: isOrchestratorTier(initialChatModel),
+    });
+    if (v4Model.modelId !== chatModel) {
+      chatModel = v4Model.modelId;
+      selectionReason = v4Model.reason ?? selectionReason;
+    }
+
     const modelConfig = chatModels.find((m) => m.id === chatModel);
     const modelCapabilities = await getCapabilities();
     const capabilities = modelCapabilities[chatModel];
@@ -531,7 +606,8 @@ export async function POST(request: Request) {
 
     // Replace `/storage/...` URLs (unreachable from external LLM providers)
     // with inline base64 data URLs so the model actually receives the bytes.
-    const inlinedMessages = await inlineLocalAttachments(uiMessages);
+    const trimmedUi = trimUiMessagesForModel(uiMessages);
+    const inlinedMessages = await inlineLocalAttachments(trimmedUi);
     const modelMessages = await convertToModelMessages(inlinedMessages);
 
     let webSourcesPayload: WebSearchOutput | null = null;
@@ -547,9 +623,21 @@ export async function POST(request: Request) {
       lastUserText.trim().length <= 500 &&
       taskIntent === "simple";
 
+    const maxOutputThisTurn =
+      maxOutputTokensForTurn({
+        responseMode,
+        webSearchPreloaded: webSearchDetection.needed,
+      }) ?? 3072;
+
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
+        if (preSavedItems.length > 0) {
+          dataStream.write(
+            memorySavedDataPart({ items: preSavedItems, source: "pre" })
+          );
+        }
+
         dataStream.write({
           type: "data-model-meta",
           data: {
@@ -676,6 +764,26 @@ export async function POST(request: Request) {
             }
             dataStream.write({ type: "text-end", id: textId });
 
+            dataStream.write({
+              type: "data-turn-usage",
+              data: estimateTurnUsage({
+                memoryContextChars: memoryContext.length,
+                filesContextChars: filesBlock.length,
+                webContextChars: 0,
+                userTextChars: lastUserText.length,
+                messageCount: trimmedUi.length,
+                maxOutputTokens: maxOutputThisTurn,
+                intent: v4Intent.intent,
+              }),
+            });
+
+            if (memoryContext.length > 0) {
+              dataStream.write({
+                type: "data-memory-recall",
+                data: { active: true, charCount: memoryContext.length },
+              });
+            }
+
             if (titlePromise) {
               try {
                 const title = await titlePromise;
@@ -689,14 +797,44 @@ export async function POST(request: Request) {
           }
         }
 
-        const fullTools = [...VANDOR_CHAT_TOOLS];
         const webSearchToolOff =
           webSearchContextBlock.length > 0 ||
           shouldDisableWebSearchTool(lastUserText);
 
-        const activeTools = webSearchToolOff
-          ? fullTools.filter((t) => t !== "webSearch")
-          : [...fullTools];
+        const instantLabels: Record<string, string> = {
+          search: "Mencari di web",
+          weather: "Mengecek cuaca",
+          time: "Mengecek waktu",
+          task: "Mengelola task",
+          notes: "Mengelola catatan",
+          document: "Menyiapkan dokumen",
+          code: "Menulis kode",
+          image: "Memproses gambar",
+          pdf: "Membuat file",
+          map: "Memuat peta",
+          chat_simple: "Memproses",
+          chat_reasoning: "Menganalisis",
+        };
+
+        dataStream.write({
+          type: "data-instant-status",
+          data: {
+            label: instantLabels[v4Intent.intent] ?? "VANDOR",
+            phase: "start",
+          },
+        });
+
+        let activeTools = selectActiveTools({
+          intent: v4Intent.intent,
+          hasAttachments: attachedFiles.length > 0,
+          webSearchPreloaded: webSearchContextBlock.length > 0,
+          webSearchDisabled: webSearchToolOff,
+          supportsTools,
+        });
+
+        if (webSearchToolOff) {
+          activeTools = activeTools.filter((t) => t !== "webSearch");
+        }
 
         const synthesisModelId =
           webSearchContextBlock.length > 0
@@ -736,7 +874,9 @@ export async function POST(request: Request) {
               webSearchRetryHint,
               responseMode,
               persona: userSettings.persona,
+              activeTools,
             }) +
+            `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${activeTools.length}.` +
             (freeModeActive
               ? `\n\n=== TIER GRATIS ===\nVANDOR mencoba ${freeAttemptChain?.length ?? 15} model :free bergantian (Llama 3.3, GPT-OSS, Nemotron, Kimi, dll.) sampai ada respons.${
                   freeHeavyReason
@@ -745,12 +885,12 @@ export async function POST(request: Request) {
                 }`
               : ""),
           messages: modelMessages,
-          maxOutputTokens:
-            webSearchContextBlock.length > 0
-              ? WEB_SEARCH_SYNTHESIS_MAX_TOKENS
-              : undefined,
+          maxOutputTokens: maxOutputTokensForTurn({
+            responseMode,
+            webSearchPreloaded: webSearchContextBlock.length > 0,
+          }),
           temperature: webSearchContextBlock.length > 0 ? 0.4 : undefined,
-          stopWhen: stepCountIs(5),
+          stopWhen: stepCountIs(V4_MAX_AGENT_STEPS),
           experimental_activeTools:
             isReasoningModel && !supportsTools ? [] : activeTools,
           tools: {
@@ -797,40 +937,61 @@ export async function POST(request: Request) {
           },
         });
 
-        if (attemptIndex > 0 || resolvedModelId !== synthesisModelId) {
-          dataStream.write({
-            type: "data-model-meta",
-            data: {
-              modelId: resolvedModelId,
-              requestedModelId: requestedMode,
-              chatMode: activeTier,
-              modelTier: activeTier,
-              agentId: orchestratorAgentId,
-              agentName: orchestratorAgentName,
-              overridden: true,
-              fallbackUsed: true,
-              attemptIndex,
-              attemptTotal: attemptedModels.length,
-              fallbackChain: attemptedModels,
-              reason:
-                freeModeActive && attemptIndex > 0
-                  ? `Rotasi Gratis: model #${attemptIndex + 1} dari ${attemptedModels.length} (${resolvedModelId.split("/").pop()})`
-                  : selectionReason,
-              attachments: extractedFiles.map((f) => ({
-                name: f.name,
-                kind: f.kind,
-                bytes: f.bytes,
-                extracted: Boolean(f.text),
-                truncated: f.truncated,
-                error: f.error,
-              })),
-            },
-          });
-        }
+        const usedFallback =
+          attemptIndex > 0 || resolvedModelId !== synthesisModelId;
 
         dataStream.merge(
           stream.toUIMessageStream({ sendReasoning: isReasoningModel })
         );
+
+        dataStream.write({
+          type: "data-model-meta",
+          data: {
+            modelId: resolvedModelId,
+            requestedModelId: requestedMode,
+            chatMode: activeTier,
+            modelTier: activeTier,
+            agentId: orchestratorAgentId,
+            agentName: orchestratorAgentName,
+            overridden: selectionOverridden || usedFallback,
+            reason:
+              usedFallback && freeModeActive && attemptIndex > 0
+                ? `Rotasi Gratis: model #${attemptIndex + 1} dari ${attemptedModels.length} (${resolvedModelId.split("/").pop()})`
+                : selectionReason,
+            fallbackUsed: usedFallback,
+            attemptIndex: usedFallback ? attemptIndex : undefined,
+            attemptTotal: usedFallback ? attemptedModels.length : undefined,
+            fallbackChain: usedFallback ? attemptedModels : freeAttemptChain,
+            attachments: extractedFiles.map((f) => ({
+              name: f.name,
+              kind: f.kind,
+              bytes: f.bytes,
+              extracted: Boolean(f.text),
+              truncated: f.truncated,
+              error: f.error,
+            })),
+          },
+        });
+
+        dataStream.write({
+          type: "data-turn-usage",
+          data: estimateTurnUsage({
+            memoryContextChars: memoryContext.length,
+            filesContextChars: filesBlock.length,
+            webContextChars: webSearchContextBlock.length,
+            userTextChars: lastUserText.length,
+            messageCount: trimmedUi.length,
+            maxOutputTokens: maxOutputThisTurn,
+            intent: v4Intent.intent,
+          }),
+        });
+
+        if (memoryContext.length > 0) {
+          dataStream.write({
+            type: "data-memory-recall",
+            data: { active: true, charCount: memoryContext.length },
+          });
+        }
 
         if (relatedPromise) {
           try {
@@ -886,7 +1047,9 @@ export async function POST(request: Request) {
             }
           }
         } else if (finishedMessages.length > 0) {
-          const messagesToSave = finishedMessages.map((currentMessage) => {
+          const messagesToSave = finishedMessages
+            .filter(shouldPersistChatMessage)
+            .map((currentMessage) => {
             let parts = currentMessage.parts;
 
             if (
@@ -935,8 +1098,12 @@ export async function POST(request: Request) {
             const rawText = getTextFromMessage(assistantMsg);
             if (rawText.trim()) {
               if (
-                userSettings.advanced.responsePolish &&
-                process.env.VANDOR_DISABLE_POLISH !== "1"
+                shouldPolishResponse({
+                  enabled: userSettings.advanced.responsePolish,
+                  intent: v4Intent.intent,
+                  responseMode,
+                  webSearchPreloaded: Boolean(webSourcesPayload),
+                })
               ) {
                 polishResponse(rawText, openRouterApiKey)
                   .then(async (polished) => {
@@ -965,17 +1132,33 @@ export async function POST(request: Request) {
             }
 
             if (memoryEnabled && memoryAutoExtract) {
-            extractAndStoreMemories({
-              userId: session.user.id,
-              userMessage: lastUserText,
-              assistantMessage: rawText,
-              chatId: id,
-              maxPerTurn: userSettings.memory.maxExtractPerTurn,
-              openRouterApiKey,
-              modelId: memoryExtractionModelId,
-              meta: openRouterMeta,
-              mergeSimilar,
-            }).catch(() => null);
+              const postSaved = await extractAndStoreMemories({
+                userId: session.user.id,
+                userMessage: lastUserText,
+                assistantMessage: rawText,
+                chatId: id,
+                maxPerTurn: userSettings.memory.maxExtractPerTurn,
+                openRouterApiKey,
+                modelId: memoryExtractionModelId,
+                meta: openRouterMeta,
+                mergeSimilar,
+              }).catch(() => [] as Awaited<
+                ReturnType<typeof extractAndStoreMemories>
+              >);
+
+              if (postSaved.length > 0) {
+                const memoryPart = memorySavedDataPart({
+                  items: postSaved,
+                  source: "post",
+                });
+                await updateMessage({
+                  id: assistantMsg.id,
+                  parts: [
+                    ...assistantMsg.parts,
+                    memoryPart as ChatMessage["parts"][number],
+                  ],
+                });
+              }
             }
 
             for (const run of parseToolRunsFromMessage(assistantMsg)) {

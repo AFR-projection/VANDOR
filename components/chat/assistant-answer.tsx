@@ -33,7 +33,7 @@ export function AssistantAnswer({
       data-testid="message-content"
     >
       {answerText && (
-        <section className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2.5 prose-headings:mb-2 prose-headings:mt-4 prose-li:my-0.5 sm:prose-p:my-3">
+        <section className="prose prose-sm max-w-none dark:prose-invert prose-p:my-2.5 prose-headings:mb-2 prose-headings:mt-4 prose-li:my-0.5 prose-strong:text-foreground prose-a:text-primary sm:prose-p:my-3">
           <MessageResponse>{answerText}</MessageResponse>
         </section>
       )}

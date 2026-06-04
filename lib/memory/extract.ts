@@ -9,6 +9,11 @@ import {
   isExplicitRememberRequest,
   looksLikeMemorableUserMessage,
 } from "./remember";
+import type { SavedMemoryItem } from "./notice";
+import {
+  POST_EXTRACTION_PROMPT,
+  PRE_EXTRACTION_PROMPT,
+} from "./prompts";
 import { saveMemory } from "./queries";
 
 const memoryItemSchema = z.object({
@@ -29,28 +34,6 @@ function extractionSchema(maxItems: number) {
     memories: z.array(memoryItemSchema).max(maxItems),
   });
 }
-
-const POST_EXTRACTION_PROMPT = `You extract long-term memories about the user for a personal AI assistant (like Jarvis).
-
-Rules:
-- Only extract NEW, durable facts (preferences, name, job, goals, relationships, habits, standing instructions).
-- Skip greetings, small talk, and one-off questions.
-- Return 0-3 items. Empty array if nothing worth remembering.
-- Write each memory in third person about the user (e.g. "User prefers Indonesian language").
-- importance: 1=trivial, 10=critical life fact.
-
-Respond with ONLY valid JSON: {"memories":[{"content":"...","category":"preference","importance":7}]}`;
-
-const PRE_EXTRACTION_PROMPT = `You extract long-term memories from the USER message only (before the assistant replies).
-
-Rules:
-- Focus on durable facts the user states about themselves (name, job, preferences, goals, people, standing instructions).
-- If the user says "remember" / "ingat" / "jangan lupa", treat as high importance (8-10).
-- Return 0-2 items. Empty array if nothing worth storing yet.
-- Third person about the user.
-- Do not invent facts not in the message.
-
-Respond with ONLY valid JSON: {"memories":[{"content":"...","category":"preference","importance":7}]}`;
 
 function hasOpenRouterKey(apiKey?: string): boolean {
   return Boolean(apiKey?.trim() || process.env.OPENROUTER_API_KEY?.trim());
@@ -107,14 +90,14 @@ export async function preExtractUserMemories({
   modelId: string;
   meta?: OpenRouterClientMeta;
   mergeSimilar?: boolean;
-}): Promise<void> {
+}): Promise<SavedMemoryItem[]> {
   if (!userMessage.trim() || !hasOpenRouterKey(openRouterApiKey) || maxPerTurn < 1) {
-    return;
+    return [];
   }
 
   const explicit = isExplicitRememberRequest(userMessage);
   if (!explicit && !looksLikeMemorableUserMessage(userMessage)) {
-    return;
+    return [];
   }
 
   try {
@@ -128,12 +111,13 @@ export async function preExtractUserMemories({
     });
 
     if (items.length === 0) {
-      return;
+      return [];
     }
 
+    const saved: SavedMemoryItem[] = [];
     await Promise.all(
-      items.map((item) =>
-        saveMemory({
+      items.map(async (item) => {
+        const id = await saveMemory({
           userId,
           content: item.content,
           category: item.category as MemoryCategory,
@@ -146,11 +130,19 @@ export async function preExtractUserMemories({
             explicitRemember: explicit,
           },
           mergeSimilar,
-        })
-      )
+        });
+        if (id) {
+          saved.push({
+            content: item.content,
+            category: item.category as MemoryCategory,
+          });
+        }
+      })
     );
+    return saved;
   } catch (error) {
     console.error("Memory pre-extraction failed:", error);
+    return [];
   }
 }
 
@@ -174,9 +166,9 @@ export async function extractAndStoreMemories({
   modelId: string;
   meta?: OpenRouterClientMeta;
   mergeSimilar?: boolean;
-}): Promise<void> {
+}): Promise<SavedMemoryItem[]> {
   if (!userMessage.trim() || !hasOpenRouterKey(openRouterApiKey) || maxPerTurn < 1) {
-    return;
+    return [];
   }
 
   try {
@@ -190,22 +182,31 @@ export async function extractAndStoreMemories({
     });
 
     if (items.length === 0) {
-      return;
+      return [];
     }
 
+    const saved: SavedMemoryItem[] = [];
     await Promise.all(
-      items.map((item) =>
-        saveMemory({
+      items.map(async (item) => {
+        const id = await saveMemory({
           userId,
           content: item.content,
           category: item.category as MemoryCategory,
           importance: item.importance,
           sourceChatId: chatId,
           mergeSimilar,
-        })
-      )
+        });
+        if (id) {
+          saved.push({
+            content: item.content,
+            category: item.category as MemoryCategory,
+          });
+        }
+      })
     );
+    return saved;
   } catch (error) {
     console.error("Memory extraction failed:", error);
+    return [];
   }
 }

@@ -35,6 +35,10 @@ import {
 import { RichContentBlocks } from "./rich/rich-content";
 import { SourcesSkeleton } from "./rich/skeletons";
 import { Weather } from "./weather";
+import { MessageTechRail } from "./message-tech-rail";
+import type { MemorySavedNotice } from "@/lib/memory/notice";
+import type { ModelMeta } from "@/lib/types";
+import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
 
 const PurePreviewMessage = ({
   addToolApprovalResponse,
@@ -48,6 +52,7 @@ const PurePreviewMessage = ({
   isReadonly,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
+  isLatestAssistant = false,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -60,12 +65,13 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
+  isLatestAssistant?: boolean;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
   );
 
-  useDataStream();
+  const { latestModelMeta } = useDataStream();
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
@@ -86,6 +92,18 @@ const PurePreviewMessage = ({
   const mediaProgress = isAssistant
     ? getMediaDownloadProgressFromMessage(message)
     : null;
+  const instantStatus = isAssistant
+    ? message.parts.find(
+        (p) =>
+          p.type === "data-instant-status" &&
+          "data" in p &&
+          (p.data as { phase?: string }).phase === "start"
+      )
+    : null;
+  const instantLabel =
+    instantStatus && "data" in instantStatus
+      ? (instantStatus.data as { label?: string }).label
+      : null;
   const isMediaDownloading =
     isAssistant &&
     mediaProgress != null &&
@@ -98,6 +116,28 @@ const PurePreviewMessage = ({
     (isMediaDownloading ||
       mediaProgress.status === "complete" ||
       mediaProgress.status === "error");
+  const memorySavedNotice = isAssistant
+    ? (message.parts.find((p) => p.type === "data-memory-saved" && "data" in p)
+        ?.data as MemorySavedNotice | undefined)
+    : undefined;
+  const turnUsage = isAssistant
+    ? (message.parts.find((p) => p.type === "data-turn-usage" && "data" in p)
+        ?.data as TurnUsageEstimate | undefined)
+    : undefined;
+  const modelMetaFromParts = isAssistant
+    ? (message.parts.find((p) => p.type === "data-model-meta" && "data" in p)
+        ?.data as ModelMeta | undefined)
+    : undefined;
+  const modelMeta =
+    modelMetaFromParts ??
+    (isLatestAssistant && !isLoading ? latestModelMeta ?? undefined : undefined);
+  const memoryRecall = isAssistant
+    ? (message.parts.find((p) => p.type === "data-memory-recall" && "data" in p)
+        ?.data as { active: boolean; charCount: number } | undefined)
+    : undefined;
+  const hasAnswerText = message.parts.some(
+    (p) => p.type === "text" && Boolean(p.text?.trim())
+  );
   const isWebSearching =
     isAssistant &&
     isLoading &&
@@ -160,8 +200,12 @@ const PurePreviewMessage = ({
       type === "data-rich-content" ||
       type === "data-search-status" ||
       type === "data-media-download-progress" ||
+      type === "data-instant-status" ||
       type === "data-model-meta" ||
-      type === "data-chat-title"
+      type === "data-chat-title" ||
+      type === "data-memory-saved" ||
+      type === "data-memory-recall" ||
+      type === "data-turn-usage"
     ) {
       return null;
     }
@@ -707,6 +751,15 @@ const PurePreviewMessage = ({
           progress={mediaProgress}
         />
       )}
+      {isLoading && instantLabel && !showMediaProgressCard && (
+        <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/50 opacity-75" />
+            <span className="relative inline-flex size-2 rounded-full bg-primary" />
+          </span>
+          {instantLabel}…
+        </div>
+      )}
       {isWebSearching && (
         <>
           <WebSearchIndicator query={searchStatus?.query} />
@@ -739,6 +792,15 @@ const PurePreviewMessage = ({
           rich={richContent}
         />
       )}
+      {isAssistant && hasAnswerText && !isLoading && (
+        <MessageTechRail
+          memoryNotice={memorySavedNotice}
+          memoryRecall={memoryRecall}
+          modelMeta={modelMeta}
+          turnUsage={turnUsage}
+          webSourceCount={webSources?.sources.length ?? 0}
+        />
+      )}
       {actions}
     </>
   );
@@ -765,7 +827,9 @@ const PurePreviewMessage = ({
           </div>
         )}
         {isAssistant ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">{content}</div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2 border-l-2 border-primary/15 pl-3 sm:pl-3.5">
+            {content}
+          </div>
         ) : (
           content
         )}

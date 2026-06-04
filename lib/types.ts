@@ -18,8 +18,10 @@ import type { showMap } from "./ai/tools/show-map";
 import type { makeDownloadMediaTool } from "./ai/tools/download-media";
 import type { webSearch } from "./ai/tools/web-search";
 import type { makeAssistantTools } from "./ai/tools/assistant-tools";
+import type { MemorySavedNotice } from "./memory/notice";
 import type { MediaDownloadProgressData } from "./media/types";
 import type { RichContent, WebSearchOutput } from "./search/types";
+import type { TurnUsageEstimate } from "./v4/turn-usage";
 import type { Suggestion } from "./db/schema";
 
 export const messageMetadataSchema = z.object({
@@ -116,8 +118,18 @@ export type CustomUIDataTypes = {
     query?: string;
   };
   "media-download-progress": MediaDownloadProgressData;
+  "instant-status": {
+    label: string;
+    phase: "start" | "done";
+  };
   "web-sources": WebSearchOutput;
   "rich-content": RichContent;
+  "memory-saved": MemorySavedNotice;
+  "memory-recall": {
+    active: boolean;
+    charCount: number;
+  };
+  "turn-usage": TurnUsageEstimate;
 };
 
 export type ChatMessage = UIMessage<

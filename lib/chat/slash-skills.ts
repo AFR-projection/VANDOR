@@ -31,8 +31,7 @@ Isi:
     name: "catatan",
     description: "Lihat daftar judul catatan kamu",
     kind: "send",
-    sendText:
-      "Tampilkan semua catatan pribadi saya. Gunakan manageNotes action list — tampilkan hanya nomor urut + judul (jangan tampilkan isi penuh dulu). Kalau belum ada catatan, bilang jelas.",
+    sendText: "/catatan",
   },
   {
     name: "baca",
@@ -67,22 +66,19 @@ Isi:
     name: "cuaca",
     description: "Cuaca di lokasiku sekarang",
     kind: "send",
-    sendText:
-      "Cuaca di lokasi saya sekarang (pakai getLocation + getWeather, jawab ringkas dalam Bahasa Indonesia).",
+    sendText: "/cuaca",
   },
   {
     name: "waktu",
     description: "Jam & tanggal sekarang",
     kind: "send",
-    sendText:
-      "Jam dan tanggal sekarang untuk timezone saya (getCurrentTime + lokasi kalau perlu).",
+    sendText: "/waktu",
   },
   {
     name: "ringkas",
     description: "Ringkas percakapan chat ini",
     kind: "send",
-    sendText:
-      "Ringkas percakapan kita di chat ini dalam poin-poin singkat (Bahasa Indonesia). Sorot keputusan & action item.",
+    sendText: "/ringkas",
   },
   {
     name: "tt",

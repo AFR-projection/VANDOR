@@ -39,7 +39,12 @@ export function SourceCards({ sources }: { sources: WebSearchSource[] }) {
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {sources.map((source, index) => (
-          <SourceCard index={index + 1} key={source.url} source={source} />
+          <SourceCard
+            allSources={sources}
+            index={index + 1}
+            key={source.url}
+            source={source}
+          />
         ))}
       </div>
     </div>
@@ -49,9 +54,11 @@ export function SourceCards({ sources }: { sources: WebSearchSource[] }) {
 function SourceCard({
   source,
   index,
+  allSources,
 }: {
   source: WebSearchSource;
   index: number;
+  allSources: WebSearchSource[];
 }) {
   const { openSource } = useSourcePanel();
   const favicon = faviconUrl(source.url, source.favicon);
@@ -62,7 +69,16 @@ function SourceCard({
       animate={{ opacity: 1, y: 0 }}
       className="group flex min-w-0 flex-col gap-1.5 rounded-xl border border-border/40 bg-background/80 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md"
       initial={{ opacity: 0, y: 8 }}
-      onClick={() => openSource({ url: source.url, title: source.title })}
+      onClick={() =>
+        openSource({
+          url: source.url,
+          title: source.title,
+          snippet: source.snippet,
+          relatedSources: allSources
+            .filter((s) => s.url !== source.url)
+            .slice(0, 10),
+        })
+      }
       transition={{ delay: 0.03 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       type="button"
     >

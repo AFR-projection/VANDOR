@@ -29,6 +29,7 @@ import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
 import { CommandPalette } from "./command-palette";
 import { DataStreamHandler } from "./data-stream-handler";
+import { MemorySavedHandler } from "./memory-saved-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
@@ -199,6 +200,7 @@ export function ChatShell() {
         )}
       </div>
 
+      <MemorySavedHandler messages={messages} status={status} />
       <DataStreamHandler />
       <CommandPalette />
 

@@ -398,6 +398,99 @@ export async function listRecentMemories({
   }
 }
 
+export async function listMemoriesSavedSince({
+  userId,
+  since,
+  limit = 5,
+}: {
+  userId: string;
+  since: Date;
+  limit?: number;
+}): Promise<MemoryRecord[]> {
+  if (!process.env.POSTGRES_URL) {
+    return [];
+  }
+  try {
+    const rows = await db
+      .select({
+        id: userMemory.id,
+        content: userMemory.content,
+        category: userMemory.category,
+        importance: userMemory.importance,
+        metadata: userMemory.metadata,
+        createdAt: userMemory.createdAt,
+        updatedAt: userMemory.updatedAt,
+      })
+      .from(userMemory)
+      .where(
+        and(
+          eq(userMemory.userId, userId),
+          sql`${userMemory.updatedAt} >= ${since.toISOString()}::timestamptz`
+        )
+      )
+      .orderBy(sql`${userMemory.updatedAt} DESC`)
+      .limit(limit);
+
+    return rows.map((r) => ({
+      id: r.id,
+      content: r.content,
+      category: r.category as MemoryCategory,
+      importance: r.importance,
+      metadata: r.metadata as Record<string, unknown> | null,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getMemoryStatsForUser(userId: string): Promise<{
+  total: number;
+  text: number;
+  visual: number;
+  byCategory: Record<MemoryCategory, number>;
+}> {
+  const empty: Record<MemoryCategory, number> = {
+    fact: 0,
+    preference: 0,
+    goal: 0,
+    person: 0,
+    event: 0,
+    instruction: 0,
+  };
+
+  if (!process.env.POSTGRES_URL) {
+    return { total: 0, text: 0, visual: 0, byCategory: empty };
+  }
+
+  try {
+    const rows = await db
+      .select({
+        category: userMemory.category,
+        metadata: userMemory.metadata,
+      })
+      .from(userMemory)
+      .where(eq(userMemory.userId, userId));
+
+    let visual = 0;
+    const byCategory = { ...empty };
+    for (const row of rows) {
+      const cat = row.category as MemoryCategory;
+      if (byCategory[cat] != null) {
+        byCategory[cat] += 1;
+      }
+      if (isVisualMemory(row.metadata)) {
+        visual += 1;
+      }
+    }
+    const total = rows.length;
+    return { total, text: total - visual, visual, byCategory };
+  } catch {
+    return { total: 0, text: 0, visual: 0, byCategory: empty };
+  }
+}
+
 export async function listAllMemories({
   userId,
   limit = 100,

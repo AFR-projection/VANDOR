@@ -10,6 +10,7 @@ import {
 } from "@/lib/media/download";
 import type { MediaDownloadProgressData } from "@/lib/media/types";
 import { generateUUID } from "@/lib/utils";
+import { toErrorMessage } from "@/lib/utils/error-message";
 import { saveMessages } from "@/lib/db/queries";
 
 export function createMediaDownloadStreamResponse(input: {
@@ -52,7 +53,7 @@ export function createMediaDownloadStreamResponse(input: {
           stageLabel: "Unduhan gagal",
           platform: input.slash.platform,
           format: input.slash.format,
-          error: result.error,
+          error: toErrorMessage(result.error),
         });
       }
 

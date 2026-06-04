@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useSourcePanel } from "@/hooks/use-source-panel";
 import type { NewsCard } from "@/lib/search/types";
 import { SmartImage } from "./smart-image";
 
@@ -35,16 +36,22 @@ export function NewsCards({ news }: { news: NewsCard[] }) {
 
 function NewsItem({ item, index }: { item: NewsCard; index: number }) {
   const date = formatDate(item.publishedDate);
+  const { openSource } = useSourcePanel();
 
   return (
-    <motion.a
+    <motion.button
       animate={{ opacity: 1, y: 0 }}
-      className="group flex flex-col overflow-hidden rounded-xl border border-border/40 bg-card/40 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--shadow-card)]"
-      href={item.url}
+      className="group flex w-full flex-col overflow-hidden rounded-xl border border-border/40 bg-card/40 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[var(--shadow-card)]"
       initial={{ opacity: 0, y: 10 }}
-      rel="noopener noreferrer"
-      target="_blank"
+      onClick={() =>
+        openSource({
+          url: item.url,
+          title: item.title,
+          snippet: item.snippet,
+        })
+      }
       transition={{ delay: 0.04 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      type="button"
     >
       <SmartImage
         alt={item.title}
@@ -71,6 +78,6 @@ function NewsItem({ item, index }: { item: NewsCard; index: number }) {
           </span>
         )}
       </div>
-    </motion.a>
+    </motion.button>
   );
 }

@@ -8,7 +8,12 @@ import {
   searchMemories,
   touchMemories,
 } from "./queries";
+import { formatMemoryCategoryHeading } from "./category-labels";
 import { scoreMemory } from "./scoring";
+import {
+  V4_MAX_MEMORY_CONTEXT_CHARS,
+  V4_MAX_MEMORY_ITEMS,
+} from "@/lib/v4/constants";
 
 export async function buildMemoryContext({
   userId,
@@ -34,8 +39,8 @@ export async function buildMemoryContext({
   }
 
   const categories = memorySettings?.enabledCategories;
-  const semanticLimit = memorySettings?.semanticSearchLimit ?? 14;
-  const recentLimit = memorySettings?.recentMemoriesLimit ?? 10;
+  const semanticLimit = Math.min(memorySettings?.semanticSearchLimit ?? 10, 10);
+  const recentLimit = Math.min(memorySettings?.recentMemoriesLimit ?? 6, 6);
   const minSim = memorySettings?.minSimilarity ?? 0.68;
 
   const [semantic, recent] = await Promise.all([
@@ -74,7 +79,7 @@ export async function buildMemoryContext({
   }
 
   candidates.sort((a, b) => b.score - a.score);
-  const top = candidates.slice(0, 16);
+  const top = candidates.slice(0, V4_MAX_MEMORY_ITEMS);
 
   touchMemories({
     userId,
@@ -104,15 +109,19 @@ export async function buildMemoryContext({
 
   const sections = sortedCategories.map((cat) => {
     const items = (byCategory.get(cat) ?? [])
-      .map((m) => `- ${m.content}`)
+      .map((m) => `- [${m.importance}/10] ${m.content}`)
       .join("\n");
-    return `### ${cat}\n${items}`;
+    return `### ${formatMemoryCategoryHeading(cat)}\n${items}`;
   });
 
-  return `## Long-term memory (VANDOR Memory v2)
-Use these facts naturally. Do not say "according to my memory" unless asked.
-Reference them only when relevant to the current message.
-When the user says "ingat" / "remember", call saveMemory immediately with high importance.
+  const body = `## Memori jangka panjang (ranked — gunakan yang relevan saja)
+Personalize jawaban jika cocok; jangan sebut "database memori" kecuali ditanya.
+Prioritaskan preferensi & instruksi > fakta umum.
 
 ${sections.join("\n\n")}`;
+
+  if (body.length <= V4_MAX_MEMORY_CONTEXT_CHARS) {
+    return body;
+  }
+  return `${body.slice(0, V4_MAX_MEMORY_CONTEXT_CHARS)}\n\n…(memori dipangkas — top ${top.length} paling relevan)`;
 }

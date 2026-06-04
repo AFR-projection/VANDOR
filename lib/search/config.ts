@@ -1,6 +1,7 @@
 export const WEB_SEARCH_MAX_RESULTS = 5;
 
-export const WEB_SEARCH_SYNTHESIS_MAX_TOKENS = 4096;
+/** Cap web-search answer length — lower = faster first-token completion. */
+export const WEB_SEARCH_SYNTHESIS_MAX_TOKENS = 2048;
 
 export function getWebSearchSynthesisModel(
   fallbackModelId: string,

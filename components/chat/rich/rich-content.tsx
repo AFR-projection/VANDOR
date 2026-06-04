@@ -1,5 +1,6 @@
 "use client";
 
+import { SparklesIcon } from "lucide-react";
 import type { RichContent } from "@/lib/search/types";
 import { ImageGallery } from "./image-gallery";
 import { LocationCards } from "./location-card";
@@ -24,8 +25,24 @@ export function RichContentBlocks({
       rich.locations?.length
   );
 
+  const hasAny =
+    hasSpecialized ||
+    (rich.websites?.length ?? 0) > 0 ||
+    (rich.relatedQuestions?.length ?? 0) > 0;
+
+  if (!hasAny) {
+    return null;
+  }
+
   return (
-    <>
+    <section className="mt-3 space-y-3 rounded-2xl border border-border/40 bg-muted/15 p-3 sm:p-4">
+      <header className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <SparklesIcon className="size-3.5 text-primary/80" />
+        Info & kartu web
+        <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
+          — klik sumber di jawaban untuk panel kanan
+        </span>
+      </header>
       {rich.images && rich.images.length > 0 && (
         <ImageGallery images={rich.images} />
       )}
@@ -45,6 +62,6 @@ export function RichContentBlocks({
       {rich.relatedQuestions && rich.relatedQuestions.length > 0 && (
         <RelatedQuestions onAsk={onAsk} questions={rich.relatedQuestions} />
       )}
-    </>
+    </section>
   );
 }
