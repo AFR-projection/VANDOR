@@ -14,6 +14,7 @@ import {
   SPECIALIST_AGENTS,
 } from "./registry";
 import { classifyTaskIntent, type TaskIntent } from "@/lib/ai/router";
+import { detectWebSearchNeed } from "@/lib/search/detect";
 import type { FileKind } from "@/lib/files/mime";
 import type {
   AgentId,
@@ -93,7 +94,21 @@ export function planOrchestrator(input: OrchestratorInput): OrchestratorPlan {
     };
   }
 
-  const intent = classifyTaskIntent(userText, { webSearchActive });
+  const needsLiveData =
+    webSearchActive || detectWebSearchNeed(userText).needed;
+
+  if (needsLiveData) {
+    const agent = getAgentSpec("research");
+    return {
+      agentId: "research",
+      agentName: agent.name,
+      modelId: modelForAgent(agent, models),
+      reason: "Orchestrator: Research Agent — data terkini / web",
+      parallelHints: ["chat"],
+    };
+  }
+
+  const intent = classifyTaskIntent(userText, { webSearchActive: needsLiveData });
   const agentId = intentToAgent(intent);
   const agent = getAgentSpec(agentId);
 

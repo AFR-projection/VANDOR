@@ -23,6 +23,10 @@ import { PreviewAttachment } from "./preview-attachment";
 import { AssistantAnswer } from "./assistant-answer";
 import { MapWidget } from "./map-widget";
 import {
+  getMediaDownloadProgressFromMessage,
+  MediaDownloadProgressCard,
+} from "./media-download-progress";
+import {
   getRichContentFromMessage,
   getSearchStatusFromMessage,
   getWebSourcesFromMessage,
@@ -79,10 +83,26 @@ const PurePreviewMessage = ({
   const webSources = isAssistant ? getWebSourcesFromMessage(message) : null;
   const richContent = isAssistant ? getRichContentFromMessage(message) : null;
   const searchStatus = isAssistant ? getSearchStatusFromMessage(message) : null;
+  const mediaProgress = isAssistant
+    ? getMediaDownloadProgressFromMessage(message)
+    : null;
+  const isMediaDownloading =
+    isAssistant &&
+    mediaProgress != null &&
+    mediaProgress.status !== "complete" &&
+    mediaProgress.status !== "error" &&
+    (isLoading || !message.parts.some((p) => p.type === "text" && p.text?.trim()));
+  const showMediaProgressCard =
+    isAssistant &&
+    mediaProgress != null &&
+    (isMediaDownloading ||
+      mediaProgress.status === "complete" ||
+      mediaProgress.status === "error");
   const isWebSearching =
     isAssistant &&
     isLoading &&
     searchStatus?.status === "searching" &&
+    !mediaProgress &&
     !message.parts.some((p) => p.type === "text" && p.text?.trim());
 
   const attachments = attachmentsFromMessage.length > 0 && (
@@ -139,6 +159,7 @@ const PurePreviewMessage = ({
       type === "data-web-sources" ||
       type === "data-rich-content" ||
       type === "data-search-status" ||
+      type === "data-media-download-progress" ||
       type === "data-model-meta" ||
       type === "data-chat-title"
     ) {
@@ -614,7 +635,8 @@ const PurePreviewMessage = ({
       type === "tool-getMemory" ||
       type === "tool-searchDb" ||
       type === "tool-manageNotes" ||
-      type === "tool-updateTask"
+      type === "tool-updateTask" ||
+      type === "tool-downloadMedia"
     ) {
       const { toolCallId, state } = part;
       const labels: Record<string, string> = {
@@ -623,6 +645,7 @@ const PurePreviewMessage = ({
         "tool-searchDb": "Mencari memori & data",
         "tool-manageNotes": "Catatan pribadi",
         "tool-updateTask": "Mengelola task",
+        "tool-downloadMedia": "Unduh media",
       };
 
       return (
@@ -678,6 +701,12 @@ const PurePreviewMessage = ({
   ) : (
     <>
       {attachments}
+      {showMediaProgressCard && mediaProgress && (
+        <MediaDownloadProgressCard
+          isActive={isMediaDownloading}
+          progress={mediaProgress}
+        />
+      )}
       {isWebSearching && (
         <>
           <WebSearchIndicator query={searchStatus?.query} />

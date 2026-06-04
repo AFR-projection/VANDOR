@@ -25,6 +25,7 @@ export const VANDOR_CHAT_TOOLS = [
   "generateVideo",
   "generateVoice",
   "transcribeAudio",
+  "downloadMedia",
 ] as const;
 
 export type VandorChatToolName = (typeof VANDOR_CHAT_TOOLS)[number];

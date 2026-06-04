@@ -1,5 +1,7 @@
 import "server-only";
 
+import { detectWebSearchNeed } from "@/lib/search/detect";
+
 export type TaskIntent = "simple" | "reasoning" | "coding" | "research";
 
 const CODING_RE =
@@ -15,7 +17,7 @@ export function classifyTaskIntent(
   userText: string,
   options: { webSearchActive?: boolean } = {}
 ): TaskIntent {
-  if (options.webSearchActive) {
+  if (options.webSearchActive || detectWebSearchNeed(userText).needed) {
     return "research";
   }
 

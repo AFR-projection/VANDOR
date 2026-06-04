@@ -84,6 +84,30 @@ Isi:
     sendText:
       "Ringkas percakapan kita di chat ini dalam poin-poin singkat (Bahasa Indonesia). Sorot keputusan & action item.",
   },
+  {
+    name: "tt",
+    description: "Unduh video TikTok (MP4)",
+    kind: "insert",
+    insertText: "/tt ",
+  },
+  {
+    name: "ytv",
+    description: "Unduh video YouTube (MP4)",
+    kind: "insert",
+    insertText: "/ytv ",
+  },
+  {
+    name: "yts",
+    description: "Unduh audio YouTube (MP3)",
+    kind: "insert",
+    insertText: "/yts ",
+  },
+  {
+    name: "ig",
+    description: "Unduh video Instagram (MP4)",
+    kind: "insert",
+    insertText: "/ig ",
+  },
 ];
 
 /** Hint for the model when user message matches /catat workflow */

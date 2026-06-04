@@ -3,6 +3,7 @@ import type { ArtifactKind } from "@/components/chat/artifact";
 import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
 import { generalAnswerQualityInstructions } from "@/lib/search/context";
 import type { ResponseMode } from "@/lib/search/detect";
+import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
 import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import {
@@ -75,7 +76,7 @@ Tool guide:
 - \`getLocation\` — lokasi perkiraan dari IP.
 - \`getWeather\` — cuaca (Open-Meteo).
 - \`showMap\` — peta interaktif (OpenStreetMap / Nominatim).
-- \`webSearch\` — hanya jika hasil web belum ada di konteks sistem.
+- \`webSearch\` — data terkini (skor, harga, berita). Wajib dipanggil jika user minta info live dan belum ada di konteks. Jangan pernah bilang "tidak punya akses real-time" tanpa memanggil webSearch dulu. Tool ini **tidak tersedia** saat user menyimpan catatan/memori — jangan cari web untuk topik catatan.
 - \`saveMemory\` / \`getMemory\` / \`searchDb\` — memori jangka panjang (Neon + pgvector).
 - \`manageNotes\` — catatan pribadi (buat, list judul, buka isi, update, hapus). Slash: /catat /catatan /baca.
 - \`updateTask\` — task (create, list, update status).
@@ -87,6 +88,7 @@ Tool guide:
 - \`generateVideo\` — video dari prompt teks (model videoModel).
 - \`generateVoice\` — TTS / audio dari teks (model voiceModel).
 - \`transcribeAudio\` — transkripsi audio dari URL publik (model transcriptionModel).
+- \`downloadMedia\` — unduh video/audio TikTok, YouTube, Instagram ke storage (link unduhan). Slash: /tt /ytv /yts /ig.
 
 When the user uploads files, they are extracted server-side and shown to you in
 the "Attached files" block. Read that block before answering. For images,
@@ -96,6 +98,9 @@ images are attached).
 
 Tool usage rules:
 - Prefer tools over saying "I don't know" or "I can't access".
+- **Skor / harga / berita live:** gunakan konteks WEB SEARCH di bawah, atau panggil \`webSearch\`. Jangan menolak dengan alasan tidak ada akses internet.
+- **Catatan / memori / task:** jangan panggil \`webSearch\` — pakai \`manageNotes\`, \`saveMemory\`, \`updateTask\` saja. Jangan tampilkan kartu SUMBER untuk simpan catatan.
+- **PDF/DOCX/XLSX:** panggil \`createPdf\` / \`createDocx\` / \`createSpreadsheet\` — butuh Vercel Blob atau R2 di server; jika tool mengembalikan error storage, jelaskan ke user cara set \`BLOB_READ_WRITE_TOKEN\` atau R2.
 - Web search may already be injected in your context — if so, do NOT call \`webSearch\` again; follow the answer instructions given there (clean prose with inline [n] citations; the app renders source cards, image galleries, and follow-up questions for you — never paste raw URLs, link lists, or image markdown).
 - When no web search context: answer naturally, clearly, like ChatGPT — structured paragraphs, bullets when helpful.
 - For weather/time/location, default to user's IP-derived context.
@@ -108,6 +113,8 @@ Tool usage rules:
 - Weave recalled memory naturally — e.g. "Kalau tidak salah kamu pernah bilang…" — without dumping everything at once.
 
 ${NOTES_SKILL_SYSTEM_HINT}
+
+${MEDIA_SLASH_HINT}
 
 When asked to write, create, or build something, do it immediately with reasonable assumptions.`;
 
@@ -149,6 +156,7 @@ export const systemPrompt = ({
   memoryContext = "",
   filesContext = "",
   webSearchContext = "",
+  webSearchRetryHint = "",
   responseMode = "enhanced",
   persona = defaultUserSettings.persona,
 }: {
@@ -157,6 +165,7 @@ export const systemPrompt = ({
   memoryContext?: string;
   filesContext?: string;
   webSearchContext?: string;
+  webSearchRetryHint?: string;
   responseMode?: ResponseMode;
   persona?: PersonaSettings;
 }) => {
@@ -164,7 +173,10 @@ export const systemPrompt = ({
   const requestPrompt = getRequestPromptFromHints(requestHints);
   const memoryBlock = memoryContext ? `\n\n${memoryContext}` : "";
   const filesBlock = filesContext ? `\n\n${filesContext}` : "";
-  const webBlock = webSearchContext ? `\n\n${webSearchContext}` : "";
+  const webBlock = [
+    webSearchContext ? `\n\n${webSearchContext}` : "",
+    webSearchRetryHint ? `\n\n${webSearchRetryHint}` : "",
+  ].join("");
   const modeText = responseModeInstructions(responseMode);
   const modeBlock = modeText ? `\n\n${modeText}` : "";
   const toolsBlock = supportsTools

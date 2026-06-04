@@ -2,6 +2,7 @@ import "server-only";
 
 import { generateText } from "ai";
 import { z } from "zod";
+import type { OpenRouterClientMeta } from "@/lib/ai/providers";
 import { getTitleModel } from "@/lib/ai/providers";
 import type { MemoryCategory } from "@/lib/db/schema";
 import {
@@ -51,19 +52,27 @@ Rules:
 
 Respond with ONLY valid JSON: {"memories":[{"content":"...","category":"preference","importance":7}]}`;
 
+function hasOpenRouterKey(apiKey?: string): boolean {
+  return Boolean(apiKey?.trim() || process.env.OPENROUTER_API_KEY?.trim());
+}
+
 async function runExtraction({
   system,
   prompt,
   maxItems,
   openRouterApiKey,
+  modelId,
+  meta,
 }: {
   system: string;
   prompt: string;
   maxItems: number;
   openRouterApiKey?: string;
+  modelId: string;
+  meta?: OpenRouterClientMeta;
 }) {
   const { text } = await generateText({
-    model: getTitleModel(openRouterApiKey),
+    model: getTitleModel(openRouterApiKey, meta, modelId),
     system,
     prompt,
   });
@@ -86,6 +95,8 @@ export async function preExtractUserMemories({
   chatId,
   maxPerTurn = 2,
   openRouterApiKey,
+  modelId,
+  meta,
   mergeSimilar = true,
 }: {
   userId: string;
@@ -93,9 +104,11 @@ export async function preExtractUserMemories({
   chatId: string;
   maxPerTurn?: number;
   openRouterApiKey?: string;
+  modelId: string;
+  meta?: OpenRouterClientMeta;
   mergeSimilar?: boolean;
 }): Promise<void> {
-  if (!userMessage.trim() || !process.env.OPENROUTER_API_KEY || maxPerTurn < 1) {
+  if (!userMessage.trim() || !hasOpenRouterKey(openRouterApiKey) || maxPerTurn < 1) {
     return;
   }
 
@@ -110,6 +123,8 @@ export async function preExtractUserMemories({
       prompt: `User said:\n${userMessage.slice(0, 2500)}`,
       maxItems: explicit ? Math.min(maxPerTurn, 3) : Math.min(maxPerTurn, 2),
       openRouterApiKey,
+      modelId,
+      meta,
     });
 
     if (items.length === 0) {
@@ -146,6 +161,8 @@ export async function extractAndStoreMemories({
   chatId,
   maxPerTurn = 3,
   openRouterApiKey,
+  modelId,
+  meta,
   mergeSimilar = true,
 }: {
   userId: string;
@@ -154,9 +171,11 @@ export async function extractAndStoreMemories({
   chatId: string;
   maxPerTurn?: number;
   openRouterApiKey?: string;
+  modelId: string;
+  meta?: OpenRouterClientMeta;
   mergeSimilar?: boolean;
 }): Promise<void> {
-  if (!userMessage.trim() || !process.env.OPENROUTER_API_KEY || maxPerTurn < 1) {
+  if (!userMessage.trim() || !hasOpenRouterKey(openRouterApiKey) || maxPerTurn < 1) {
     return;
   }
 
@@ -166,6 +185,8 @@ export async function extractAndStoreMemories({
       prompt: `User said:\n${userMessage.slice(0, 2000)}\n\nAssistant replied:\n${assistantMessage.slice(0, 1500)}`,
       maxItems: maxPerTurn,
       openRouterApiKey,
+      modelId,
+      meta,
     });
 
     if (items.length === 0) {

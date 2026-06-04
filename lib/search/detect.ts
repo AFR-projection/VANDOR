@@ -3,48 +3,59 @@ const SKIP_PATTERNS = [
   /^(hi|halo|hello|hey|thanks|thank you|terima kasih|makasih|ok|oke|sip|noted|good|bagus|mantap)\s*[!.?]*$/i,
   /^(write|buatkan|generate|create)\s+(me\s+)?(a\s+)?(code|script|function|program|gambar|image|logo|pdf|docx)/i,
   /^\/\w+/,
-  // Image generation / editing (handled by generateImage / editImage tools)
+  /^\/?(tt|ytv|yts|ig)\s+\S+/i,
   /\b(edit|edot|editan|photoshop|manipulasi|inpaint|ganti background|ubah foto|ubah gambar|retouch|airbrush)\b/i,
   /\b(buatkan gambar|generate image|draw|gambarin|ilustrasi|logo)\b/i,
-  // Identity / meta about the assistant
   /\b(siapa kamu|siapa anda|kamu siapa|who are you|nama kamu|kamu bisa apa|apa yang bisa kamu|what can you do|apa kabar|how are you|kabar kamu)\b/i,
-  // Time / date (handled by getCurrentTime tool)
   /\b(jam berapa|pukul berapa|what time|tanggal berapa|hari apa|what day|sekarang jam)\b/i,
-  // Pure arithmetic
   /\d\s*[+\-*/×÷^]\s*\d/,
-  // Local content tasks on text the user supplied (no external info needed)
   /\b(translate|terjemah(kan)?|ringkas(kan|an)?|rangkum(kan)?|summarize|summary|rewrite|tulis ulang|parafrase|paraphrase|koreksi|perbaiki (kalimat|tata bahasa|grammar|ejaan))\b/i,
 ];
 
-// ── Strong signals that genuinely require external / current information ─────
-const SEARCH_TRIGGERS = [
-  // Recency
-  /\b(terbaru|terkini|latest|current|hari ini|kemarin|besok|tahun ini|this year|minggu ini|bulan ini|this week|this month|baru saja|barusan)\b/i,
-  // News
-  /\b(berita|news|headline|breaking|kabar terbaru|viral|trending|gosip)\b/i,
-  // Commerce / pricing
-  /\b(harga|price|cost|biaya|tarif|fee|beli|buy|diskon|promo|murah|mahal|langganan|subscription|jual|olshop|e-commerce)\b/i,
-  // Comparison
-  /\b(bandingkan|compare|comparison|perbandingan|vs\.?|versus)\b/i,
-  // Reviews / specs
-  /\b(review|ulasan|rating|spesifikasi|spek|spec|benchmark|unboxing|testimoni)\b/i,
-  // Finance
-  /\b(saham|stock|crypto|bitcoin|ethereum|forex|kurs|nilai tukar|harga emas|gold price)\b/i,
-  // Releases / events
-  /\b(rilis|release|launch|launching|announce|announced|dirilis|kapan rilis|kapan keluar|jadwal)\b/i,
-  // Explicit search requests
-  /\b(cari(kan)?|search|google|googling|telusuri|browsing|cek di (internet|web|google))\b/i,
-  // Recommendations & local discovery
-  /\b(rekomendasi|recommend|paling (bagus|baik)|tempat (makan|wisata|nongkrong|menarik)|restoran|hotel|penginapan|cafe|kafe|kuliner|destinasi|wisata|near me|terdekat)\b/i,
-  // Explicit years (2010-2029)
-  /\b20[12]\d\b/,
+/** Catatan, memori, task, kredensial pribadi — tidak butuh web. */
+const LOCAL_TASK_PATTERNS = [
+  /\b(simpan|save)\s+(catatan|note|memo)\b/i,
+  /\b(catat|catatan)\s+(ini|ku|saya|pribadi)?\b/i,
+  /^judul\s*:/im,
+  /^isi\s*:/im,
+  /\b(ingat|jangan lupa|remember)\s+(ini|ini ya|ya)?\b/i,
+  /\bmanageNotes\b/i,
+  /\b(updateTask|buat task|todo)\b/i,
+  /\b(username|user\s?name|password|pin|rekening|no\.?\s*rek|transfer ke|biaya transfer)\b/i,
+  /\b(daftar catatan|catatan (saya|ku|pribadi)|buka catatan|lihat catatan)\b/i,
+  /\b(apa saja catatan|list catatan)\b/i,
+  /\b(download|unduh|simpan)\s+(video|audio|mp3|mp4)\b/i,
+  /^\/?(tt|ytv|yts|ig)\s+\S+/i,
 ];
 
-// ── Strong visual intent → image search (must be explicit) ───────────────────
+/** Selalu cari web bila muncul (data live / eksternal). */
+const LIVE_DATA_PATTERNS = [
+  /\b(berapa skor|skor (sekarang|terbaru|hari ini)|hasil pertandingan|live\s*score|livescore)\b/i,
+  /\b(spain|indonesia|manchester|barcelona|real madrid|liverpool|arsenal|chelsea)\s+vs\b/i,
+  /\bvs\.?\s+(spain|iraq|indonesia|japan|korea|brazil|argentina)\b/i,
+  /\b(berita|news|headline|breaking|kabar terbaru|viral|trending)\b/i,
+  /\b(prediksi harga|harga emas|harga saham|harga bitcoin|kurs (dolar|usd|rupiah)|nilai tukar)\b/i,
+  /\b(saham|stock|crypto|bitcoin|ethereum|forex)\s+(hari ini|sekarang|terbaru)\b/i,
+  /\b(cuaca (di |sekarang)|weather (in |now|today))\b/i,
+  /\b(cari(kan)?\s+(di )?(internet|web|google)|search (the )?web|googling)\b/i,
+  /\b(cek (di )?(internet|web)|telusuri|browsing)\b/i,
+  /\b(rekomendasi (restoran|hotel|cafe|tempat makan)|restoran terdekat|hotel terdekat|near me)\b/i,
+  /\b20[12]\d\b.*\b(terbaru|news|rilis|harga|skor)\b/i,
+];
+
+/** Butuh konteks tanya / recency — hindari false positive di catatan pribadi. */
+const CONTEXTUAL_LIVE_PATTERNS = [
+  /\b(terbaru|terkini|latest|current|hari ini|kemarin|minggu ini|bulan ini|baru saja|barusan)\b/i,
+  /\b(harga|price|berapa harga|murah|mahal|diskon|promo)\b/i,
+  /\b(bandingkan|compare|perbandingan)\b/i,
+  /\b(review|ulasan|spesifikasi|spek|benchmark)\b/i,
+  /\b(kapan rilis|tanggal rilis|launch date)\b/i,
+  /\b(rekomendasi|recommend)\b/i,
+];
+
 const STRONG_VISUAL = [
-  /\b(foto|gambar|photo|picture|images?|wallpaper|penampakan|pemandangan)\b/i,
-  /\b(tampilkan|tampilin|tunjukkan|tunjukin|show me)\b.*\b(foto|gambar|photo|picture|wujud|bentuk|rupa)\b/i,
-  /\bseperti apa (bentuk|rupa|wujud|penampakan)\b/i,
+  /\b(foto|gambar|photo|picture|images?|wallpaper)\b/i,
+  /\b(tampilkan|tampilin|tunjukkan|tunjukin|show me)\b.*\b(foto|gambar|photo|picture)\b/i,
 ];
 
 export type WebSearchDetection = {
@@ -74,12 +85,13 @@ const VIDEO_PATTERNS = [
 ];
 
 const PRODUCT_PATTERNS = [
-  /\b(harga|price|beli|buy|review produk|spesifikasi|spec|spek|rekomendasi (hp|laptop|gadget|produk)|toko|jual|murah|diskon)\b/i,
-  /\b(iphone|samsung|xiaomi|laptop|smartphone|headphone|tws|kamera|sepatu|jam tangan)\b/i,
+  /\b(berapa harga|harga (hp|laptop|iphone)|review produk|spesifikasi|rekomendasi (hp|laptop|gadget))\b/i,
+  /\b(iphone|samsung|xiaomi|laptop|smartphone)\s+(terbaru|harga|review)\b/i,
 ];
 
 const LOCATION_PATTERNS = [
-  /\b(di mana|dimana|lokasi|alamat|peta|map|rute|arah|wisata|destinasi|restoran|hotel|cafe|kafe|stasiun|bandara|terdekat|near me)\b/i,
+  /\b(di mana|dimana|lokasi|alamat|peta|map|rute|arah|terdekat|near me)\b/i,
+  /\b(restoran|hotel|cafe|kafe|wisata|destinasi)\s+(terdekat|dekat|recommended)\b/i,
 ];
 
 const BRAND_PHRASING =
@@ -92,7 +104,7 @@ function anyMatch(patterns: RegExp[], text: string): boolean {
 function normalizeQuery(text: string): string {
   return text
     .replace(/\s+/g, " ")
-    .replace(/[^\p{L}\p{N}\s?.,!-]/gu, "")
+    .replace(/[^\p{L}\p{N}\s?.,!@-]/gu, "")
     .trim();
 }
 
@@ -112,6 +124,42 @@ function isSkipped(text: string): boolean {
   return anyMatch(SKIP_PATTERNS, text);
 }
 
+function isLocalPersonalTask(text: string): boolean {
+  return anyMatch(LOCAL_TASK_PATTERNS, text);
+}
+
+function hasLiveIntent(text: string): boolean {
+  if (anyMatch(LIVE_DATA_PATTERNS, text)) {
+    return true;
+  }
+  const asks =
+    text.includes("?") ||
+    /\b(berapa|berapaan|gimana|bagaimana|kapan|siapa|dimana|di mana|kenapa|mengapa|what|how|when|where|why)\b/i.test(
+      text
+    );
+  const recency =
+    /\b(sekarang|hari ini|terbaru|live|ongoing|real[- ]?time)\b/i.test(text);
+  if (anyMatch(CONTEXTUAL_LIVE_PATTERNS, text) && (asks || recency)) {
+    return true;
+  }
+  if (/\bvs\.?\b/i.test(text) && (asks || recency || /\b(skor|match|pertandingan)\b/i.test(text))) {
+    return true;
+  }
+  return false;
+}
+
+/** Jangan sediakan tool webSearch — catatan/memori/sapaan ringan. */
+export function shouldDisableWebSearchTool(userText: string): boolean {
+  const { needed, reason } = detectWebSearchNeed(userText);
+  if (needed) {
+    return false;
+  }
+  if (/^\/?(tt|ytv|yts|ig)\s+\S+/i.test(userText.trim())) {
+    return true;
+  }
+  return reason === "local_task" || reason === "skip_pattern";
+}
+
 export function detectWebSearchNeed(userText: string): WebSearchDetection {
   const text = normalizeQuery(userText);
   const query = buildSearchQuery(userText);
@@ -124,15 +172,18 @@ export function detectWebSearchNeed(userText: string): WebSearchDetection {
     return { needed: false, query, reason: "skip_pattern" };
   }
 
-  if (anyMatch(SEARCH_TRIGGERS, text)) {
-    return { needed: true, query, reason: "external_signal" };
+  if (isLocalPersonalTask(text)) {
+    return { needed: false, query, reason: "local_task" };
+  }
+
+  if (hasLiveIntent(text)) {
+    return { needed: true, query, reason: "live_data" };
   }
 
   if (anyMatch(STRONG_VISUAL, text)) {
     return { needed: true, query, reason: "visual_signal" };
   }
 
-  // Default: answer from the model's own knowledge (no rich content).
   return { needed: false, query, reason: "no_external_signal" };
 }
 
@@ -152,12 +203,6 @@ function isSimpleQuery(text: string): boolean {
   return anyMatch(SIMPLE_PATTERNS, normalized);
 }
 
-/**
- * Decide how rich the rendered response should be:
- * - "rich": needs external/current info → web search + cards/sources.
- * - "simple": greetings, identity, time, math, trivial tasks → bare answer.
- * - "enhanced": explanations, coding, tutorials → clean formatted answer, no cards.
- */
 export function classifyResponseMode(userText: string): ResponseMode {
   if (detectWebSearchNeed(userText).needed) {
     return "rich";
@@ -170,20 +215,18 @@ export function classifyResponseMode(userText: string): ResponseMode {
 
 export function classifyContentIntents(userText: string): ContentIntents {
   const text = normalizeQuery(userText);
+  const searchNeeded = detectWebSearchNeed(userText).needed;
 
-  const news = anyMatch(NEWS_PATTERNS, text);
-  const video = anyMatch(VIDEO_PATTERNS, text);
-  const product = anyMatch(PRODUCT_PATTERNS, text);
-  const location = anyMatch(LOCATION_PATTERNS, text);
-  // Gallery only for explicit visual intent — never just because a query
-  // mentions a place or product.
-  const images = !news && anyMatch(STRONG_VISUAL, text);
+  const news = searchNeeded && anyMatch(NEWS_PATTERNS, text);
+  const video = searchNeeded && anyMatch(VIDEO_PATTERNS, text);
+  const product = searchNeeded && anyMatch(PRODUCT_PATTERNS, text);
+  const location = searchNeeded && anyMatch(LOCATION_PATTERNS, text);
+  const images = searchNeeded && !news && anyMatch(STRONG_VISUAL, text);
 
-  // Website preview cards: short brand/tool/site lookups (e.g. "Tavily",
-  // "apa itu Notion", "OpenRouter pricing") rather than every search.
   const wordCount = text.split(/\s+/).filter(Boolean).length;
   const brandPhrasing = BRAND_PHRASING.test(text);
   const website =
+    searchNeeded &&
     !(news || video || product || location) &&
     (wordCount <= 3 || (brandPhrasing && wordCount <= 8));
 

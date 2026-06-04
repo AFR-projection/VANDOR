@@ -17,7 +17,11 @@ description: >-
 - **DB**: Neon Postgres via `POSTGRES_URL`, Drizzle in `lib/db/`
 - **Memory v1**: `lib/memory/` — pgvector HNSW, auto extract after replies
 - **Slash skills**: `lib/chat/slash-skills.ts`, `components/chat/slash-commands.tsx`
-- **Catatan**: `manageNotes` tool + `UserNote` table (`lib/memory/assistant-db.ts`)
+- **Catatan**: `manageNotes` tool + `UserNote` table; UI tab Pengaturan → Catatan
+- **Observability**: `ToolEvent` table + tab Aktivitas (`lib/observability/`)
+- **Voice**: `POST /api/voice/transcribe` + mic button in composer
+- **PWA**: `app/manifest.ts`, `public/sw.js`, `PwaRegister`
+- **Memory extract model**: `lib/ai/memory-model.ts` (never `openrouter/free`)
 
 ## Persona
 

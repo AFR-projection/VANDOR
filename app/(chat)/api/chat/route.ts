@@ -33,6 +33,7 @@ import {
   classifyContentIntents,
   classifyResponseMode,
   detectWebSearchNeed,
+  shouldDisableWebSearchTool,
 } from "@/lib/search/detect";
 import type { RichContent, WebSearchOutput } from "@/lib/search/types";
 import { runWebSearch } from "@/lib/search/engine";
@@ -52,6 +53,9 @@ import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
 import { isFreeTier, isOrchestratorTier } from "@/lib/ai/chat-modes";
 import { normalizeModelTier } from "@/lib/ai/model-tiers";
 import { resolveIntegrationModels } from "@/lib/ai/integration-models";
+import { resolveMemoryExtractionModel } from "@/lib/ai/memory-model";
+import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
+import { recordToolEvent } from "@/lib/observability/record";
 import {
   isHeavyForFreeMode,
   planOrchestrator,
@@ -70,7 +74,10 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { showMap } from "@/lib/ai/tools/show-map";
-import { webSearch } from "@/lib/ai/tools/web-search";
+import { makeDownloadMediaTool } from "@/lib/ai/tools/download-media";
+import { makeWebSearch } from "@/lib/ai/tools/web-search";
+import { parseMediaSlash } from "@/lib/chat/media-slash";
+import { createMediaDownloadStreamResponse } from "@/lib/media/chat-stream";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { resolveClientGeo } from "@/lib/security/geo";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
@@ -112,7 +119,7 @@ import { convertToUIMessages, generateUUID, getTextFromMessage } from "@/lib/uti
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function getStreamContext() {
   try {
@@ -256,6 +263,36 @@ export async function POST(request: Request) {
           ? getTextFromMessage(lastUserMessage)
           : "";
 
+    const mediaSlash =
+      !isToolApprovalFlow && lastUserText.trim()
+        ? parseMediaSlash(lastUserText)
+        : null;
+
+    if (mediaSlash) {
+      return createMediaDownloadStreamResponse({
+        chatId: id,
+        slash: mediaSlash,
+        consumeSseStream: async ({ stream: sseStream }) => {
+          if (!process.env.REDIS_URL) {
+            return;
+          }
+          try {
+            const streamContext = getStreamContext();
+            if (streamContext) {
+              const streamId = generateId();
+              await createStreamId({ streamId, chatId: id });
+              await streamContext.createNewResumableStream(
+                streamId,
+                () => sseStream
+              );
+            }
+          } catch (_) {
+            /* non-critical */
+          }
+        },
+      });
+    }
+
     // ── Multi-format attachment ingestion ───────────────────────────────
     const attachedFiles = (lastUserMessage?.parts ?? [])
       .filter(
@@ -293,6 +330,23 @@ export async function POST(request: Request) {
 
     const mergeSimilar = userSettings.memory.mergeSimilarMemories !== false;
 
+    const activeTier = normalizeModelTier(initialChatModel);
+    const integrationModels = resolveIntegrationModels(
+      userSettings.integrations,
+      activeTier
+    );
+    const openRouterMeta = {
+      appName:
+        userSettings.integrations.openrouterAppName.trim() || "VANDOR",
+      appUrl:
+        userSettings.integrations.openrouterAppUrl.trim() ||
+        process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+        process.env.OPENROUTER_APP_URL?.trim() ||
+        "http://localhost:3000",
+    };
+    const memoryExtractionModelId =
+      resolveMemoryExtractionModel(integrationModels);
+
     const preExtractPromise = preExtractOn
       ? preExtractUserMemories({
           userId: session.user.id,
@@ -300,6 +354,8 @@ export async function POST(request: Request) {
           chatId: id,
           maxPerTurn: Math.min(userSettings.memory.maxExtractPerTurn, 2),
           openRouterApiKey,
+          modelId: memoryExtractionModelId,
+          meta: openRouterMeta,
           mergeSimilar,
         }).catch(() => null)
       : Promise.resolve();
@@ -360,12 +416,6 @@ export async function POST(request: Request) {
     const taskIntent = classifyTaskIntent(lastUserText, {
       webSearchActive: webSearchDetection.needed,
     });
-
-    const activeTier = normalizeModelTier(initialChatModel);
-    const integrationModels = resolveIntegrationModels(
-      userSettings.integrations,
-      activeTier
-    );
 
     const contextChars =
       lastUserText.length + filesBlock.length + memoryContext.length;
@@ -524,6 +574,7 @@ export async function POST(request: Request) {
         });
 
         let webSearchContextBlock = "";
+        let webSearchRetryHint = "";
         let relatedPromise: Promise<string[]> | null = null;
 
         if (!isToolApprovalFlow && lastUserText.trim() && webSearchDetection.needed) {
@@ -594,6 +645,11 @@ export async function POST(request: Request) {
                 buildWebSearchContextBlock(searchResult.sources),
                 getWebSearchAnswerInstructions(searchResult.sources.length),
               ].join("\n\n");
+            } else {
+              webSearchRetryHint = [
+                "=== WEB SEARCH REMINDER ===",
+                "Pencarian otomatis tidak menemukan sumber. Sebelum bilang tidak bisa akses data live, WAJIB panggil tool webSearch dengan query lebih spesifik (bahasa Inggris sering lebih baik untuk skor olahraga internasional).",
+              ].join("\n");
             }
 
             dataStream.write({
@@ -634,11 +690,13 @@ export async function POST(request: Request) {
         }
 
         const fullTools = [...VANDOR_CHAT_TOOLS];
+        const webSearchToolOff =
+          webSearchContextBlock.length > 0 ||
+          shouldDisableWebSearchTool(lastUserText);
 
-        const activeTools =
-          webSearchContextBlock.length > 0
-            ? fullTools.filter((t) => t !== "webSearch")
-            : [...fullTools];
+        const activeTools = webSearchToolOff
+          ? fullTools.filter((t) => t !== "webSearch")
+          : [...fullTools];
 
         const synthesisModelId =
           webSearchContextBlock.length > 0
@@ -675,6 +733,7 @@ export async function POST(request: Request) {
               memoryContext,
               filesContext: filesBlock,
               webSearchContext: webSearchContextBlock,
+              webSearchRetryHint,
               responseMode,
               persona: userSettings.persona,
             }) +
@@ -699,7 +758,8 @@ export async function POST(request: Request) {
             getLocation: makeGetLocation(ipGeo),
             getWeather,
             showMap,
-            webSearch,
+            webSearch: makeWebSearch(session.user.id),
+            downloadMedia: makeDownloadMediaTool(),
             ...assistantTools,
             createDocument: createDocument({
               session,
@@ -912,8 +972,20 @@ export async function POST(request: Request) {
               chatId: id,
               maxPerTurn: userSettings.memory.maxExtractPerTurn,
               openRouterApiKey,
+              modelId: memoryExtractionModelId,
+              meta: openRouterMeta,
               mergeSimilar,
             }).catch(() => null);
+            }
+
+            for (const run of parseToolRunsFromMessage(assistantMsg)) {
+              recordToolEvent({
+                userId: session.user.id,
+                chatId: id,
+                toolName: run.toolName,
+                status: run.status,
+                detail: run.detail,
+              }).catch(() => null);
             }
 
             if (

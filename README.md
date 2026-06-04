@@ -32,6 +32,8 @@ Semua tool di bawah ini punya implementasi server (`lib/ai/tools/`):
 - `getCurrentTime`, `getLocation`, `getWeather`, `showMap`
 - `webSearch` (Tavily / DuckDuckGo + Wikipedia)
 - `saveMemory`, `getMemory`, `searchDb`, `manageNotes`, `updateTask`
+- **Vercel production:** set `BLOB_READ_WRITE_TOKEN` (or Cloudflare `R2_*`) for PDF/DOCX/uploads
+- **Web search:** `TAVILY_API_KEY` recommended for live scores & news (Settings → API also works)
 - Slash skills: `/catat`, `/catatan`, `/baca`, `/todo`, `/ingat`, `/cari`, `/cuaca`, …
 - `createDocument`, `editDocument`, `updateDocument`, `requestSuggestions`
 - `createPdf`, `createDocx`, `createSpreadsheet`, `generateImage`
@@ -110,6 +112,16 @@ OPENROUTER_APP_URL=https://nama-projek.vercel.app
 | `NEXT_PUBLIC_APP_URL` | Ya |
 | `OPENROUTER_API_KEY` | Opsional (UI) |
 Opsional file upload production: `BLOB_READ_WRITE_TOKEN` (Vercel Blob) — tanpa ini export file pakai `public/storage` lokal.
+
+### Unduh media (`/tt`, `/ytv`, `/yts`, `/ig`)
+
+| Yang perlu | Lokal (dev) | Vercel (production) |
+|------------|-------------|---------------------|
+| **Link file untuk user** | Opsional (`public/storage`) | **Wajib** `BLOB_READ_WRITE_TOKEN` atau `R2_*` |
+| **Engine unduh** | Pasang **yt-dlp** (`winget install yt-dlp`) | **Cobalt** `COBALT_API_URL` (+ `COBALT_API_KEY` jika perlu) |
+| OpenRouter | Tidak dipakai untuk slash unduh | Sama |
+
+Contoh slash: `/ytv https://www.youtube.com/watch?v=...`
 
 ## Struktur penting
 

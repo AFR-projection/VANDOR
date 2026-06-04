@@ -337,3 +337,18 @@ export const responseCache = pgTable("ResponseCache", {
 });
 
 export type ResponseCache = InferSelectModel<typeof responseCache>;
+
+export const toolEvent = pgTable("ToolEvent", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  chatId: uuid("chatId").references(() => chat.id, { onDelete: "set null" }),
+  toolName: varchar("toolName", { length: 64 }).notNull(),
+  status: varchar("status", { enum: ["ok", "error"] }).notNull(),
+  durationMs: integer("durationMs"),
+  detail: text("detail"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type ToolEvent = InferSelectModel<typeof toolEvent>;

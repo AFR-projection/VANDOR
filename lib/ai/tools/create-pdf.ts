@@ -2,7 +2,7 @@ import "server-only";
 
 import { tool } from "ai";
 import { z } from "zod";
-import { putFile } from "@/lib/storage/blob";
+import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 
 export const createPdf = tool({
   description:
@@ -19,6 +19,31 @@ export const createPdf = tool({
     author: z.string().max(80).optional(),
   }),
   execute: async ({ title, body, author }) => {
+    try {
+      return await buildPdf({ title, body, author });
+    } catch (e) {
+      if (e instanceof StorageNotConfiguredError) {
+        return {
+          ok: false,
+          kind: "pdf" as const,
+          title,
+          error: e.message,
+        };
+      }
+      throw e;
+    }
+  },
+});
+
+async function buildPdf({
+  title,
+  body,
+  author,
+}: {
+  title: string;
+  body: string;
+  author?: string;
+}) {
     type PdfDoc = NodeJS.ReadableStream & {
       on(event: "data", listener: (chunk: Buffer) => void): PdfDoc;
       on(event: "end" | "error", listener: (...args: unknown[]) => void): PdfDoc;
@@ -91,11 +116,12 @@ export const createPdf = tool({
     });
 
     return {
+      ok: true,
       kind: "pdf" as const,
       title,
       url: stored.url,
       filename: `${safeName || "document"}.pdf`,
       bytes: buf.byteLength,
+      backend: stored.backend,
     };
-  },
-});
+}

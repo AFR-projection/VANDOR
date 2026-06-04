@@ -15,8 +15,10 @@ import type { getWeather } from "./ai/tools/get-weather";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
 import type { showMap } from "./ai/tools/show-map";
+import type { makeDownloadMediaTool } from "./ai/tools/download-media";
 import type { webSearch } from "./ai/tools/web-search";
 import type { makeAssistantTools } from "./ai/tools/assistant-tools";
+import type { MediaDownloadProgressData } from "./media/types";
 import type { RichContent, WebSearchOutput } from "./search/types";
 import type { Suggestion } from "./db/schema";
 
@@ -35,6 +37,7 @@ type requestSuggestionsTool = InferUITool<
 type getCurrentTimeTool = InferUITool<typeof getCurrentTime>;
 type getLocationTool = InferUITool<ReturnType<typeof makeGetLocation>>;
 type webSearchTool = InferUITool<typeof webSearch>;
+type downloadMediaTool = InferUITool<ReturnType<typeof makeDownloadMediaTool>>;
 type showMapTool = InferUITool<typeof showMap>;
 type createPdfTool = InferUITool<typeof createPdf>;
 type createDocxTool = InferUITool<typeof createDocx>;
@@ -56,6 +59,7 @@ export type ChatTools = {
   getCurrentTime: getCurrentTimeTool;
   getLocation: getLocationTool;
   webSearch: webSearchTool;
+  downloadMedia: downloadMediaTool;
   showMap: showMapTool;
   createPdf: createPdfTool;
   createDocx: createDocxTool;
@@ -111,6 +115,7 @@ export type CustomUIDataTypes = {
     status: "searching" | "complete" | "idle";
     query?: string;
   };
+  "media-download-progress": MediaDownloadProgressData;
   "web-sources": WebSearchOutput;
   "rich-content": RichContent;
 };

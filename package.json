@@ -16,7 +16,8 @@
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
-    "test": "export PLAYWRIGHT=True && pnpm exec playwright test"
+    "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
+    "test:unit": "npx tsx --test lib/search/detect.test.ts"
   },
   "dependencies": {
     "@ai-sdk/provider": "^3.0.3",
@@ -40,6 +41,7 @@
     "@vercel/functions": "^2.0.0",
     "@vercel/otel": "^1.12.0",
     "ai": "6.0.116",
+    "aws4fetch": "^1.0.20",
     "bcrypt-ts": "^5.0.2",
     "botid": "^1.5.11",
     "class-variance-authority": "^0.7.1",

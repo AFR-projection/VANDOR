@@ -11,8 +11,11 @@ import {
   PaletteIcon,
   PenLineIcon,
   PenSquareIcon,
+  DownloadIcon,
+  MusicIcon,
   SearchIcon,
   StickyNoteIcon,
+  VideoIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
@@ -85,6 +88,10 @@ const SKILL_ICONS: Record<string, ReactNode> = {
   cuaca: <CloudSunIcon className="size-3.5" />,
   waktu: <ClockIcon className="size-3.5" />,
   ringkas: <PenLineIcon className="size-3.5" />,
+  tt: <VideoIcon className="size-3.5" />,
+  ytv: <VideoIcon className="size-3.5" />,
+  yts: <MusicIcon className="size-3.5" />,
+  ig: <DownloadIcon className="size-3.5" />,
 };
 
 const SKILL_COMMANDS: SlashCommand[] = SLASH_SKILLS.map((skill) => ({

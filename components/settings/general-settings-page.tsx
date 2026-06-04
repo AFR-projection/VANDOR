@@ -1,8 +1,11 @@
 "use client";
 
 import {
+  ActivityIcon,
   ArrowLeftIcon,
+  BookMarkedIcon,
   BrainIcon,
+  CircleHelpIcon,
   EyeIcon,
   EyeOffIcon,
   KeyRoundIcon,
@@ -27,7 +30,10 @@ import {
   type PersonaTonePreset,
 } from "@/lib/settings/persona-presets";
 import type { IntegrationsSettings, PersonaSettings } from "@/lib/settings/types";
+import { ActivityPanel } from "./activity-panel";
+import { HelpGuidePanel } from "./help-guide-panel";
 import { LoginHistoryPanel } from "./login-history-panel";
+import { NotesPanel } from "./notes-panel";
 import { SettingSlider } from "./setting-row";
 import { ModelAiPanel } from "./model-ai-panel";
 import { normalizeModelTier, type ModelTierId } from "@/lib/ai/model-tiers";
@@ -71,8 +77,11 @@ type GeneralPayload = {
 const tabs = [
   { id: "persona", label: "Gaya bicara", icon: MessageCircleIcon },
   { id: "model", label: "Model & AI", icon: SparklesIcon },
+  { id: "notes", label: "Catatan", icon: BookMarkedIcon },
   { id: "api", label: "API & integrasi", icon: ServerIcon },
   { id: "security", label: "Keamanan", icon: ShieldIcon },
+  { id: "activity", label: "Aktivitas", icon: ActivityIcon },
+  { id: "guide", label: "Panduan", icon: CircleHelpIcon },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -627,6 +636,12 @@ export function GeneralSettingsPage() {
                 </section>
               </>
             )}
+
+            {tab === "notes" && <NotesPanel />}
+
+            {tab === "activity" && <ActivityPanel />}
+
+            {tab === "guide" && <HelpGuidePanel />}
 
             {tab === "security" && (
               <>

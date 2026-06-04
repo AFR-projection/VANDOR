@@ -2,7 +2,7 @@ import "server-only";
 
 import { tool } from "ai";
 import { z } from "zod";
-import { putFile } from "@/lib/storage/blob";
+import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 
 export const createDocx = tool({
   description:
@@ -12,6 +12,7 @@ export const createDocx = tool({
     body: z.string().min(1).max(60_000),
   }),
   execute: async ({ title, body }) => {
+    try {
     const {
       Document,
       Packer,
@@ -77,11 +78,18 @@ export const createDocx = tool({
     });
 
     return {
+      ok: true,
       kind: "docx" as const,
       title,
       url: stored.url,
       filename: `${safeName || "document"}.docx`,
       bytes: buf.byteLength,
     };
+    } catch (e) {
+      if (e instanceof StorageNotConfiguredError) {
+        return { ok: false, kind: "docx" as const, title, error: e.message };
+      }
+      throw e;
+    }
   },
 });

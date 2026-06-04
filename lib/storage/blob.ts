@@ -5,11 +5,18 @@ import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { getAppUrl } from "@/lib/app-url";
+import {
+  hasR2Storage,
+  hasVercelBlob,
+  isServerlessRuntime,
+  storageSetupHint,
+} from "@/lib/storage/config";
+import { putR2File } from "@/lib/storage/r2";
 
 export type StoredFile = {
   url: string;
   pathname: string;
-  backend: "vercel-blob" | "local";
+  backend: "vercel-blob" | "r2" | "local";
 };
 
 export type PutOptions = {
@@ -20,8 +27,11 @@ export type PutOptions = {
 
 const LOCAL_DIR = path.join(process.cwd(), "public", "storage");
 
-function hasVercelBlob(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+export class StorageNotConfiguredError extends Error {
+  constructor() {
+    super(storageSetupHint());
+    this.name = "StorageNotConfiguredError";
+  }
 }
 
 function toBuffer(data: Buffer | ArrayBuffer | Uint8Array): Buffer {
@@ -42,9 +52,8 @@ function publicUrl(pathname: string): string {
 }
 
 /**
- * Store a binary blob. Uses Vercel Blob if `BLOB_READ_WRITE_TOKEN` is set,
- * otherwise writes to `./public/storage` so the file is served as a static
- * asset by Next.js (perfect for local dev / self-hosted single-server).
+ * Store a binary blob.
+ * Priority: Vercel Blob → Cloudflare R2 → local public/storage (dev only).
  */
 export async function putFile(
   filename: string,
@@ -53,9 +62,9 @@ export async function putFile(
 ): Promise<StoredFile> {
   const contentType = options.contentType ?? "application/octet-stream";
   const addSuffix = options.addRandomSuffix !== false;
+  const buf = toBuffer(data);
 
   if (hasVercelBlob()) {
-    const buf = toBuffer(data);
     const result = await vercelPut(filename, buf, {
       access: "public",
       contentType,
@@ -68,13 +77,26 @@ export async function putFile(
     };
   }
 
+  if (hasR2Storage()) {
+    const result = await putR2File(filename, buf, contentType, addSuffix);
+    return {
+      url: result.url,
+      pathname: result.pathname,
+      backend: "r2",
+    };
+  }
+
+  if (isServerlessRuntime()) {
+    throw new StorageNotConfiguredError();
+  }
+
   await mkdir(LOCAL_DIR, { recursive: true });
   const ext = path.extname(filename);
   const stem = sanitize(path.basename(filename, ext)) || "file";
   const suffix = addSuffix ? `-${randomBytes(6).toString("hex")}` : "";
   const finalName = `${stem}${suffix}${ext}`;
   const fullPath = path.join(LOCAL_DIR, finalName);
-  await writeFile(fullPath, toBuffer(data));
+  await writeFile(fullPath, buf);
 
   const pathname = `/storage/${finalName}`;
   return {

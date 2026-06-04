@@ -2,7 +2,7 @@ import "server-only";
 
 import { tool } from "ai";
 import { z } from "zod";
-import { putFile } from "@/lib/storage/blob";
+import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 
 const SheetSchema = z.object({
   name: z.string().min(1).max(31).describe("Sheet name (max 31 chars)"),
@@ -22,6 +22,7 @@ export const createSpreadsheet = tool({
     sheets: z.array(SheetSchema).min(1).max(20),
   }),
   execute: async ({ title, format, sheets }) => {
+    try {
     const XLSX = await import("xlsx");
     const wb = XLSX.utils.book_new();
 
@@ -43,6 +44,7 @@ export const createSpreadsheet = tool({
         addRandomSuffix: true,
       });
       return {
+        ok: true,
         kind: "csv" as const,
         title,
         url: stored.url,
@@ -60,6 +62,7 @@ export const createSpreadsheet = tool({
     });
 
     return {
+      ok: true,
       kind: "xlsx" as const,
       title,
       url: stored.url,
@@ -67,5 +70,16 @@ export const createSpreadsheet = tool({
       bytes: out.byteLength,
       sheets: sheets.length,
     };
+    } catch (e) {
+      if (e instanceof StorageNotConfiguredError) {
+        return {
+          ok: false,
+          kind: format === "csv" ? ("csv" as const) : ("xlsx" as const),
+          title,
+          error: e.message,
+        };
+      }
+      throw e;
+    }
   },
 });

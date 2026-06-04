@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
+import { PwaRegister } from "@/components/pwa-register";
 import { getAppUrl } from "@/lib/app-url";
 
 export const metadata: Metadata = {
@@ -12,6 +13,12 @@ export const metadata: Metadata = {
   title: "VANDOR — Asisten Pribadi",
   description:
     "Asisten AI pribadi dengan memori jangka panjang dan model OpenRouter.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "VANDOR",
+  },
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport = {
@@ -84,7 +91,10 @@ export default function RootLayout({
           <SessionProvider
             basePath={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/auth`}
           >
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              <PwaRegister />
+              {children}
+            </TooltipProvider>
           </SessionProvider>
         </ThemeProvider>
       </body>
