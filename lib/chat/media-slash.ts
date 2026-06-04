@@ -9,6 +9,11 @@ export type MediaSlashCommand = {
 
 const MEDIA_SLASH_RE = /^\/?(tt|ytv|yts|ig)\s+(\S+)/i;
 
+/** `/tt` tanpa URL — Enter menampilkan petunjuk, bukan mengirim kosong. */
+export function isBareMediaSlash(text: string): boolean {
+  return /^\/?(tt|ytv|yts|ig)\s*$/i.test(text.trim());
+}
+
 export function parseMediaSlash(text: string): MediaSlashCommand | null {
   const trimmed = text.trim();
   const match = trimmed.match(MEDIA_SLASH_RE);

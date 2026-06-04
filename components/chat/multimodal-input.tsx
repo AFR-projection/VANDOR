@@ -38,6 +38,10 @@ import { Button } from "../ui/button";
 import { PaperclipIcon, StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
 import {
+  isBareMediaSlash,
+  parseMediaSlash,
+} from "@/lib/chat/media-slash";
+import {
   type SlashCommand,
   SlashCommandMenu,
   slashCommands,
@@ -425,22 +429,51 @@ function PureMultimodalInput({
       <PromptInput
         className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:border-primary/25 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
         onSubmit={() => {
+          const trySubmit = () => {
+            if (status === "ready" || status === "error") {
+              submitForm();
+            } else {
+              toast.error("Tunggu respons model selesai dulu.");
+            }
+          };
+
           if (input.startsWith("/")) {
-            const query = input.slice(1).trim();
-            const cmd = slashCommands.find((c) => c.name === query);
-            if (cmd) {
-              handleSlashSelect(cmd);
+            const trimmed = input.slice(1).trim();
+            const firstToken = trimmed.split(/\s+/)[0]?.toLowerCase() ?? "";
+
+            if (isBareMediaSlash(input)) {
+              toast.error(
+                "Tambahkan link setelah command, contoh: /tt https://vt.tiktok.com/..."
+              );
+              return;
+            }
+
+            if (parseMediaSlash(input)) {
+              trySubmit();
+              return;
+            }
+
+            // Satu kata saja: /cuaca, /catatan, /tt (menu) — jalankan skill UI
+            if (!trimmed.includes(" ")) {
+              const cmd = slashCommands.find((c) => c.name === firstToken);
+              if (cmd) {
+                handleSlashSelect(cmd);
+                return;
+              }
+            }
+
+            // Slash + teks lain (mis. /cari tentang X) — kirim ke chat
+            if (trimmed.length > 0) {
+              trySubmit();
+              return;
             }
             return;
           }
+
           if (!input.trim() && attachments.length === 0) {
             return;
           }
-          if (status === "ready" || status === "error") {
-            submitForm();
-          } else {
-            toast.error("Please wait for the model to finish its response!");
-          }
+          trySubmit();
         }}
       >
         <ChatModelStatusStrip
