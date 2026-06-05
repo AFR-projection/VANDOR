@@ -1,6 +1,7 @@
 import "server-only";
 
 import { baseProgress, reportProgress } from "@/lib/media/progress";
+import { readResponseWithProgress } from "@/lib/media/stream-fetch";
 import type {
   MediaDownloadFormat,
   MediaDownloadProgressReporter,
@@ -118,11 +119,15 @@ export async function downloadWithTikwm(
     signal: AbortSignal.timeout(120_000),
   });
 
-  if (!res.ok) {
-    throw new Error(`Unduhan TikTok gagal (HTTP ${res.status})`);
-  }
+  const buffer = await readResponseWithProgress(
+    res,
+    onProgress,
+    "tiktok",
+    format,
+    { from: 38, to: 78 },
+    "TikTok"
+  );
 
-  const buffer = Buffer.from(await res.arrayBuffer());
   if (buffer.length === 0) {
     throw new Error(
       "File TikTok kosong — coba link lain atau tunggu beberapa detik."

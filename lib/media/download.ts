@@ -8,10 +8,12 @@ import { isUrlForPlatform } from "@/lib/chat/media-slash";
 import { formatCobaltApiError } from "@/lib/media/cobalt-error";
 import {
   baseProgress,
-  formatBytes,
   reportProgress,
+  startResolvingPulse,
   startSimulatedDownloadProgress,
+  startUploadProgressSimulation,
 } from "@/lib/media/progress";
+import { readResponseWithProgress } from "@/lib/media/stream-fetch";
 import { downloadWithTikwm } from "@/lib/media/tiktok-tikwm";
 import type {
   MediaDownloadFormat,
@@ -140,51 +142,13 @@ async function fetchRemoteFile(
       headers: headers ?? {},
       redirect: "follow",
     });
-    if (!res.ok) {
-      throw new Error(`Unduhan gagal (HTTP ${res.status})`);
-    }
-
-    const total = Number(res.headers.get("content-length")) || 0;
-    const body = res.body;
-
-    if (!body) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length > MAX_BYTES) {
-        throw new Error(
-          `File terlalu besar (${Math.round(buf.length / 1024 / 1024)}MB).`
-        );
-      }
-      return buf;
-    }
-
-    const reader = body.getReader();
-    const chunks: Uint8Array[] = [];
-    let received = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        chunks.push(value);
-        received += value.length;
-        if (total > 0) {
-          const ratio = Math.min(1, received / total);
-          const progress = 20 + Math.round(ratio * 52);
-          reportProgress(
-            onProgress,
-            baseProgress(platform, format, {
-              status: "downloading",
-              progress,
-              stageLabel: `Mengunduh… ${formatBytes(received)} / ${formatBytes(total)}`,
-              bytesReceived: received,
-              bytesTotal: total,
-            })
-          );
-        }
-      }
-    }
-
-    const buf = Buffer.concat(chunks);
+    const buf = await readResponseWithProgress(
+      res,
+      onProgress,
+      platform,
+      format,
+      { from: 24, to: 76 }
+    );
     if (buf.length > MAX_BYTES) {
       throw new Error(
         `File terlalu besar (${Math.round(buf.length / 1024 / 1024)}MB).`
@@ -419,6 +383,8 @@ export async function downloadSocialMedia(
     };
   }
 
+  let stopResolvePulse: (() => void) | null = null;
+
   try {
     let buffer: Buffer | null = null;
     let title = "media";
@@ -432,6 +398,14 @@ export async function downloadSocialMedia(
         progress: 14,
         stageLabel: "Mengambil media dari sumber…",
       })
+    );
+
+    stopResolvePulse = startResolvingPulse(
+      onProgress,
+      platform,
+      format,
+      15,
+      26
     );
 
     const ytdlp = shouldTryYtDlpFirst()
@@ -474,6 +448,8 @@ export async function downloadSocialMedia(
               error: msg,
             })
           );
+          stopResolvePulse?.();
+          stopResolvePulse = null;
           return { ok: false, platform, format, error: msg };
         }
         backend = "cobalt";
@@ -498,6 +474,8 @@ export async function downloadSocialMedia(
               error: msg,
             })
           );
+          stopResolvePulse?.();
+          stopResolvePulse = null;
           return { ok: false, platform, format, error: msg };
         }
       }
@@ -530,6 +508,8 @@ export async function downloadSocialMedia(
             error: `${msg}${hint}`,
           })
         );
+        stopResolvePulse?.();
+        stopResolvePulse = null;
         return {
           ok: false,
           platform,
@@ -549,6 +529,8 @@ export async function downloadSocialMedia(
           error: errMsg,
         })
       );
+      stopResolvePulse?.();
+      stopResolvePulse = null;
       return {
         ok: false,
         platform,
@@ -557,26 +539,42 @@ export async function downloadSocialMedia(
       };
     }
 
+    stopResolvePulse?.();
+    stopResolvePulse = null;
+
     reportProgress(
       onProgress,
       baseProgress(platform, format, {
         status: "uploading",
-        progress: 82,
+        progress: 80,
         stageLabel: "Mengunggah ke penyimpanan cloud…",
         bytesReceived: buffer.length,
+        bytesTotal: buffer.length,
       })
     );
 
     const filename = sanitizeFilename(suggestedName ?? title, format);
-    const uploaded = await uploadBuffer(buffer, filename, format);
+    const stopUploadSim = startUploadProgressSimulation(
+      onProgress,
+      platform,
+      format,
+      buffer.length
+    );
+    let uploaded: Awaited<ReturnType<typeof uploadBuffer>>;
+    try {
+      uploaded = await uploadBuffer(buffer, filename, format);
+    } finally {
+      stopUploadSim();
+    }
 
     reportProgress(
       onProgress,
       baseProgress(platform, format, {
         status: "uploading",
-        progress: 96,
+        progress: 98,
         stageLabel: "Menyelesaikan…",
         bytesReceived: uploaded.sizeBytes,
+        bytesTotal: uploaded.sizeBytes,
       })
     );
 
@@ -606,6 +604,7 @@ export async function downloadSocialMedia(
 
     return result;
   } catch (err) {
+    stopResolvePulse?.();
     if (err instanceof StorageNotConfiguredError) {
       reportProgress(
         onProgress,
