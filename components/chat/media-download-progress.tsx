@@ -2,13 +2,14 @@
 
 import { motion } from "framer-motion";
 import {
+  AlertCircleIcon,
   CheckCircle2Icon,
   DownloadIcon,
   InstagramIcon,
   Music2Icon,
-  AlertCircleIcon,
   VideoIcon,
 } from "lucide-react";
+import { formatBytes } from "@/lib/media/progress";
 import {
   MEDIA_DOWNLOAD_STEPS,
   type MediaDownloadProgressData,
@@ -16,7 +17,6 @@ import {
 } from "@/lib/media/types";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { formatBytes } from "@/lib/media/progress";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
 export function getMediaDownloadProgressFromMessage(

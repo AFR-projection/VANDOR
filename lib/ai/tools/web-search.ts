@@ -21,11 +21,7 @@ export function makeWebSearch(userId: string) {
         .optional()
         .describe("Set true for breaking news / sports results"),
     }),
-    execute: async ({
-      query,
-      maxResults,
-      news,
-    }): Promise<WebSearchOutput> => {
+    execute: async ({ query, maxResults, news }): Promise<WebSearchOutput> => {
       return runWebSearch(query, {
         maxResults: maxResults ?? 5,
         userId,

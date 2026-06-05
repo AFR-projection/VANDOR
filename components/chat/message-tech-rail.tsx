@@ -5,11 +5,11 @@ import {
   BrainIcon,
   ChevronDownIcon,
   CpuIcon,
-  GlobeIcon,
   GaugeIcon,
+  GlobeIcon,
   SparklesIcon,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import {
   describeModelSelection,
   displayOpenRouterModelName,
@@ -18,8 +18,8 @@ import { normalizeModelTier } from "@/lib/ai/model-tiers";
 import { getTierUi } from "@/lib/ai/tier-styles";
 import type { MemorySavedNotice } from "@/lib/memory/notice";
 import type { ModelMeta } from "@/lib/types";
-import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
 import { cn } from "@/lib/utils";
+import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
 
 function MetaPill({
   children,
@@ -58,8 +58,7 @@ export function MessageTechRail({
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const hasMemory =
-    memoryNotice != null && memoryNotice.items.length > 0;
+  const hasMemory = memoryNotice != null && memoryNotice.items.length > 0;
   const hasRecall = memoryRecall?.active === true;
   const hasUsage = turnUsage != null;
   const hasModel = modelMeta != null;
@@ -211,7 +210,9 @@ export function MessageTechRail({
               </p>
               <p className="mt-0.5 break-all">{modelMeta.modelId}</p>
               {modelMeta.reason ? (
-                <p className="mt-1 leading-snug opacity-90">{modelMeta.reason}</p>
+                <p className="mt-1 leading-snug opacity-90">
+                  {modelMeta.reason}
+                </p>
               ) : null}
             </div>
           )}

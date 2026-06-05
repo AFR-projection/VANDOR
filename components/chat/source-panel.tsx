@@ -1,15 +1,14 @@
 "use client";
 
-import { ExternalLinkIcon, Loader2Icon, XIcon } from "lucide-react";
 import { motion } from "framer-motion";
+import { ExternalLinkIcon, Loader2Icon, XIcon } from "lucide-react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import {
   useSourcePanel,
   useSourcePanelSelector,
 } from "@/hooks/use-source-panel";
-import type { ArticlePayload } from "@/lib/search/types";
-import type { WebSearchSource } from "@/lib/search/types";
+import type { ArticlePayload, WebSearchSource } from "@/lib/search/types";
 import { cn } from "@/lib/utils";
 
 async function fetchArticle(url: string): Promise<ArticlePayload> {
@@ -226,7 +225,9 @@ export function SourcePanel({ overlay = false }: { overlay?: boolean }) {
             </div>
           )}
 
-          {data?.content && !isLoading && <ArticleBody content={data.content} />}
+          {data?.content && !isLoading && (
+            <ArticleBody content={data.content} />
+          )}
         </div>
 
         {hasRelated && (

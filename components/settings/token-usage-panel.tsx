@@ -17,9 +17,17 @@ export function TokenUsagePanel() {
       </p>
       <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
         <li>Memori: maks ~5 fakta / ~3200 karakter per giliran</li>
-        <li>Riwayat chat: 10 pesan terakhir (+ ringkasan di pengaturan lanjutan)</li>
-        <li>Web search: konteks sumber di-inject, kartu di UI (tidak diulang di teks)</li>
-        <li>Mode simple: batas keluar ~512 token; enhanced ~2048; web ~config sintesis</li>
+        <li>
+          Riwayat chat: 10 pesan terakhir (+ ringkasan di pengaturan lanjutan)
+        </li>
+        <li>
+          Web search: konteks sumber di-inject, kartu di UI (tidak diulang di
+          teks)
+        </li>
+        <li>
+          Mode simple: batas keluar ~512 token; enhanced ~2048; web ~config
+          sintesis
+        </li>
       </ul>
     </section>
   );

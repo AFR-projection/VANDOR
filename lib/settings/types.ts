@@ -10,26 +10,17 @@ import { memoryCategories } from "@/lib/db/schema";
 
 import { personaTonePresets } from "./persona-presets";
 
-
-
 export const modelTierSchema = z.enum(MODEL_TIER_IDS);
 
-
-
 export const integrationsSettingsSchema = z.object({
-
   modelTier: modelTierSchema,
 
   openrouterAppName: z.string().min(1).max(64),
 
   openrouterAppUrl: z.string().max(256),
-
 });
 
-
-
 const categoryFlagsSchema = z.object({
-
   fact: z.boolean(),
 
   preference: z.boolean(),
@@ -41,13 +32,9 @@ const categoryFlagsSchema = z.object({
   event: z.boolean(),
 
   instruction: z.boolean(),
-
 });
 
-
-
 export const memorySettingsSchema = z.object({
-
   enabled: z.boolean(),
 
   autoExtract: z.boolean(),
@@ -69,13 +56,9 @@ export const memorySettingsSchema = z.object({
   mergeSimilarMemories: z.boolean(),
 
   enabledCategories: categoryFlagsSchema,
-
 });
 
-
-
 export const visualMemorySettingsSchema = z.object({
-
   enabled: z.boolean(),
 
   autoCaptureFromImages: z.boolean(),
@@ -83,13 +66,9 @@ export const visualMemorySettingsSchema = z.object({
   includeInRecall: z.boolean(),
 
   maxVisualMemories: z.number().int().min(5).max(100),
-
 });
 
-
-
 export const advancedSettingsSchema = z.object({
-
   webSearchAuto: z.boolean(),
 
   responsePolish: z.boolean(),
@@ -101,13 +80,9 @@ export const advancedSettingsSchema = z.object({
   summaryInterval: z.number().int().min(5).max(50),
 
   richContentLevel: z.enum(["auto", "minimal", "rich"]),
-
 });
 
-
-
 export const personaSettingsSchema = z.object({
-
   assistantName: z.string().min(1).max(32),
 
   tonePreset: z.enum(personaTonePresets),
@@ -123,13 +98,9 @@ export const personaSettingsSchema = z.object({
   customInstructions: z.string().max(2500),
 
   signaturePhrase: z.string().max(120),
-
 });
 
-
-
 export const userSettingsSchema = z.object({
-
   memory: memorySettingsSchema,
 
   visualMemory: visualMemorySettingsSchema,
@@ -139,10 +110,7 @@ export const userSettingsSchema = z.object({
   persona: personaSettingsSchema,
 
   integrations: integrationsSettingsSchema,
-
 });
-
-
 
 export type MemorySettings = z.infer<typeof memorySettingsSchema>;
 
@@ -156,20 +124,12 @@ export type IntegrationsSettings = z.infer<typeof integrationsSettingsSchema>;
 
 export type UserSettings = z.infer<typeof userSettingsSchema>;
 
-
-
 export const defaultEnabledCategories = Object.fromEntries(
-
   memoryCategories.map((c) => [c, true])
-
 ) as Record<(typeof memoryCategories)[number], boolean>;
 
-
-
 export const defaultUserSettings: UserSettings = {
-
   memory: {
-
     enabled: true,
 
     autoExtract: true,
@@ -189,11 +149,9 @@ export const defaultUserSettings: UserSettings = {
     mergeSimilarMemories: true,
 
     enabledCategories: { ...defaultEnabledCategories },
-
   },
 
   visualMemory: {
-
     enabled: true,
 
     autoCaptureFromImages: true,
@@ -201,11 +159,9 @@ export const defaultUserSettings: UserSettings = {
     includeInRecall: true,
 
     maxVisualMemories: 30,
-
   },
 
   advanced: {
-
     webSearchAuto: true,
 
     responsePolish: true,
@@ -217,11 +173,9 @@ export const defaultUserSettings: UserSettings = {
     summaryInterval: 15,
 
     richContentLevel: "auto",
-
   },
 
   persona: {
-
     assistantName: "VANDOR",
 
     tonePreset: "jarvis",
@@ -237,105 +191,67 @@ export const defaultUserSettings: UserSettings = {
     customInstructions: "",
 
     signaturePhrase: "",
-
   },
 
   integrations: {
-
     modelTier: DEFAULT_MODEL_TIER,
 
     openrouterAppName: "VANDOR",
 
     openrouterAppUrl: "",
-
   },
-
 };
 
-
-
 function migrateIntegrations(
-
   raw: Record<string, unknown>
-
 ): IntegrationsSettings {
-
   const parsed = integrationsSettingsSchema.safeParse(raw);
 
   if (parsed.success) {
-
     return parsed.data;
-
   }
 
-
-
   const modelTier = (() => {
-
     if (typeof raw.modelTier === "string") {
-
       const t = raw.modelTier.trim();
 
       const result = modelTierSchema.safeParse(t);
 
       if (result.success) return result.data;
-
     }
 
     return inferTierFromLegacySlots(raw);
-
   })();
 
-
-
   return {
-
     modelTier,
 
     openrouterAppName:
-
       typeof raw.openrouterAppName === "string" && raw.openrouterAppName.trim()
-
         ? raw.openrouterAppName.trim().slice(0, 64)
-
         : defaultUserSettings.integrations.openrouterAppName,
 
     openrouterAppUrl:
-
       typeof raw.openrouterAppUrl === "string"
-
         ? raw.openrouterAppUrl.slice(0, 256)
-
         : "",
-
   };
-
 }
 
-
-
 export function mergeUserSettings(
-
   partial: Partial<UserSettings> | null | undefined
-
 ): UserSettings {
-
   if (!partial) {
-
     return defaultUserSettings;
-
   }
 
   return {
-
     memory: { ...defaultUserSettings.memory, ...partial.memory },
 
     visualMemory: {
-
       ...defaultUserSettings.visualMemory,
 
       ...partial.visualMemory,
-
     },
 
     advanced: { ...defaultUserSettings.advanced, ...partial.advanced },
@@ -343,12 +259,7 @@ export function mergeUserSettings(
     persona: { ...defaultUserSettings.persona, ...partial.persona },
 
     integrations: migrateIntegrations(
-
       (partial.integrations ?? {}) as Record<string, unknown>
-
     ),
-
   };
-
 }
-

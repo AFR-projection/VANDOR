@@ -1,12 +1,13 @@
 "use client";
 
-const PYODIDE_SRC =
-  "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
+const PYODIDE_SRC = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
 
 let loading: Promise<void> | null = null;
 
 function hasLoadPyodide(): boolean {
-  return typeof (globalThis as { loadPyodide?: unknown }).loadPyodide === "function";
+  return (
+    typeof (globalThis as { loadPyodide?: unknown }).loadPyodide === "function"
+  );
 }
 
 /** Load Pyodide only when a code artifact runs Python (not on every chat page). */

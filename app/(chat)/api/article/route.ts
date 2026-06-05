@@ -1,6 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
-import { getOrExtractArticle } from "@/lib/search/extract-article";
 import { ChatbotError } from "@/lib/errors";
+import { getOrExtractArticle } from "@/lib/search/extract-article";
 
 export async function GET(request: Request) {
   const session = await auth();

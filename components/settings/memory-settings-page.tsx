@@ -13,7 +13,7 @@ import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
-import { memoryCategories, type MemoryCategory } from "@/lib/db/schema";
+import { type MemoryCategory, memoryCategories } from "@/lib/db/schema";
 import type { UserSettings } from "@/lib/settings/types";
 import { MemoryBrainHero } from "./memory-brain-hero";
 import { MemoryManager } from "./memory-manager";
@@ -58,7 +58,10 @@ const categoryLabels: Record<MemoryCategory, string> = {
 };
 
 export function MemorySettingsPage() {
-  const { data, mutate, isLoading } = useSWR("user-settings-memory", fetchSettings);
+  const { data, mutate, isLoading } = useSWR(
+    "user-settings-memory",
+    fetchSettings
+  );
   const [tab, setTab] = useState<TabId>("memory");
   const [saving, setSaving] = useState(false);
 
@@ -164,12 +167,19 @@ export function MemorySettingsPage() {
             {tab === "memory" && (
               <>
                 <section className="space-y-3">
-                  <h2 className="text-sm font-semibold">Memori jangka panjang</h2>
+                  <h2 className="text-sm font-semibold">
+                    Memori jangka panjang
+                  </h2>
                   <p className="text-xs text-muted-foreground">
                     Model embedding:{" "}
-                    <code className="rounded bg-muted px-1">{env.embeddingModel}</code>
+                    <code className="rounded bg-muted px-1">
+                      {env.embeddingModel}
+                    </code>
                     {!env.postgresConfigured && (
-                      <span className="text-destructive"> · Postgres tidak terkonfigurasi</span>
+                      <span className="text-destructive">
+                        {" "}
+                        · Postgres tidak terkonfigurasi
+                      </span>
                     )}
                   </p>
                   <SettingToggle
@@ -177,7 +187,9 @@ export function MemorySettingsPage() {
                     description="Nonaktifkan untuk tidak menyimpan atau mengingat memori sama sekali."
                     id="memory-enabled"
                     label="Aktifkan memori"
-                    onCheckedChange={(enabled) => patch({ memory: { ...m, enabled } })}
+                    onCheckedChange={(enabled) =>
+                      patch({ memory: { ...m, enabled } })
+                    }
                   />
                   <SettingToggle
                     checked={m.autoExtract}
@@ -247,10 +259,10 @@ export function MemorySettingsPage() {
                     label="Min. similarity"
                     max={0.95}
                     min={0.4}
-                    step={0.01}
                     onChange={(minSimilarity) =>
                       patch({ memory: { ...m, minSimilarity } })
                     }
+                    step={0.01}
                     value={m.minSimilarity}
                   />
                   <SettingSlider
@@ -295,8 +307,8 @@ export function MemorySettingsPage() {
               <section className="space-y-3">
                 <h2 className="text-sm font-semibold">Visual Memory</h2>
                 <p className="text-xs text-muted-foreground">
-                  Menyimpan konteks saat kamu mengunggah gambar di chat (nama file +
-                  pesan kamu). Berguna untuk mengingat referensi visual.
+                  Menyimpan konteks saat kamu mengunggah gambar di chat (nama
+                  file + pesan kamu). Berguna untuk mengingat referensi visual.
                 </p>
                 <SettingToggle
                   checked={v.enabled}
@@ -344,9 +356,9 @@ export function MemorySettingsPage() {
                 <h2 className="text-sm font-semibold">Pengaturan lanjutan</h2>
                 <p className="text-xs text-muted-foreground">
                   Postgres:{" "}
-                  {env.postgresConfigured ? "terhubung" : "tidak dikonfigurasi"} ·
-                  OpenRouter: {env.openrouterConfigured ? "OK" : "tidak ada"} ·
-                  API key di menu{" "}
+                  {env.postgresConfigured ? "terhubung" : "tidak dikonfigurasi"}{" "}
+                  · OpenRouter: {env.openrouterConfigured ? "OK" : "tidak ada"}{" "}
+                  · API key di menu{" "}
                   <Link className="underline" href={`${base()}/settings`}>
                     Pengaturan
                   </Link>
@@ -361,7 +373,9 @@ export function MemorySettingsPage() {
                   }
                 />
                 <div className="rounded-xl border border-border/40 bg-card/30 px-4 py-3">
-                  <p className="mb-2 text-sm font-medium">Tingkat rich content</p>
+                  <p className="mb-2 text-sm font-medium">
+                    Tingkat rich content
+                  </p>
                   <p className="mb-3 text-[12px] text-muted-foreground">
                     Kontrol kartu, galeri, dan pertanyaan lanjutan di jawaban.
                   </p>
@@ -438,9 +452,9 @@ export function MemorySettingsPage() {
             {tab === "manage" && (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Semua ingatan VANDOR — edit, hapus, atau tambah manual. Setelah
-                  chat, toast &quot;VANDOR mengingat…&quot; muncul jika ada fakta
-                  baru tersimpan.
+                  Semua ingatan VANDOR — edit, hapus, atau tambah manual.
+                  Setelah chat, toast &quot;VANDOR mengingat…&quot; muncul jika
+                  ada fakta baru tersimpan.
                 </p>
                 <MemoryManager />
               </>

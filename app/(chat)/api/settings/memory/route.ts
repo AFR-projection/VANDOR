@@ -1,8 +1,8 @@
 import { auth } from "@/app/(auth)/auth";
-import { requireClientAccess } from "@/lib/security/client-access";
 import { ChatbotError } from "@/lib/errors";
+import { requireClientAccess } from "@/lib/security/client-access";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
-import { userSettingsSchema, type UserSettings } from "@/lib/settings/types";
+import { type UserSettings, userSettingsSchema } from "@/lib/settings/types";
 
 export async function GET(request: Request) {
   const denied = await requireClientAccess(request);
@@ -18,9 +18,7 @@ export async function GET(request: Request) {
     embeddingModel:
       process.env.MEMORY_EMBEDDING_MODEL ?? "openai/text-embedding-3-small",
     postgresConfigured: Boolean(process.env.POSTGRES_URL),
-    openrouterConfigured: Boolean(
-      process.env.OPENROUTER_API_KEY
-    ),
+    openrouterConfigured: Boolean(process.env.OPENROUTER_API_KEY),
   };
 
   return Response.json({ settings, env });

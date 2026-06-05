@@ -3,9 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import equal from "fast-deep-equal";
-import {
-  ArrowUpIcon,
-} from "lucide-react";
+import { ArrowUpIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -20,11 +18,12 @@ import {
 } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
 import { ChatModelStatusStrip } from "@/components/chat/chat-model-status";
 import { OpenRouterModelPicker } from "@/components/chat/openrouter-model-picker";
-import { DEFAULT_CHAT_MODEL, type ModelCapabilities } from "@/lib/ai/models";
+import { useIsMobile } from "@/hooks/use-mobile";
+import type { ModelCapabilities } from "@/lib/ai/models";
+import { isBareMediaSlash, parseMediaSlash } from "@/lib/chat/media-slash";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -38,10 +37,6 @@ import { Button } from "../ui/button";
 import { PaperclipIcon, StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
 import {
-  isBareMediaSlash,
-  parseMediaSlash,
-} from "@/lib/chat/media-slash";
-import {
   type SlashCommand,
   SlashCommandMenu,
   slashCommands,
@@ -49,12 +44,6 @@ import {
 import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 import { VoiceInputButton } from "./voice-input-button";
-
-function setCookie(name: string, value: string) {
-  const maxAge = 60 * 60 * 24 * 365;
-  // biome-ignore lint/suspicious/noDocumentCookie: needed for client-side cookie setting
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
-}
 
 function PureMultimodalInput({
   chatId,

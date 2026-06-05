@@ -129,7 +129,10 @@ function normalizeQuery(text: string): string {
 
 function buildSearchQuery(userText: string): string {
   const cleaned = normalizeQuery(userText)
-    .replace(/^(tolong|please|bisa|could you|can you|mohon|hey|hi|halo)\s+/i, "")
+    .replace(
+      /^(tolong|please|bisa|could you|can you|mohon|hey|hi|halo)\s+/i,
+      ""
+    )
     .replace(/\?+$/, "")
     .trim();
 
@@ -167,7 +170,10 @@ function buildContextualSearchQuery(
       continue;
     }
     const topic = buildSearchQuery(prev);
-    if (isLinkOnlyRequest(userText) || /\b(link|tautan|url|playlist)\b/i.test(userText)) {
+    if (
+      isLinkOnlyRequest(userText) ||
+      /\b(link|tautan|url|playlist)\b/i.test(userText)
+    ) {
       return `${topic} youtube soundcloud`.slice(0, 140);
     }
     return topic;
@@ -203,7 +209,10 @@ function hasLiveIntent(text: string): boolean {
   if (anyMatch(CONTEXTUAL_LIVE_PATTERNS, text) && (asks || recency)) {
     return true;
   }
-  if (/\bvs\.?\b/i.test(text) && (asks || recency || /\b(skor|match|pertandingan)\b/i.test(text))) {
+  if (
+    /\bvs\.?\b/i.test(text) &&
+    (asks || recency || /\b(skor|match|pertandingan)\b/i.test(text))
+  ) {
     return true;
   }
   return false;
@@ -296,8 +305,7 @@ export function classifyContentIntents(userText: string): ContentIntents {
 
   const news = searchNeeded && anyMatch(NEWS_PATTERNS, text);
   const video =
-    searchNeeded &&
-    (anyMatch(VIDEO_PATTERNS, text) || isLinkOnlyRequest(text));
+    searchNeeded && (anyMatch(VIDEO_PATTERNS, text) || isLinkOnlyRequest(text));
   const product = searchNeeded && anyMatch(PRODUCT_PATTERNS, text);
   const location = searchNeeded && anyMatch(LOCATION_PATTERNS, text);
   const images = searchNeeded && !news && anyMatch(STRONG_VISUAL, text);

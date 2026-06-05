@@ -1,6 +1,9 @@
 import { DEFAULT_FREE_MODEL_CHAIN } from "@/lib/ai/free-models";
 
-export { DEFAULT_FREE_MODEL_CHAIN, OPENROUTER_FREE_MODEL_POOL } from "@/lib/ai/free-models";
+export {
+  DEFAULT_FREE_MODEL_CHAIN,
+  OPENROUTER_FREE_MODEL_POOL,
+} from "@/lib/ai/free-models";
 
 export const OPENROUTER_MODEL_ID_PATTERN =
   /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i;
@@ -60,7 +63,8 @@ export const MODEL_SLOT_GROUPS: {
   {
     id: "generate",
     title: "Agent Generate (gambar, video, file)",
-    subtitle: "Model untuk membuat gambar, video, suara, transkripsi, dan dokumen.",
+    subtitle:
+      "Model untuk membuat gambar, video, suara, transkripsi, dan dokumen.",
   },
   {
     id: "system",
@@ -74,7 +78,8 @@ export const MODEL_SLOT_DEFINITIONS: ModelSlotDefinition[] = [
   {
     key: "freeModel1",
     label: "Free #1 (utama)",
-    description: "Model gratis pertama. Wajib tier :free (contoh: openrouter/free).",
+    description:
+      "Model gratis pertama. Wajib tier :free (contoh: openrouter/free).",
     placeholder: "openrouter/free",
     group: "free",
   },
@@ -96,7 +101,8 @@ export const MODEL_SLOT_DEFINITIONS: ModelSlotDefinition[] = [
   {
     key: "chatModel",
     label: "Chat Agent",
-    description: "Percakapan umum & task ringan. Jadi induk fallback agent lain.",
+    description:
+      "Percakapan umum & task ringan. Jadi induk fallback agent lain.",
     placeholder: "google/gemini-2.5-flash",
     group: "agents",
   },

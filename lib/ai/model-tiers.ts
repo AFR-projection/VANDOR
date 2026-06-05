@@ -108,8 +108,7 @@ export const MODEL_TIER_OPTIONS = [
     id: "gratis" as const,
     label: "Gratis",
     shortLabel: "Gratis",
-    description:
-      "15+ model :free — otomatis ganti jika satu kena rate limit.",
+    description: "15+ model :free — otomatis ganti jika satu kena rate limit.",
     provider: "moonshotai",
     requiresCredits: false,
   },
@@ -208,7 +207,9 @@ export function displayTierLabel(id: string): string {
 
 export function displayTierProvider(id: string): string {
   const tier = normalizeModelTier(id);
-  return MODEL_TIER_OPTIONS.find((o) => o.id === tier)?.provider ?? "openrouter";
+  return (
+    MODEL_TIER_OPTIONS.find((o) => o.id === tier)?.provider ?? "openrouter"
+  );
 }
 
 export function slotsFromTier(tier: ModelTierId): TierPreset {
@@ -229,7 +230,9 @@ export function slotsFromTier(tier: ModelTierId): TierPreset {
 export function inferTierFromLegacySlots(
   raw: Record<string, unknown>
 ): ModelTierId {
-  const chat = String(raw.chatModel ?? raw.defaultChatModel ?? "").toLowerCase();
+  const chat = String(
+    raw.chatModel ?? raw.defaultChatModel ?? ""
+  ).toLowerCase();
   const free1 = String(raw.freeModel1 ?? raw.freeChatModel ?? "").toLowerCase();
 
   if (

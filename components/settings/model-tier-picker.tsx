@@ -1,13 +1,19 @@
 "use client";
 
-import { CheckIcon, CrownIcon, ScaleIcon, WalletIcon, ZapIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  CheckIcon,
+  CrownIcon,
+  ScaleIcon,
+  WalletIcon,
+  ZapIcon,
+} from "lucide-react";
 import {
   MODEL_TIER_OPTIONS,
-  tierCookieValue,
   type ModelTierId,
+  tierCookieValue,
 } from "@/lib/ai/model-tiers";
 import { getTierUi } from "@/lib/ai/tier-styles";
+import { cn } from "@/lib/utils";
 
 const TIER_ICONS: Record<ModelTierId, typeof ZapIcon> = {
   gratis: ZapIcon,
@@ -31,6 +37,7 @@ export function ModelTierPicker({
 }: ModelTierPickerProps) {
   return (
     <div
+      aria-label="Tingkat model AI"
       className={cn(
         compact
           ? "grid grid-cols-2 gap-2 sm:grid-cols-4"
@@ -38,7 +45,6 @@ export function ModelTierPicker({
         className
       )}
       role="radiogroup"
-      aria-label="Tingkat model AI"
     >
       {MODEL_TIER_OPTIONS.map((option) => {
         const selected = value === option.id;
@@ -67,7 +73,9 @@ export function ModelTierPicker({
               <span
                 className={cn(
                   "flex size-9 shrink-0 items-center justify-center rounded-xl border transition-colors",
-                  selected ? ui.iconRing : "border-border/50 bg-muted/30 text-muted-foreground group-hover:border-border"
+                  selected
+                    ? ui.iconRing
+                    : "border-border/50 bg-muted/30 text-muted-foreground group-hover:border-border"
                 )}
               >
                 <Icon className="size-4" />
@@ -84,18 +92,20 @@ export function ModelTierPicker({
                     {ui.shortTag}
                   </span>
                 </div>
-                {!compact ? (
+                {compact ? null : (
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {option.requiresCredits ? "Butuh kredit OR" : "Tanpa kredit"}
+                    {option.requiresCredits
+                      ? "Butuh kredit OR"
+                      : "Tanpa kredit"}
                   </p>
-                ) : null}
+                )}
               </div>
             </div>
-            {!compact ? (
+            {compact ? null : (
               <p className="pr-8 text-[11px] leading-relaxed text-muted-foreground">
                 {option.description}
               </p>
-            ) : null}
+            )}
           </button>
         );
       })}

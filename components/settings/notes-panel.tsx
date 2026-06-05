@@ -23,7 +23,9 @@ type NoteDetail = {
 };
 
 async function fetchNotes(): Promise<{ notes: NoteRow[] }> {
-  const res = await fetch(`${base()}/api/settings/notes`, { cache: "no-store" });
+  const res = await fetch(`${base()}/api/settings/notes`, {
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error("Gagal memuat catatan");
   return res.json();
 }

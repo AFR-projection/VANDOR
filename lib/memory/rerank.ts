@@ -1,7 +1,7 @@
 import "server-only";
 
-import { openRouterFetch } from "@/lib/ai/openrouter-http";
 import type { OpenRouterUserContext } from "@/lib/ai/integration-models";
+import { openRouterFetch } from "@/lib/ai/openrouter-http";
 
 type RerankResult = {
   index: number;

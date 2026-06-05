@@ -25,8 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    const originalName =
-      (file as File).name ?? `upload-${Date.now()}`;
+    const originalName = (file as File).name ?? `upload-${Date.now()}`;
     const mime = file.type || "application/octet-stream";
 
     if (file.size > MAX_UPLOAD_BYTES) {
@@ -66,8 +65,7 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       console.error("Upload failed:", error);
-      const msg =
-        error instanceof Error ? error.message : "Upload failed";
+      const msg = error instanceof Error ? error.message : "Upload failed";
       return NextResponse.json({ error: msg }, { status: 500 });
     }
   } catch (_error) {

@@ -3,16 +3,16 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { getOpenRouterContextForUser } from "@/lib/ai/integration-models";
 import type { MemoryCategory } from "@/lib/db/schema";
 import { userMemory } from "@/lib/db/schema";
-import { getOpenRouterContextForUser } from "@/lib/ai/integration-models";
 import { getEmbeddingOptionsForUser } from "./embedding-options";
-import { embedText, embeddingToSql } from "./embeddings";
+import { embeddingToSql, embedText } from "./embeddings";
 import { mergeMemoryTexts } from "./merge";
 import {
+  type MemoryMetadata,
   parseMemoryMetadata,
   withAccessBump,
-  type MemoryMetadata,
 } from "./metadata";
 import { rerankDocuments } from "./rerank";
 
@@ -71,15 +71,17 @@ export async function searchMemories({
 
     const fetchLimit = Math.min(limit * 3, 36);
 
-    const rows = await client<{
-      id: string;
-      content: string;
-      category: MemoryCategory;
-      importance: number;
-      similarity: number;
-      metadata: unknown;
-      updatedAt: Date;
-    }[]>`
+    const rows = await client<
+      {
+        id: string;
+        content: string;
+        category: MemoryCategory;
+        importance: number;
+        similarity: number;
+        metadata: unknown;
+        updatedAt: Date;
+      }[]
+    >`
       SELECT
         id,
         content,
@@ -205,10 +207,11 @@ export async function saveMemory({
       const existing = await findSimilarForSave(userId, trimmed);
       if (existing?.id) {
         const sim = existing.similarity ?? 0;
-        if (sim >= MEMORY_DUPLICATE_SIMILARITY) {
-          if (existing.content.trim().toLowerCase() === trimmed.toLowerCase()) {
-            return existing.id;
-          }
+        if (
+          sim >= MEMORY_DUPLICATE_SIMILARITY &&
+          existing.content.trim().toLowerCase() === trimmed.toLowerCase()
+        ) {
+          return existing.id;
         }
         if (sim >= MEMORY_MERGE_SIMILARITY) {
           const merged = mergeMemoryTexts(existing.content, trimmed);
@@ -331,12 +334,9 @@ export async function searchAllUserData({
   const q = query.toLowerCase();
   const filteredNotes = notes.filter(
     (n) =>
-      n.title.toLowerCase().includes(q) ||
-      n.content.toLowerCase().includes(q)
+      n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
   );
-  const filteredTasks = tasks.filter((t) =>
-    t.title.toLowerCase().includes(q)
-  );
+  const filteredTasks = tasks.filter((t) => t.title.toLowerCase().includes(q));
 
   return {
     memories,

@@ -7,7 +7,20 @@ import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 
 const PIN_LENGTH = 4;
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"];
+const KEYS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "clear",
+  "0",
+  "back",
+];
 
 type GateStatus = {
   configured: boolean;
@@ -58,17 +71,15 @@ function GateForm() {
     return () => clearInterval(id);
   }, []);
 
-  const locked = Boolean(status?.locked && status.lockedUntil && status.lockedUntil > now);
+  const locked = Boolean(
+    status?.locked && status.lockedUntil && status.lockedUntil > now
+  );
   const remainingMs = locked ? (status?.lockedUntil ?? 0) - now : 0;
   const attemptsLeft = status?.attemptsLeft ?? PIN_LENGTH;
 
   const submit = useCallback(
     async (value: string) => {
-      if (
-        value.length !== PIN_LENGTH ||
-        submitInFlight.current ||
-        success
-      ) {
+      if (value.length !== PIN_LENGTH || submitInFlight.current || success) {
         return;
       }
       submitInFlight.current = true;
@@ -273,7 +284,9 @@ export default function GatePage() {
             "radial-gradient(circle at 50% 0%, oklch(0.55 0.12 220 / 0.15), transparent 55%)",
         }}
       />
-      <Suspense fallback={<div className="text-muted-foreground text-sm">…</div>}>
+      <Suspense
+        fallback={<div className="text-muted-foreground text-sm">…</div>}
+      >
         <GateForm />
       </Suspense>
     </div>

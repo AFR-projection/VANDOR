@@ -4,6 +4,7 @@ import {
   generateId,
 } from "ai";
 import type { MediaSlashCommand } from "@/lib/chat/media-slash";
+import { saveMessages } from "@/lib/db/queries";
 import {
   downloadSocialMedia,
   formatMediaDownloadReply,
@@ -11,7 +12,6 @@ import {
 import type { MediaDownloadProgressData } from "@/lib/media/types";
 import { generateUUID } from "@/lib/utils";
 import { toErrorMessage } from "@/lib/utils/error-message";
-import { saveMessages } from "@/lib/db/queries";
 
 export function createMediaDownloadStreamResponse(input: {
   chatId: string;

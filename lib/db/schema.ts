@@ -153,9 +153,7 @@ export const userMemory = pgTable("UserMemory", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
-  category: varchar("category", { length: 32 })
-    .notNull()
-    .default("fact"),
+  category: varchar("category", { length: 32 }).notNull().default("fact"),
   importance: integer("importance").notNull().default(5),
   metadata: json("metadata"),
   sourceChatId: uuid("sourceChatId"),

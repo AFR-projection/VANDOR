@@ -1,21 +1,18 @@
 import "server-only";
 
-import { mergeFreeAttemptChain } from "@/lib/ai/free-models";
-import {
-  sanitizeFreeModelSlots,
-  type ModelSlotKey,
-} from "@/lib/ai/model-slots";
 import {
   SYSTEM_FREE_CHAT_MODEL,
   SYSTEM_FREE_VISION_MODEL,
 } from "@/lib/ai/chat-modes";
+import { mergeFreeAttemptChain } from "@/lib/ai/free-models";
 import {
-  getAgentSpec,
-  SPECIALIST_AGENTS,
-} from "./registry";
+  type ModelSlotKey,
+  sanitizeFreeModelSlots,
+} from "@/lib/ai/model-slots";
 import { classifyTaskIntent, type TaskIntent } from "@/lib/ai/router";
-import { detectWebSearchNeed } from "@/lib/search/detect";
 import type { FileKind } from "@/lib/files/mime";
+import { detectWebSearchNeed } from "@/lib/search/detect";
+import { getAgentSpec, SPECIALIST_AGENTS } from "./registry";
 import type {
   AgentId,
   AgentSpec,
@@ -94,8 +91,7 @@ export function planOrchestrator(input: OrchestratorInput): OrchestratorPlan {
     };
   }
 
-  const needsLiveData =
-    webSearchActive || detectWebSearchNeed(userText).needed;
+  const needsLiveData = webSearchActive || detectWebSearchNeed(userText).needed;
 
   if (needsLiveData) {
     const agent = getAgentSpec("research");
@@ -108,7 +104,9 @@ export function planOrchestrator(input: OrchestratorInput): OrchestratorPlan {
     };
   }
 
-  const intent = classifyTaskIntent(userText, { webSearchActive: needsLiveData });
+  const intent = classifyTaskIntent(userText, {
+    webSearchActive: needsLiveData,
+  });
   const agentId = intentToAgent(intent);
   const agent = getAgentSpec(agentId);
 
@@ -152,7 +150,11 @@ export function resolveFreeModeChain(models: Models): {
     freeModel2: raw(models, "freeModel2"),
     freeModel3: raw(models, "freeModel3"),
   };
-  const invalidEntries = [before.freeModel1, before.freeModel2, before.freeModel3]
+  const invalidEntries = [
+    before.freeModel1,
+    before.freeModel2,
+    before.freeModel3,
+  ]
     .filter(Boolean)
     .filter((m) => !isFreeModelId(m));
 
@@ -170,7 +172,11 @@ export function resolveFreeModeChain(models: Models): {
   };
 }
 
-function pickFreeSlot(models: Models, slot: ModelSlotKey, fallback: string): string {
+function pickFreeSlot(
+  models: Models,
+  slot: ModelSlotKey,
+  fallback: string
+): string {
   const id = raw(models, slot);
   return id && isFreeModelId(id) ? id : fallback;
 }
@@ -185,8 +191,11 @@ export function resolveFreeModeModel(
   reason: string | null;
   invalidEntries: string[];
 } {
-  const { primary, fallbacks: slotFallbacks, invalidEntries } =
-    resolveFreeModeChain(models);
+  const {
+    primary,
+    fallbacks: slotFallbacks,
+    invalidEntries,
+  } = resolveFreeModeChain(models);
   const chainIds = [primary, ...slotFallbacks].filter(Boolean);
   const hasMedia =
     attachmentKinds.includes("image") ||

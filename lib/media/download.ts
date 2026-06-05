@@ -4,10 +4,8 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 import { isUrlForPlatform } from "@/lib/chat/media-slash";
 import { formatCobaltApiError } from "@/lib/media/cobalt-error";
-import { toErrorMessage } from "@/lib/utils/error-message";
 import {
   baseProgress,
   formatBytes,
@@ -20,6 +18,8 @@ import type {
   MediaDownloadResult,
   MediaPlatform,
 } from "@/lib/media/types";
+import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
+import { toErrorMessage } from "@/lib/utils/error-message";
 
 const MAX_BYTES = 80 * 1024 * 1024;
 const YTDLP_TIMEOUT_MS = 120_000;
@@ -35,7 +35,8 @@ type CobaltResponse = {
 
 function hasCobaltBackend(): boolean {
   return Boolean(
-    process.env.COBALT_API_URL?.trim() || process.env.COBALT_ALLOW_PUBLIC === "1"
+    process.env.COBALT_API_URL?.trim() ||
+      process.env.COBALT_ALLOW_PUBLIC === "1"
   );
 }
 
@@ -334,8 +335,7 @@ async function downloadWithCobalt(
     platform,
     format
   );
-  const title =
-    data.filename?.replace(/\.[^.]+$/, "") ?? "media";
+  const title = data.filename?.replace(/\.[^.]+$/, "") ?? "media";
   return { buffer, title, filename: data.filename };
 }
 
@@ -387,10 +387,9 @@ export async function downloadSocialMedia(
       })
     );
 
-    const ytdlp =
-      shouldTryYtDlpFirst()
-        ? await downloadWithYtDlp(url, format, onProgress, platform)
-        : null;
+    const ytdlp = shouldTryYtDlpFirst()
+      ? await downloadWithYtDlp(url, format, onProgress, platform)
+      : null;
     if (ytdlp && ytdlp.buffer.length > 0) {
       buffer = ytdlp.buffer;
       title = ytdlp.title;
@@ -419,10 +418,9 @@ export async function downloadSocialMedia(
         title = cobalt.title;
         suggestedName = cobalt.filename;
       } catch (cobaltErr) {
-        const hint =
-          process.env.COBALT_API_URL?.trim()
-            ? ""
-            : " Pasang yt-dlp di PATH, atau set COBALT_API_URL (instance sendiri) di env.";
+        const hint = process.env.COBALT_API_URL?.trim()
+          ? ""
+          : " Pasang yt-dlp di PATH, atau set COBALT_API_URL (instance sendiri) di env.";
         const msg = toErrorMessage(cobaltErr);
         reportProgress(
           onProgress,
@@ -470,10 +468,7 @@ export async function downloadSocialMedia(
       })
     );
 
-    const filename = sanitizeFilename(
-      suggestedName ?? title,
-      format
-    );
+    const filename = sanitizeFilename(suggestedName ?? title, format);
     const uploaded = await uploadBuffer(buffer, filename, format);
 
     reportProgress(

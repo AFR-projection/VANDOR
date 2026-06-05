@@ -20,9 +20,7 @@ export function ModelMetaBadge() {
 
   if (!latest) return null;
 
-  const tier = latest.modelTier
-    ? normalizeModelTier(latest.modelTier)
-    : null;
+  const tier = latest.modelTier ? normalizeModelTier(latest.modelTier) : null;
   const ui = tier ? getTierUi(tier) : null;
   const rotated = Boolean(latest.fallbackUsed);
 
@@ -45,7 +43,9 @@ export function ModelMetaBadge() {
           ) : ui ? (
             <span className={cn("size-1.5 shrink-0 rounded-full", ui.dot)} />
           ) : null}
-          <span className="truncate">{displayOpenRouterModelName(latest.modelId)}</span>
+          <span className="truncate">
+            {displayOpenRouterModelName(latest.modelId)}
+          </span>
           {ui ? (
             <span
               className={cn(

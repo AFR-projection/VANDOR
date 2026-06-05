@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
-const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 } as const;
+const SCRYPT_PARAMS = { N: 16_384, r: 8, p: 1 } as const;
 const KEY_LEN = 32;
 
 export function hashNumpadPin(pin: string): string {

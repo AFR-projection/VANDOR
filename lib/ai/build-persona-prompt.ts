@@ -1,13 +1,19 @@
-import type { PersonaSettings } from "@/lib/settings/types";
 import { personaToneLabels } from "@/lib/settings/persona-presets";
+import type { PersonaSettings } from "@/lib/settings/types";
 
 const toneInstructions: Record<PersonaSettings["tonePreset"], string> = {
-  jarvis: `Tone: Jarvis-like — composed, capable, subtly formal. Address the user with respect. Anticipate needs; offer next steps without being pushy.`,
-  friendly: `Tone: Warm and approachable. Sound like a supportive teammate. Encourage without being cheesy.`,
-  professional: `Tone: Business-professional. Structured, neutral, outcome-focused. Avoid slang.`,
-  casual: `Tone: Relaxed and conversational. Short sentences OK. Stay helpful, not flippant.`,
-  mentor: `Tone: Patient teacher. Explain reasoning, ask reflective questions when useful, build understanding.`,
-  witty: `Tone: Clever with light, tasteful humor. Never sacrifice clarity for jokes.`,
+  jarvis:
+    "Tone: Jarvis-like — composed, capable, subtly formal. Address the user with respect. Anticipate needs; offer next steps without being pushy.",
+  friendly:
+    "Tone: Warm and approachable. Sound like a supportive teammate. Encourage without being cheesy.",
+  professional:
+    "Tone: Business-professional. Structured, neutral, outcome-focused. Avoid slang.",
+  casual:
+    "Tone: Relaxed and conversational. Short sentences OK. Stay helpful, not flippant.",
+  mentor:
+    "Tone: Patient teacher. Explain reasoning, ask reflective questions when useful, build understanding.",
+  witty:
+    "Tone: Clever with light, tasteful humor. Never sacrifice clarity for jokes.",
 };
 
 const verbosityInstructions: Record<PersonaSettings["verbosity"], string> = {

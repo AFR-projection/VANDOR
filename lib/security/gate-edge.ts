@@ -126,10 +126,7 @@ function decodeToken(token: string): GatePayload | null {
   }
 }
 
-export function createGateToken(
-  sid: string,
-  deviceId: string | null
-): string {
+export function createGateToken(sid: string, deviceId: string | null): string {
   return encodePayload({
     exp: Date.now() + GATE_TTL_MS,
     sid,

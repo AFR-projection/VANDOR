@@ -4,7 +4,6 @@ import { RELIABLE_PAID_FALLBACKS } from "@/lib/ai/chat-modes";
 import {
   buildGratisRotationChain,
   freeModelsForOpenRouterRouting,
-  mergeFreeAttemptChain,
   OPENROUTER_FREE_MODEL_POOL,
 } from "@/lib/ai/free-models";
 import { sanitizeFreeModelSlots } from "@/lib/ai/model-slots";
@@ -32,7 +31,9 @@ function isFreeModelId(id: string): boolean {
 }
 
 /** OpenRouter-native fallback list (see openrouter.ai/docs — `models` fallback). */
-export function buildModelFallbackList(input: OpenRouterRoutingInput): string[] {
+export function buildModelFallbackList(
+  input: OpenRouterRoutingInput
+): string[] {
   const primary = input.primary.trim();
   const chain: string[] = [];
   const add = (id?: string) => {

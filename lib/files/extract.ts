@@ -35,11 +35,17 @@ async function extractPdf(
   buf: Buffer
 ): Promise<{ text: string; meta: Record<string, unknown> }> {
   const mod = await import("pdf-parse");
-  const PDFParse = (mod as { PDFParse: new (opts: { data: Uint8Array }) => {
-    getText: () => Promise<{ text: string; pages?: unknown[] }>;
-    getInfo?: () => Promise<{ info?: unknown; total?: number }>;
-    destroy?: () => Promise<void>;
-  } }).PDFParse;
+  const PDFParse = (
+    mod as {
+      PDFParse: new (opts: {
+        data: Uint8Array;
+      }) => {
+        getText: () => Promise<{ text: string; pages?: unknown[] }>;
+        getInfo?: () => Promise<{ info?: unknown; total?: number }>;
+        destroy?: () => Promise<void>;
+      };
+    }
+  ).PDFParse;
   const parser = new PDFParse({
     data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength),
   });
@@ -67,13 +73,17 @@ async function extractPdf(
   }
 }
 
-async function extractDocx(buf: Buffer): Promise<{ text: string; meta: Record<string, unknown> }> {
+async function extractDocx(
+  buf: Buffer
+): Promise<{ text: string; meta: Record<string, unknown> }> {
   const mammoth = await import("mammoth");
   const { value } = await mammoth.extractRawText({ buffer: buf });
   return { text: value, meta: {} };
 }
 
-async function extractXlsx(buf: Buffer): Promise<{ text: string; meta: Record<string, unknown> }> {
+async function extractXlsx(
+  buf: Buffer
+): Promise<{ text: string; meta: Record<string, unknown> }> {
   const XLSX = await import("xlsx");
   const wb = XLSX.read(buf, { type: "buffer" });
   const parts: string[] = [];
@@ -88,7 +98,9 @@ async function extractXlsx(buf: Buffer): Promise<{ text: string; meta: Record<st
   return { text: parts.join("\n\n"), meta: { sheets } };
 }
 
-async function extractText(buf: Buffer): Promise<{ text: string; meta: Record<string, unknown> }> {
+async function extractText(
+  buf: Buffer
+): Promise<{ text: string; meta: Record<string, unknown> }> {
   return { text: buf.toString("utf8"), meta: {} };
 }
 
@@ -163,7 +175,8 @@ export function buildFilesContextBlock(files: ExtractedFile[]): string {
   if (files.length === 0) return "";
 
   const extractable = files.filter(
-    (f) => f.text && f.kind !== "image" && f.kind !== "video" && f.kind !== "audio"
+    (f) =>
+      f.text && f.kind !== "image" && f.kind !== "video" && f.kind !== "audio"
   );
   const headerLines = files.map((f) => {
     const status = f.error
@@ -179,8 +192,7 @@ export function buildFilesContextBlock(files: ExtractedFile[]): string {
   });
 
   const bodies = extractable.map(
-    (f) =>
-      `### File: ${f.name} (${f.kind})\n\n\`\`\`\n${f.text}\n\`\`\`\n`
+    (f) => `### File: ${f.name} (${f.kind})\n\n\`\`\`\n${f.text}\n\`\`\`\n`
   );
 
   return `## Attached files

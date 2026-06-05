@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  detectWebSearchNeed,
-  shouldDisableWebSearchTool,
-} from "./detect";
+import { detectWebSearchNeed, shouldDisableWebSearchTool } from "./detect";
 
 describe("detectWebSearchNeed", () => {
   it("detects sports live score queries", () => {
@@ -42,7 +39,9 @@ describe("detectWebSearchNeed", () => {
   });
 
   it("detects explicit web search request", () => {
-    const r = detectWebSearchNeed("cari di google harga tiket jakarta bali besok");
+    const r = detectWebSearchNeed(
+      "cari di google harga tiket jakarta bali besok"
+    );
     assert.equal(r.needed, true);
   });
 
@@ -58,9 +57,7 @@ describe("detectWebSearchNeed", () => {
 
   it("detects link follow-up with prior user context", () => {
     const r = detectWebSearchNeed("berikan linknya", {
-      priorUserTexts: [
-        "gue suka DJ vinahouse Mandarin dan English",
-      ],
+      priorUserTexts: ["gue suka DJ vinahouse Mandarin dan English"],
     });
     assert.equal(r.needed, true);
     assert.equal(r.reason, "link_follow_up");

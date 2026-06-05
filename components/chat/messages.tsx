@@ -2,12 +2,12 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowDownIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useMessages } from "@/hooks/use-messages";
+import { assistantHasVisibleContent } from "@/lib/chat/message-visibility";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
-import { assistantHasVisibleContent } from "@/lib/chat/message-visibility";
 import { PreviewMessage, ThinkingMessage } from "./message";
 
 function shouldRenderMessage(
@@ -102,12 +102,11 @@ function PureMessages({
               <PreviewMessage
                 addToolApprovalResponse={addToolApprovalResponse}
                 chatId={chatId}
+                isLatestAssistant={
+                  message.role === "assistant" && index === messages.length - 1
+                }
                 isLoading={
                   status === "streaming" && messages.length - 1 === index
-                }
-                isLatestAssistant={
-                  message.role === "assistant" &&
-                  index === messages.length - 1
                 }
                 isReadonly={isReadonly}
                 key={message.id}

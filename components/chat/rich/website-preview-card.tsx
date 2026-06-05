@@ -27,7 +27,11 @@ function WebsitePreview({ site, index }: { site: WebsiteCard; index: number }) {
       initial={{ opacity: 0, y: 8 }}
       rel="noopener noreferrer"
       target="_blank"
-      transition={{ delay: 0.04 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        delay: 0.04 * index,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      }}
     >
       <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted ring-1 ring-border/40">
         {site.favicon ? (

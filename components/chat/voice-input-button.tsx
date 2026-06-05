@@ -30,7 +30,10 @@ export function VoiceInputButton({
 
   const startRecording = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      toast({ type: "error", description: "Mikrofon tidak didukung di browser ini" });
+      toast({
+        type: "error",
+        description: "Mikrofon tidak didukung di browser ini",
+      });
       return;
     }
     try {

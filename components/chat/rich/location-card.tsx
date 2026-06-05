@@ -39,7 +39,11 @@ function LocationItem({
       animate={{ opacity: 1, y: 0 }}
       className="overflow-hidden rounded-xl border border-border/40 bg-card/40"
       initial={{ opacity: 0, y: 10 }}
-      transition={{ delay: 0.04 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        delay: 0.04 * index,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      }}
     >
       <SmartImage
         alt={location.name}
@@ -83,7 +87,10 @@ function LocationItem({
             data={{
               query: location.name,
               displayName: location.address,
-              center: { lat: location.lat as number, lng: location.lng as number },
+              center: {
+                lat: location.lat as number,
+                lng: location.lng as number,
+              },
               osmUrl: location.mapUrl,
             }}
           />

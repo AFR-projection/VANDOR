@@ -10,8 +10,8 @@ import {
   ModelTierPicker,
   syncTierToChatCookie,
 } from "@/components/settings/model-tier-picker";
-import { displayOpenRouterModelName } from "@/lib/ai/model-display";
 import { OPENROUTER_FREE_MODEL_POOL } from "@/lib/ai/free-models";
+import { displayOpenRouterModelName } from "@/lib/ai/model-display";
 import { MODEL_TIER_OPTIONS, type ModelTierId } from "@/lib/ai/model-tiers";
 import { getTierUi } from "@/lib/ai/tier-styles";
 import { cn } from "@/lib/utils";
@@ -91,14 +91,15 @@ export function ModelAiPanel({
       <section className="space-y-3">
         <h3 className="text-sm font-semibold">Pilih tier</h3>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Perubahan langsung dipakai di chat. Cookie & akun disinkronkan otomatis.
+          Perubahan langsung dipakai di chat. Cookie & akun disinkronkan
+          otomatis.
         </p>
         <ModelTierPicker
-          value={modelTier}
           onChange={(tier) => {
             syncTierToChatCookie(tier);
             onTierChange(tier);
           }}
+          value={modelTier}
         />
       </section>
 
@@ -150,7 +151,9 @@ export function ModelAiPanel({
         </section>
       ) : (
         <section className="rounded-2xl border border-border/40 bg-muted/15 p-4">
-          <p className="text-xs font-medium text-foreground">OpenRouter berbayar</p>
+          <p className="text-xs font-medium text-foreground">
+            OpenRouter berbayar
+          </p>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
             Tier ini memakai model berkualitas tinggi. Pastikan saldo cukup agar
             respons tidak terputus.

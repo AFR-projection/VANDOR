@@ -1,7 +1,6 @@
 import type { WebSearchSource } from "./types";
 
-const SOURCE_LINE_RE =
-  /^-\s*(.+?)\s*[—–-]\s*(https?:\/\/\S+)\s*$/u;
+const SOURCE_LINE_RE = /^-\s*(.+?)\s*[—–-]\s*(https?:\/\/\S+)\s*$/u;
 
 export function parseSourceLines(text: string): WebSearchSource[] {
   const sources: WebSearchSource[] = [];
@@ -34,9 +33,7 @@ export function parseStructuredWebResponse(text: string) {
     answer: answerMatch?.[1]?.trim() ?? "",
     sourcesText: sourcesMatch?.[1]?.trim() ?? "",
     notes: notesMatch?.[1]?.trim() ?? "",
-    parsedSources: sourcesMatch?.[1]
-      ? parseSourceLines(sourcesMatch[1])
-      : [],
+    parsedSources: sourcesMatch?.[1] ? parseSourceLines(sourcesMatch[1]) : [],
   };
 }
 

@@ -3,17 +3,17 @@ import "server-only";
 import type { MemoryCategory } from "@/lib/db/schema";
 import type { MemorySettings } from "@/lib/settings/types";
 import {
+  V4_MAX_MEMORY_CONTEXT_CHARS,
+  V4_MAX_MEMORY_ITEMS,
+} from "@/lib/v4/constants";
+import { formatMemoryCategoryHeading } from "./category-labels";
+import {
   listRecentMemories,
   type MemoryRecord,
   searchMemories,
   touchMemories,
 } from "./queries";
-import { formatMemoryCategoryHeading } from "./category-labels";
 import { scoreMemory } from "./scoring";
-import {
-  V4_MAX_MEMORY_CONTEXT_CHARS,
-  V4_MAX_MEMORY_ITEMS,
-} from "@/lib/v4/constants";
 
 export async function buildMemoryContext({
   userId,
@@ -50,13 +50,17 @@ export async function buildMemoryContext({
       limit: semanticLimit,
       minSimilarity: Math.min(minSim, 0.62),
       includeVisual,
-      enabledCategories: categories as Record<MemoryCategory, boolean> | undefined,
+      enabledCategories: categories as
+        | Record<MemoryCategory, boolean>
+        | undefined,
     }),
     listRecentMemories({
       userId,
       limit: recentLimit,
       includeVisual,
-      enabledCategories: categories as Record<MemoryCategory, boolean> | undefined,
+      enabledCategories: categories as
+        | Record<MemoryCategory, boolean>
+        | undefined,
     }),
   ]);
 

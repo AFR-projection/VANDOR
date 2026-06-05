@@ -1,8 +1,8 @@
 import "server-only";
 
 import { OPENROUTER_FREE_MODEL_POOL } from "@/lib/ai/free-models";
-import { chatModels, getCapabilities, IGNORED_FREE_PROVIDERS } from "./models";
 import type { FileKind } from "@/lib/files/mime";
+import { chatModels, getCapabilities, IGNORED_FREE_PROVIDERS } from "./models";
 
 export type AutoSelectInput = {
   /** User-chosen model from the UI (the desired model when no override needed). */

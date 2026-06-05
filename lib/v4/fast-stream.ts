@@ -3,9 +3,9 @@ import {
   createUIMessageStreamResponse,
   generateId,
 } from "ai";
+import { saveMessages } from "@/lib/db/queries";
 import type { CustomUIDataTypes } from "@/lib/types";
 import { generateUUID } from "@/lib/utils";
-import { saveMessages } from "@/lib/db/queries";
 
 type InstantStatus = CustomUIDataTypes["instant-status"];
 
@@ -26,9 +26,7 @@ export function createFastTextStreamResponse(input: {
       });
 
       for (const part of input.extraParts ?? []) {
-        dataStream.write(
-          part as { type: `data-${string}`; data: unknown }
-        );
+        dataStream.write(part as { type: `data-${string}`; data: unknown });
       }
 
       const textId = generateId();

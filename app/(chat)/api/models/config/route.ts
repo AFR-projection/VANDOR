@@ -1,9 +1,12 @@
 import { auth } from "@/app/(auth)/auth";
+import {
+  resolveIntegrationModels,
+  resolveTierFromSettings,
+} from "@/lib/ai/integration-models";
 import { DEFAULT_MODEL_TIER, slotsFromTier } from "@/lib/ai/model-tiers";
-import { resolveIntegrationModels, resolveTierFromSettings } from "@/lib/ai/integration-models";
+import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { getUserSettings } from "@/lib/settings/queries";
-import { ChatbotError } from "@/lib/errors";
 
 export async function GET(request: Request) {
   const denied = await requireClientAccess(request);

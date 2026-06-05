@@ -1,6 +1,6 @@
+import { WEB_SEARCH_SYNTHESIS_MAX_TOKENS } from "@/lib/search/config";
 import type { ResponseMode } from "@/lib/search/detect";
 import type { VandorIntent } from "@/lib/v4/intent";
-import { WEB_SEARCH_SYNTHESIS_MAX_TOKENS } from "@/lib/search/config";
 
 export function shouldRunPreExtract(input: {
   enabled: boolean;

@@ -2,12 +2,12 @@ import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { memoryCategories } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
-import { requireClientAccess } from "@/lib/security/client-access";
 import {
   deleteAllMemories,
   listAllMemories,
   saveMemory,
 } from "@/lib/memory/queries";
+import { requireClientAccess } from "@/lib/security/client-access";
 
 const createSchema = z.object({
   content: z.string().min(3).max(2000),
@@ -40,7 +40,8 @@ export async function GET(request: Request) {
     limit,
     offset,
     category:
-      category && memoryCategories.includes(category as (typeof memoryCategories)[number])
+      category &&
+      memoryCategories.includes(category as (typeof memoryCategories)[number])
         ? (category as (typeof memoryCategories)[number])
         : undefined,
     visualOnly,
@@ -77,9 +78,7 @@ export async function POST(request: Request) {
     content,
     category: category ?? "fact",
     importance: importance ?? 5,
-    metadata: visual
-      ? { ...metadata, visual: true }
-      : metadata,
+    metadata: visual ? { ...metadata, visual: true } : metadata,
   });
 
   if (!id) {

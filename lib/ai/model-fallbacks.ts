@@ -26,6 +26,9 @@ export function formatOpenRouterGuardrailHelp(modelId: string): string {
   return formatOpenRouterUserError("guardrail data policy", modelId);
 }
 
-export function formatOpenRouterError(message: string, modelId?: string): string {
+export function formatOpenRouterError(
+  message: string,
+  modelId?: string
+): string {
   return formatOpenRouterUserError(message, modelId);
 }

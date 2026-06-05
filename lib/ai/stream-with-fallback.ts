@@ -1,11 +1,11 @@
 import "server-only";
 
-import { streamText, type StreamTextOnStepFinishCallback, type ToolSet } from "ai";
-import { probeFreeOpenRouterModel } from "@/lib/ai/free-model-probe";
 import {
-  getLanguageModel,
-  type OpenRouterClientMeta,
-} from "@/lib/ai/providers";
+  type StreamTextOnStepFinishCallback,
+  streamText,
+  type ToolSet,
+} from "ai";
+import { probeFreeOpenRouterModel } from "@/lib/ai/free-model-probe";
 import {
   buildAttemptModelChain,
   buildModelFallbackList,
@@ -13,6 +13,10 @@ import {
   isRetryableOpenRouterError,
   openRouterErrorMessage,
 } from "@/lib/ai/openrouter-routing";
+import {
+  getLanguageModel,
+  type OpenRouterClientMeta,
+} from "@/lib/ai/providers";
 
 type StreamTextWithFallbackParams<TOOLS extends ToolSet> = Omit<
   Parameters<typeof streamText<TOOLS>>[0],
@@ -71,7 +75,11 @@ export async function streamTextWithModelFallback<TOOLS extends ToolSet>(
     Boolean(freeMode) && attemptModelIds && attemptModelIds.length > 0;
 
   let lastErr: unknown;
-  for (let attemptIndex = 0; attemptIndex < attemptModels.length; attemptIndex++) {
+  for (
+    let attemptIndex = 0;
+    attemptIndex < attemptModels.length;
+    attemptIndex++
+  ) {
     const modelId = attemptModels[attemptIndex];
     try {
       if (freeMode) {
@@ -79,7 +87,9 @@ export async function streamTextWithModelFallback<TOOLS extends ToolSet>(
           modelId,
           apiKey,
           meta,
-          messages: messages as Parameters<typeof probeFreeOpenRouterModel>[0]["messages"],
+          messages: messages as Parameters<
+            typeof probeFreeOpenRouterModel
+          >[0]["messages"],
         });
       }
 

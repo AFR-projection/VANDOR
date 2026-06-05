@@ -1,8 +1,8 @@
 import "server-only";
 
 import { resolveIntegrationModels } from "@/lib/ai/integration-models";
-import { getOpenRouterApiKey } from "@/lib/settings/secrets-queries";
 import { getUserSettings } from "@/lib/settings/queries";
+import { getOpenRouterApiKey } from "@/lib/settings/secrets-queries";
 
 export async function getEmbeddingOptionsForUser(userId: string): Promise<{
   apiKey: string | null;

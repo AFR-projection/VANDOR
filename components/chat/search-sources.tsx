@@ -1,13 +1,13 @@
 "use client";
 
+import { useSourcePanel } from "@/hooks/use-source-panel";
+import { parseStructuredWebResponse } from "@/lib/search/parse-response";
 import type {
   RichContent,
   WebSearchOutput,
   WebSearchSource,
 } from "@/lib/search/types";
 import type { ChatMessage } from "@/lib/types";
-import { parseStructuredWebResponse } from "@/lib/search/parse-response";
-import { useSourcePanel } from "@/hooks/use-source-panel";
 
 function faviconUrl(url: string): string {
   try {
@@ -111,11 +111,7 @@ export function WebSearchIndicator({
   );
 }
 
-export function SourceCitationBar({
-  sources,
-}: {
-  sources: WebSearchSource[];
-}) {
+export function SourceCitationBar({ sources }: { sources: WebSearchSource[] }) {
   if (sources.length === 0) {
     return null;
   }
@@ -153,9 +149,9 @@ function SourceCitationPill({
   return (
     <CitationPillButton
       allSources={allSources}
+      favicon={favicon}
       index={index}
       source={source}
-      favicon={favicon}
     />
   );
 }
@@ -181,7 +177,9 @@ function CitationPillButton({
           url: source.url,
           title: source.title,
           snippet: source.snippet,
-          relatedSources: allSources.filter((s) => s.url !== source.url).slice(0, 10),
+          relatedSources: allSources
+            .filter((s) => s.url !== source.url)
+            .slice(0, 10),
         })
       }
       type="button"

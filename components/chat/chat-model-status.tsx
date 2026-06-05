@@ -1,15 +1,15 @@
 "use client";
 
+import type { UseChatHelpers } from "@ai-sdk/react";
 import { ArrowRightLeftIcon, Loader2Icon, Settings2Icon } from "lucide-react";
 import Link from "next/link";
-import type { UseChatHelpers } from "@ai-sdk/react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { displayOpenRouterModelName } from "@/lib/ai/model-display";
 import { normalizeModelTier } from "@/lib/ai/model-tiers";
 import { getTierUi } from "@/lib/ai/tier-styles";
-import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useDataStream } from "./data-stream-provider";
 import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { useDataStream } from "./data-stream-provider";
 
 type ChatModelStatusProps = {
   selectedModelId: string;

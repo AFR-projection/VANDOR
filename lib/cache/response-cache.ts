@@ -26,7 +26,10 @@ export async function getCachedResponse({
   modelId: string;
   query: string;
 }): Promise<string | null> {
-  if (!process.env.POSTGRES_URL || process.env.VANDOR_DISABLE_RESPONSE_CACHE === "1") {
+  if (
+    !process.env.POSTGRES_URL ||
+    process.env.VANDOR_DISABLE_RESPONSE_CACHE === "1"
+  ) {
     return null;
   }
 
@@ -60,7 +63,10 @@ export async function setCachedResponse({
   query: string;
   response: string;
 }): Promise<void> {
-  if (!process.env.POSTGRES_URL || process.env.VANDOR_DISABLE_RESPONSE_CACHE === "1") {
+  if (
+    !process.env.POSTGRES_URL ||
+    process.env.VANDOR_DISABLE_RESPONSE_CACHE === "1"
+  ) {
     return;
   }
 

@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { AppSidebar } from "@/components/chat/app-sidebar";
+import { ChatLayoutContent } from "@/components/chat/chat-layout-content";
 import { ChatToaster } from "@/components/chat/chat-toaster";
 import { DataStreamProvider } from "@/components/chat/data-stream-provider";
-import { ChatLayoutContent } from "@/components/chat/chat-layout-content";
 import { GateWatchdog } from "@/components/security/gate-watchdog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { auth } from "../(auth)/auth";

@@ -1,8 +1,14 @@
 "use client";
 
-import { MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
+import {
+  mergeWebSources,
+  parseStructuredWebResponse,
+} from "@/lib/search/parse-response";
 import type { WebSearchSource } from "@/lib/search/types";
-import { mergeWebSources, parseStructuredWebResponse } from "@/lib/search/parse-response";
 import { cn, sanitizeText } from "@/lib/utils";
 import { SourceCards } from "./rich/source-card";
 

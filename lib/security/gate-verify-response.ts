@@ -3,10 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { isDevelopmentEnvironment } from "@/lib/constants";
-import {
-  DEVICE_COOKIE_NAME,
-  GATE_COOKIE_NAME,
-} from "@/lib/security/gate-edge";
+import { DEVICE_COOKIE_NAME, GATE_COOKIE_NAME } from "@/lib/security/gate-edge";
 
 const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 

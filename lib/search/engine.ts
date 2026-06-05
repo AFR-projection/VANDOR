@@ -74,14 +74,16 @@ async function tavilySearch(
 
   const sources: WebSearchSource[] = (data.results ?? [])
     .slice(0, 6)
-    .map((r: TavilyResult): WebSearchSource => ({
-      title: r.title?.trim() || r.url,
-      snippet: r.content?.trim() ?? "",
-      url: r.url,
-      favicon: r.favicon || faviconFor(r.url),
-      publishedDate: r.published_date,
-      score: r.score,
-    }))
+    .map(
+      (r: TavilyResult): WebSearchSource => ({
+        title: r.title?.trim() || r.url,
+        snippet: r.content?.trim() ?? "",
+        url: r.url,
+        favicon: r.favicon || faviconFor(r.url),
+        publishedDate: r.published_date,
+        score: r.score,
+      })
+    )
     .filter((s: WebSearchSource) => s.url.startsWith("http"));
 
   const images: RichImage[] = (data.images ?? [])

@@ -2,9 +2,8 @@ import "server-only";
 
 import { getUser } from "@/lib/db/queries";
 import { getNumpadPinHash } from "@/lib/settings/secrets-queries";
-import { verifyNumpadPin } from "./gate-edge";
+import { getOwnerCredentials, verifyNumpadPin } from "./gate-edge";
 import { verifyNumpadPinHash } from "./pin-hash";
-import { getOwnerCredentials } from "./gate-edge";
 
 export async function verifyNumpadPinForGate(pin: string): Promise<boolean> {
   const owner = getOwnerCredentials();

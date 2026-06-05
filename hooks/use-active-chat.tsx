@@ -23,11 +23,11 @@ import { toast } from "@/components/chat/toast";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { DEFAULT_CHAT_MODE } from "@/lib/ai/chat-modes";
+import { normalizeModelTier, tierCookieValue } from "@/lib/ai/model-tiers";
 import {
   fetchAccountModelTier,
   setChatModelCookie,
 } from "@/lib/client/model-tier-sync";
-import { normalizeModelTier, tierCookieValue } from "@/lib/ai/model-tiers";
 import type { Vote } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import type { ChatMessage } from "@/lib/types";
@@ -78,7 +78,8 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
 
   const chatId = chatIdFromUrl ?? newChatIdRef.current;
 
-  const [currentModelId, setCurrentModelId] = useState<string>(DEFAULT_CHAT_MODE);
+  const [currentModelId, setCurrentModelId] =
+    useState<string>(DEFAULT_CHAT_MODE);
   const currentModelIdRef = useRef(currentModelId);
   useEffect(() => {
     currentModelIdRef.current = currentModelId;

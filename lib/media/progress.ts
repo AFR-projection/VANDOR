@@ -1,8 +1,8 @@
 import type {
+  MediaDownloadFormat,
   MediaDownloadProgressData,
   MediaDownloadProgressReporter,
   MediaPlatform,
-  MediaDownloadFormat,
 } from "@/lib/media/types";
 
 export function reportProgress(

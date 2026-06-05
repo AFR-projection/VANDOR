@@ -8,9 +8,9 @@ import {
   LEGACY_VANDOR_MODE_AUTO,
   LEGACY_VANDOR_MODE_FREE,
   MODEL_TIER_OPTIONS,
+  type ModelTierId,
   normalizeModelTier,
   tierCookieValue,
-  type ModelTierId,
 } from "@/lib/ai/model-tiers";
 
 export {

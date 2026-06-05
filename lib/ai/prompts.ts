@@ -1,17 +1,17 @@
 import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
-import { generalAnswerQualityInstructions } from "@/lib/search/context";
-import type { ResponseMode } from "@/lib/search/detect";
-import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
-import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
-import { buildActiveToolsPrompt } from "@/lib/v4/prompt-tools";
+import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
+import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
+import { generalAnswerQualityInstructions } from "@/lib/search/context";
+import type { ResponseMode } from "@/lib/search/detect";
 import {
   defaultUserSettings,
   type PersonaSettings,
 } from "@/lib/settings/types";
+import { buildActiveToolsPrompt } from "@/lib/v4/prompt-tools";
 
 const responseModeInstructions = (
   mode: ResponseMode,

@@ -6,11 +6,7 @@ export function assistantHasVisibleContent(message: ChatMessage): boolean {
     if (part.type === "text" && part.text?.trim()) {
       return true;
     }
-    if (
-      part.type === "reasoning" &&
-      "text" in part &&
-      part.text?.trim()
-    ) {
+    if (part.type === "reasoning" && "text" in part && part.text?.trim()) {
       return true;
     }
     if (part.type.startsWith("tool-")) {

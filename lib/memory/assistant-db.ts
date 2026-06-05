@@ -165,7 +165,11 @@ export async function createTask({
   const [row] = await db
     .insert(userTask)
     .values({ userId, title, dueAt: dueAt ?? null })
-    .returning({ id: userTask.id, title: userTask.title, status: userTask.status });
+    .returning({
+      id: userTask.id,
+      title: userTask.title,
+      status: userTask.status,
+    });
   return row;
 }
 
@@ -180,7 +184,11 @@ export async function updateTask({
   title?: string;
   status?: "pending" | "done" | "cancelled";
 }) {
-  const updates: Partial<{ title: string; status: "pending" | "done" | "cancelled"; updatedAt: Date }> = {
+  const updates: Partial<{
+    title: string;
+    status: "pending" | "done" | "cancelled";
+    updatedAt: Date;
+  }> = {
     updatedAt: new Date(),
   };
   if (title) updates.title = title;
@@ -190,7 +198,11 @@ export async function updateTask({
     .update(userTask)
     .set(updates)
     .where(and(eq(userTask.id, taskId), eq(userTask.userId, userId)))
-    .returning({ id: userTask.id, title: userTask.title, status: userTask.status });
+    .returning({
+      id: userTask.id,
+      title: userTask.title,
+      status: userTask.status,
+    });
 
   return row ?? null;
 }

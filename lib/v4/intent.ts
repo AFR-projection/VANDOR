@@ -1,7 +1,7 @@
 import "server-only";
 
-import { detectWebSearchNeed } from "@/lib/search/detect";
 import type { FileKind } from "@/lib/files/mime";
+import { detectWebSearchNeed } from "@/lib/search/detect";
 
 export type VandorIntent =
   | "command"
@@ -36,8 +36,7 @@ const NOTES_RE =
 const MEMORY_RE =
   /\b(ingat|jangan lupa|remember|save\s+memory|simpan\s+ke\s+memori)\b/i;
 
-const WEATHER_RE =
-  /\b(cuaca|weather|panas|hujan|derajat|suhu)\b/i;
+const WEATHER_RE = /\b(cuaca|weather|panas|hujan|derajat|suhu)\b/i;
 
 const TIME_RE =
   /\b(jam\s+berapa|pukul|what\s+time|tanggal|hari\s+ini\s+jam|waktu\s+sekarang)\b/i;
@@ -54,8 +53,7 @@ const CODE_RE =
 const IMAGE_RE =
   /\b(gambar|generate\s+image|buatkan\s+gambar|edit\s+(?:foto|gambar)|logo|ilustrasi)\b/i;
 
-const PDF_RE =
-  /\b(pdf|docx|xlsx|spreadsheet|excel)\b/i;
+const PDF_RE = /\b(pdf|docx|xlsx|spreadsheet|excel)\b/i;
 
 export function resolveVandorIntent(input: {
   userText: string;
@@ -129,8 +127,16 @@ export function resolveVandorIntent(input: {
     return { intent: "chat_simple", needsLargeModel: false, bypassLlm: false };
   }
 
-  if (CODE_RE.test(text) || text.length > 200 || /\b(analisis|strategy|bandingkan|compare|rencana)\b/i.test(text)) {
-    return { intent: "chat_reasoning", needsLargeModel: true, bypassLlm: false };
+  if (
+    CODE_RE.test(text) ||
+    text.length > 200 ||
+    /\b(analisis|strategy|bandingkan|compare|rencana)\b/i.test(text)
+  ) {
+    return {
+      intent: "chat_reasoning",
+      needsLargeModel: true,
+      bypassLlm: false,
+    };
   }
 
   return { intent: "chat_simple", needsLargeModel: false, bypassLlm: false };

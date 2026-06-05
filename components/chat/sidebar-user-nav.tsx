@@ -29,10 +29,13 @@ export function SidebarUserNav({ user }: { user: User }) {
 
   const handleLock = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/gate/revoke`, {
-        method: "POST",
-        credentials: "include",
-      });
+      await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/gate/revoke`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
       await signOut({ redirect: false });
     } finally {
       const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -79,7 +82,9 @@ export function SidebarUserNav({ user }: { user: User }) {
               {resolvedTheme === "light" ? "Mode gelap" : "Mode terang"}
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="cursor-pointer text-[13px]">
-              <Link href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/settings`}>
+              <Link
+                href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/settings`}
+              >
                 <SettingsIcon className="mr-2 inline size-3.5" />
                 Pengaturan
               </Link>

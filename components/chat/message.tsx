@@ -1,8 +1,11 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { GlobeIcon } from "lucide-react";
 import type { Vote } from "@/lib/db/schema";
-import type { ChatMessage } from "@/lib/types";
+import type { MemorySavedNotice } from "@/lib/memory/notice";
+import type { ChatMessage, ModelMeta } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
+import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
 import {
@@ -12,33 +15,29 @@ import {
   ToolInput,
   ToolOutput,
 } from "../ai-elements/tool";
-import { GlobeIcon } from "lucide-react";
+import { AssistantAnswer } from "./assistant-answer";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { SparklesIcon } from "./icons";
-import { MessageActions } from "./message-actions";
-import { MessageReasoning } from "./message-reasoning";
-import { PreviewAttachment } from "./preview-attachment";
-import { AssistantAnswer } from "./assistant-answer";
 import { MapWidget } from "./map-widget";
 import {
   getMediaDownloadProgressFromMessage,
   MediaDownloadProgressCard,
 } from "./media-download-progress";
+import { MessageActions } from "./message-actions";
+import { MessageReasoning } from "./message-reasoning";
+import { MessageTechRail } from "./message-tech-rail";
+import { PreviewAttachment } from "./preview-attachment";
+import { RichContentBlocks } from "./rich/rich-content";
+import { SourcesSkeleton } from "./rich/skeletons";
 import {
   getRichContentFromMessage,
   getSearchStatusFromMessage,
   getWebSourcesFromMessage,
   WebSearchIndicator,
 } from "./search-sources";
-import { RichContentBlocks } from "./rich/rich-content";
-import { SourcesSkeleton } from "./rich/skeletons";
 import { Weather } from "./weather";
-import { MessageTechRail } from "./message-tech-rail";
-import type { MemorySavedNotice } from "@/lib/memory/notice";
-import type { ModelMeta } from "@/lib/types";
-import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
 
 const PurePreviewMessage = ({
   addToolApprovalResponse,
@@ -109,7 +108,8 @@ const PurePreviewMessage = ({
     mediaProgress != null &&
     mediaProgress.status !== "complete" &&
     mediaProgress.status !== "error" &&
-    (isLoading || !message.parts.some((p) => p.type === "text" && p.text?.trim()));
+    (isLoading ||
+      !message.parts.some((p) => p.type === "text" && p.text?.trim()));
   const showMediaProgressCard =
     isAssistant &&
     mediaProgress != null &&
@@ -130,7 +130,9 @@ const PurePreviewMessage = ({
     : undefined;
   const modelMeta =
     modelMetaFromParts ??
-    (isLatestAssistant && !isLoading ? latestModelMeta ?? undefined : undefined);
+    (isLatestAssistant && !isLoading
+      ? (latestModelMeta ?? undefined)
+      : undefined);
   const memoryRecall = isAssistant
     ? (message.parts.find((p) => p.type === "data-memory-recall" && "data" in p)
         ?.data as { active: boolean; charCount: number } | undefined)
@@ -441,7 +443,9 @@ const PurePreviewMessage = ({
           }
         | undefined;
       const imageAlt =
-        output?.instruction ?? output?.prompt ?? (isEdit ? "Edited image" : "Generated image");
+        output?.instruction ??
+        output?.prompt ??
+        (isEdit ? "Edited image" : "Generated image");
       return (
         <div className="w-[min(100%,520px)]" key={toolCallId}>
           <Tool className="w-full" defaultOpen={false}>
@@ -451,9 +455,7 @@ const PurePreviewMessage = ({
               type={type}
             />
             <ToolContent>
-              {state === "input-available" && (
-                <ToolInput input={part.input} />
-              )}
+              {state === "input-available" && <ToolInput input={part.input} />}
               {state === "output-available" && output?.ok && output.url && (
                 <div className="space-y-2">
                   <img
@@ -483,7 +485,9 @@ const PurePreviewMessage = ({
               {state === "output-available" && output && !output.ok && (
                 <div className="rounded-md bg-destructive/10 p-3 text-destructive text-xs">
                   {output.error ??
-                    (isEdit ? "Image edit failed." : "Image generation failed.")}
+                    (isEdit
+                      ? "Image edit failed."
+                      : "Image generation failed.")}
                 </div>
               )}
             </ToolContent>
@@ -521,9 +525,7 @@ const PurePreviewMessage = ({
               type={type}
             />
             <ToolContent>
-              {state === "input-available" && (
-                <ToolInput input={part.input} />
-              )}
+              {state === "input-available" && <ToolInput input={part.input} />}
               {state === "output-available" && output?.url && (
                 <div className="space-y-3">
                   <div className="rounded-lg border border-border/50 bg-card/60 p-3">
@@ -558,10 +560,7 @@ const PurePreviewMessage = ({
       );
     }
 
-    if (
-      type === "tool-getCurrentTime" ||
-      type === "tool-getLocation"
-    ) {
+    if (type === "tool-getCurrentTime" || type === "tool-getLocation") {
       const { toolCallId, state } = part;
       const labels: Record<string, string> = {
         "tool-getCurrentTime": "Mengecek waktu",
@@ -573,11 +572,7 @@ const PurePreviewMessage = ({
           defaultOpen={false}
           key={toolCallId}
         >
-          <ToolHeader
-            state={state}
-            title={labels[type] ?? type}
-            type={type}
-          />
+          <ToolHeader state={state} title={labels[type] ?? type} type={type} />
           <ToolContent>
             {(state === "input-available" ||
               state === "approval-requested") && (
@@ -617,11 +612,7 @@ const PurePreviewMessage = ({
       }
 
       return (
-        <Tool
-          className="w-[min(100%,560px)]"
-          defaultOpen
-          key={toolCallId}
-        >
+        <Tool className="w-[min(100%,560px)]" defaultOpen key={toolCallId}>
           <ToolHeader
             state={state}
             title="Mencari di web"
@@ -698,11 +689,7 @@ const PurePreviewMessage = ({
           defaultOpen={false}
           key={toolCallId}
         >
-          <ToolHeader
-            state={state}
-            title={labels[type] ?? type}
-            type={type}
-          />
+          <ToolHeader state={state} title={labels[type] ?? type} type={type} />
           <ToolContent>
             {(state === "input-available" ||
               state === "approval-requested") && (
@@ -766,12 +753,15 @@ const PurePreviewMessage = ({
           <SourcesSkeleton />
         </>
       )}
-      {webSources && webSources.sources.length > 0 && isLoading && !message.parts.some((p) => p.type === "text" && p.text?.trim()) && (
-        <WebSearchIndicator
-          query={webSources.query}
-          sourceCount={webSources.sources.length}
-        />
-      )}
+      {webSources &&
+        webSources.sources.length > 0 &&
+        isLoading &&
+        !message.parts.some((p) => p.type === "text" && p.text?.trim()) && (
+          <WebSearchIndicator
+            query={webSources.query}
+            sourceCount={webSources.sources.length}
+          />
+        )}
       {parts}
       {isAssistant && richContent && (
         <RichContentBlocks
@@ -816,7 +806,9 @@ const PurePreviewMessage = ({
     >
       <div
         className={cn(
-          isUser ? "flex flex-col items-end gap-2" : "flex items-start gap-2 sm:gap-3"
+          isUser
+            ? "flex flex-col items-end gap-2"
+            : "flex items-start gap-2 sm:gap-3"
         )}
       >
         {isAssistant && (

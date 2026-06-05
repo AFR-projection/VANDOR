@@ -1,14 +1,13 @@
 import "server-only";
 
-import {
-  DEFAULT_MODEL_TIER,
-  inferTierFromLegacySlots,
-  normalizeModelTier,
-  slotsFromTier,
-  type ModelTierId,
-} from "@/lib/ai/model-tiers";
 import type { ModelSlotKey } from "@/lib/ai/model-slots";
 import { normalizeModelId } from "@/lib/ai/model-slots";
+import {
+  inferTierFromLegacySlots,
+  type ModelTierId,
+  normalizeModelTier,
+  slotsFromTier,
+} from "@/lib/ai/model-tiers";
 import { getUserSettings } from "@/lib/settings/queries";
 import { getOpenRouterApiKey } from "@/lib/settings/secrets-queries";
 import type { IntegrationsSettings } from "@/lib/settings/types";

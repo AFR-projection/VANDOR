@@ -8,7 +8,6 @@ import {
   CircleHelpIcon,
   EyeIcon,
   EyeOffIcon,
-  KeyRoundIcon,
   Loader2Icon,
   MessageCircleIcon,
   ServerIcon,
@@ -22,24 +21,27 @@ import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { type ModelTierId, normalizeModelTier } from "@/lib/ai/model-tiers";
+import { getTierUi } from "@/lib/ai/tier-styles";
 import {
+  type PersonaTonePreset,
   personaLanguageLabels,
   personaToneLabels,
   personaTonePresets,
   personaVerbosityLabels,
-  type PersonaTonePreset,
 } from "@/lib/settings/persona-presets";
-import type { IntegrationsSettings, PersonaSettings } from "@/lib/settings/types";
+import type {
+  IntegrationsSettings,
+  PersonaSettings,
+} from "@/lib/settings/types";
+import { cn } from "@/lib/utils";
+import { APP_NAME, APP_VERSION } from "@/lib/version";
 import { ActivityPanel } from "./activity-panel";
 import { HelpGuidePanel } from "./help-guide-panel";
 import { LoginHistoryPanel } from "./login-history-panel";
+import { ModelAiPanel } from "./model-ai-panel";
 import { NotesPanel } from "./notes-panel";
 import { SettingSlider } from "./setting-row";
-import { ModelAiPanel } from "./model-ai-panel";
-import { normalizeModelTier, type ModelTierId } from "@/lib/ai/model-tiers";
-import { getTierUi } from "@/lib/ai/tier-styles";
-import { cn } from "@/lib/utils";
-import { APP_NAME, APP_VERSION } from "@/lib/version";
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -109,7 +111,10 @@ function SourceBadge({ source }: { source: SecretSource }) {
 }
 
 export function GeneralSettingsPage() {
-  const { data, mutate, isLoading } = useSWR("user-settings-general", fetchGeneral);
+  const { data, mutate, isLoading } = useSWR(
+    "user-settings-general",
+    fetchGeneral
+  );
   const [tab, setTab] = useState<TabId>("persona");
   const [saving, setSaving] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
@@ -240,8 +245,7 @@ export function GeneralSettingsPage() {
   const p = settings.persona;
   const int = settings.integrations;
   const preview =
-    personaToneLabels[p.tonePreset]?.sample ??
-    "Halo! Saya siap membantu.";
+    personaToneLabels[p.tonePreset]?.sample ?? "Halo! Saya siap membantu.";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
@@ -339,7 +343,9 @@ export function GeneralSettingsPage() {
                   <Input
                     maxLength={32}
                     onBlur={() =>
-                      savePersona({ persona: { assistantName: p.assistantName } })
+                      savePersona({
+                        persona: { assistantName: p.assistantName },
+                      })
                     }
                     onChange={(e) =>
                       mutate(
@@ -488,7 +494,9 @@ export function GeneralSettingsPage() {
                     id="sig"
                     maxLength={120}
                     onBlur={() =>
-                      savePersona({ persona: { signaturePhrase: p.signaturePhrase } })
+                      savePersona({
+                        persona: { signaturePhrase: p.signaturePhrase },
+                      })
                     }
                     onChange={(e) =>
                       mutate(
@@ -542,34 +550,37 @@ export function GeneralSettingsPage() {
                     </li>
                   </ul>
                   <p className="mt-2">
-                    OpenRouter, Tavily, PIN, model, dan gaya bicara bisa dari UI.
+                    OpenRouter, Tavily, PIN, model, dan gaya bicara bisa dari
+                    UI.
                   </p>
                 </section>
 
                 <ApiKeySection
                   configured={secrets.openrouter}
+                  description="Chat, embedding memori, polish, gambar."
                   label="OpenRouter"
+                  onChange={setOpenrouterKey}
                   onClear={() => saveSecrets({ clearOpenrouter: true })}
-                  onSave={() => saveSecrets({ openrouterApiKey: openrouterKey })}
+                  onSave={() =>
+                    saveSecrets({ openrouterApiKey: openrouterKey })
+                  }
                   placeholder="sk-or-v1-…"
                   show={showOr}
                   toggleShow={() => setShowOr((v) => !v)}
                   value={openrouterKey}
-                  onChange={setOpenrouterKey}
-                  description="Chat, embedding memori, polish, gambar."
                 />
 
                 <ApiKeySection
                   configured={secrets.tavily}
+                  description="Pencarian web kaya (berita, gambar). Tanpa key: fallback DDG."
                   label="Tavily (web search)"
+                  onChange={setTavilyKey}
                   onClear={() => saveSecrets({ clearTavily: true })}
                   onSave={() => saveSecrets({ tavilyApiKey: tavilyKey })}
                   placeholder="tvly-…"
                   show={showTavily}
                   toggleShow={() => setShowTavily((v) => !v)}
                   value={tavilyKey}
-                  onChange={setTavilyKey}
-                  description="Pencarian web kaya (berita, gambar). Tanpa key: fallback DDG."
                 />
 
                 <section className="space-y-3 rounded-xl border border-border/40 bg-card/30 p-4">
@@ -651,7 +662,7 @@ export function GeneralSettingsPage() {
                     <h2 className="text-sm font-semibold">PIN numpad</h2>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Sesi login: {Math.round(gate.ttlSeconds / 86400)} hari ·
+                    Sesi login: {Math.round(gate.ttlSeconds / 86_400)} hari ·
                     Sumber: <SourceBadge source={secrets.pin.source} />
                     {secrets.pin.source === "database" && (
                       <>
@@ -661,7 +672,10 @@ export function GeneralSettingsPage() {
                       </>
                     )}
                   </p>
-                  <label className="block text-xs font-medium" htmlFor="cur-pin">
+                  <label
+                    className="block text-xs font-medium"
+                    htmlFor="cur-pin"
+                  >
                     PIN saat ini (wajib untuk simpan API)
                   </label>
                   <Input
@@ -678,7 +692,10 @@ export function GeneralSettingsPage() {
                     type="password"
                     value={currentPin}
                   />
-                  <label className="block text-xs font-medium" htmlFor="new-pin">
+                  <label
+                    className="block text-xs font-medium"
+                    htmlFor="new-pin"
+                  >
                     PIN baru
                   </label>
                   <Input
@@ -745,8 +762,7 @@ function ApiKeySection({
       <p className="text-xs text-muted-foreground">{description}</p>
       {configured.masked && (
         <p className="font-mono text-xs text-muted-foreground">
-          Aktif: {configured.masked}{" "}
-          <SourceBadge source={configured.source} />
+          Aktif: {configured.masked} <SourceBadge source={configured.source} />
         </p>
       )}
       <div className="relative">

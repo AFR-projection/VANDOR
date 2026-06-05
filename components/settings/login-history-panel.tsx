@@ -66,11 +66,9 @@ async function fetchHistory(): Promise<LoginHistoryPayload> {
 }
 
 export function LoginHistoryPanel() {
-  const { data, mutate, isLoading } = useSWR(
-    "login-history",
-    fetchHistory,
-    { refreshInterval: 30_000 }
-  );
+  const { data, mutate, isLoading } = useSWR("login-history", fetchHistory, {
+    refreshInterval: 30_000,
+  });
   const [revokeSid, setRevokeSid] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [revoking, setRevoking] = useState(false);
@@ -86,7 +84,10 @@ export function LoginHistoryPanel() {
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast({ type: "error", description: body.error ?? "Gagal mengakhiri sesi" });
+        toast({
+          type: "error",
+          description: body.error ?? "Gagal mengakhiri sesi",
+        });
         return;
       }
       toast({ type: "success", description: "Sesi diakhiri" });
@@ -116,13 +117,15 @@ export function LoginHistoryPanel() {
         <h2 className="text-sm font-semibold">Riwayat login</h2>
       </div>
       <p className="text-xs text-muted-foreground">
-        Setiap login PIN tercatat dengan IP, waktu, dan perkiraan lokasi.
-        Hanya satu perangkat aktif: login di HP/PC baru otomatis logout
-        perangkat lama dalam ±20 detik.
+        Setiap login PIN tercatat dengan IP, waktu, dan perkiraan lokasi. Hanya
+        satu perangkat aktif: login di HP/PC baru otomatis logout perangkat lama
+        dalam ±20 detik.
       </p>
 
       {entries.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Belum ada riwayat login.</p>
+        <p className="text-xs text-muted-foreground">
+          Belum ada riwayat login.
+        </p>
       ) : (
         <ul className="space-y-2">
           {entries.map((entry) => (
@@ -156,7 +159,8 @@ export function LoginHistoryPanel() {
                     {entry.locationLabel ??
                       ([entry.city, entry.region, entry.country]
                         .filter(Boolean)
-                        .join(", ") || "Lokasi tidak diketahui")}
+                        .join(", ") ||
+                        "Lokasi tidak diketahui")}
                   </p>
                 </div>
                 {entry.active && entry.sid && !entry.current && (

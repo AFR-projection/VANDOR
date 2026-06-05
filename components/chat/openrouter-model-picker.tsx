@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CrownIcon,
+  ScaleIcon,
+  WalletIcon,
+  ZapIcon,
+} from "lucide-react";
 import { useCallback } from "react";
 import {
   ModelSelector,
@@ -18,23 +26,18 @@ import {
   displayChatModeProvider,
 } from "@/lib/ai/chat-modes";
 import { OPENROUTER_FREE_MODEL_POOL } from "@/lib/ai/free-models";
-import { persistModelTier, setChatModelCookie } from "@/lib/client/model-tier-sync";
 import {
   MODEL_TIER_OPTIONS,
+  type ModelTierId,
   normalizeModelTier,
   tierCookieValue,
-  type ModelTierId,
 } from "@/lib/ai/model-tiers";
 import { getTierUi } from "@/lib/ai/tier-styles";
-import { cn } from "@/lib/utils";
 import {
-  CheckIcon,
-  ChevronDownIcon,
-  CrownIcon,
-  ScaleIcon,
-  WalletIcon,
-  ZapIcon,
-} from "lucide-react";
+  persistModelTier,
+  setChatModelCookie,
+} from "@/lib/client/model-tier-sync";
+import { cn } from "@/lib/utils";
 
 export { setChatModelCookie };
 
@@ -77,7 +80,9 @@ export function OpenRouterModelPicker({
       });
       setTimeout(() => {
         document
-          .querySelector<HTMLTextAreaElement>("[data-testid='multimodal-input']")
+          .querySelector<HTMLTextAreaElement>(
+            "[data-testid='multimodal-input']"
+          )
           ?.focus();
       }, 50);
     },
@@ -93,7 +98,9 @@ export function OpenRouterModelPicker({
             ui.trigger
           )}
           data-testid="model-selector"
-          title={MODEL_TIER_OPTIONS.find((o) => o.id === activeTier)?.description}
+          title={
+            MODEL_TIER_OPTIONS.find((o) => o.id === activeTier)?.description
+          }
           variant="ghost"
         >
           <span className={cn("size-1.5 shrink-0 rounded-full", ui.dot)} />
@@ -113,8 +120,8 @@ export function OpenRouterModelPicker({
         >
           <p className="text-xs font-semibold text-foreground">Tingkat model</p>
           <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-            Tersimpan ke akun. Tier Gratis memutar {OPENROUTER_FREE_MODEL_POOL.length}{" "}
-            model saat limit.
+            Tersimpan ke akun. Tier Gratis memutar{" "}
+            {OPENROUTER_FREE_MODEL_POOL.length} model saat limit.
           </p>
         </div>
         <ModelSelectorList>

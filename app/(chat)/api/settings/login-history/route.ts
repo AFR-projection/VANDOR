@@ -2,15 +2,12 @@ import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
+import { listLoginHistory, revokeSession } from "@/lib/security/gate";
 import {
   GATE_PIN_LENGTH,
   getGateCookieValue,
   readGateToken,
 } from "@/lib/security/gate-edge";
-import {
-  listLoginHistory,
-  revokeSession,
-} from "@/lib/security/gate";
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
 
 export async function GET(request: Request) {

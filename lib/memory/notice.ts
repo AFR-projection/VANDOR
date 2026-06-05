@@ -10,9 +10,10 @@ export type MemorySavedNotice = {
   source: "pre" | "post" | "explicit";
 };
 
-export function memorySavedDataPart(
-  notice: MemorySavedNotice
-): { type: "data-memory-saved"; data: MemorySavedNotice } {
+export function memorySavedDataPart(notice: MemorySavedNotice): {
+  type: "data-memory-saved";
+  data: MemorySavedNotice;
+} {
   return { type: "data-memory-saved", data: notice };
 }
 
@@ -22,8 +23,7 @@ export function formatMemorySavedToast(notice: MemorySavedNotice): string {
     return "";
   }
   const first = notice.items[0].content;
-  const preview =
-    first.length > 72 ? `${first.slice(0, 69)}…` : first;
+  const preview = first.length > 72 ? `${first.slice(0, 69)}…` : first;
   if (n === 1) {
     return `VANDOR mengingat: ${preview}`;
   }

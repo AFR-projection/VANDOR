@@ -6,7 +6,9 @@ export type ParsedToolRun = {
   detail?: string;
 };
 
-export function parseToolRunsFromMessage(message: ChatMessage): ParsedToolRun[] {
+export function parseToolRunsFromMessage(
+  message: ChatMessage
+): ParsedToolRun[] {
   const runs: ParsedToolRun[] = [];
   for (const part of message.parts ?? []) {
     const type = String(part.type ?? "");

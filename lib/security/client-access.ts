@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
+import { isSessionActive, touchSession } from "./gate";
 import {
   DEVICE_COOKIE_NAME,
   GATE_COOKIE_NAME,
@@ -11,7 +12,6 @@ import {
   readGateToken,
   verifyGateToken,
 } from "./gate-edge";
-import { isSessionActive, touchSession } from "./gate";
 
 export type AccessDenyReason = "gate_required" | "session_revoked";
 
@@ -53,15 +53,15 @@ export async function getClientAccessSnapshot(
 
   const token = getGateCookieValue(request);
   const payload = readGateToken(token);
-  const gateValid = gateConfigured && verifyGateToken(token) && Boolean(payload);
+  const gateValid =
+    gateConfigured && verifyGateToken(token) && Boolean(payload);
 
   let sessionRevoked = false;
   if (gateConfigured && gateValid && payload?.sid) {
     sessionRevoked = !(await isSessionActive(payload.sid));
   }
 
-  const requiresPin =
-    gateConfigured && (!gateValid || sessionRevoked);
+  const requiresPin = gateConfigured && (!gateValid || sessionRevoked);
 
   if (gateValid && payload?.sid && !sessionRevoked) {
     void touchSession(payload.sid);
@@ -95,9 +95,7 @@ export async function accessDeniedResponse(
     NextResponse.json(
       {
         error:
-          reason === "session_revoked"
-            ? "Session revoked"
-            : "Login required",
+          reason === "session_revoked" ? "Session revoked" : "Login required",
         reason,
         ip: snapshot.ip,
         requiresPin: true,

@@ -50,7 +50,11 @@ function NewsItem({ item, index }: { item: NewsCard; index: number }) {
           snippet: item.snippet,
         })
       }
-      transition={{ delay: 0.04 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        delay: 0.04 * index,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      }}
       type="button"
     >
       <SmartImage
@@ -60,7 +64,11 @@ function NewsItem({ item, index }: { item: NewsCard; index: number }) {
       />
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <SmartImage alt="" className="size-3.5 rounded-sm" src={item.favicon} />
+          <SmartImage
+            alt=""
+            className="size-3.5 rounded-sm"
+            src={item.favicon}
+          />
           <span className="truncate font-medium">{item.source}</span>
           {date && (
             <>

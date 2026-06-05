@@ -47,7 +47,9 @@ export async function getCachedWebSearch(
   };
 }
 
-export async function setCachedWebSearch(result: WebSearchOutput): Promise<void> {
+export async function setCachedWebSearch(
+  result: WebSearchOutput
+): Promise<void> {
   if (!process.env.POSTGRES_URL || result.sources.length === 0) {
     return;
   }

@@ -1,6 +1,6 @@
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
-import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
+import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
 
 const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   getCurrentTime: "waktu/tanggal",
@@ -28,7 +28,9 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   downloadMedia: "unduh TT/YT/IG",
 };
 
-export function buildActiveToolsPrompt(activeTools: VandorChatToolName[]): string {
+export function buildActiveToolsPrompt(
+  activeTools: VandorChatToolName[]
+): string {
   if (activeTools.length === 0) {
     return `## Tools (VANDOR v4)
 No tools enabled for this turn — answer from context only. Do not invent tool names.`;

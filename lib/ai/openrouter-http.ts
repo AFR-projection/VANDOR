@@ -16,7 +16,11 @@ export async function openRouterFetch<T = unknown>({
   { ok: true; data: T } | { ok: false; status: number; error: string }
 > {
   if (!ctx.apiKey) {
-    return { ok: false, status: 503, error: "OpenRouter API key not configured." };
+    return {
+      ok: false,
+      status: 503,
+      error: "OpenRouter API key not configured.",
+    };
   }
 
   let resp: Response;

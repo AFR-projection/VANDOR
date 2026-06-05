@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 /** Keeps mobile chat full-screen: no body scroll, sidebar sheet closed by default. */
 export function MobileChatEffects() {

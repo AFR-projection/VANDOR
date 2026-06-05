@@ -55,7 +55,10 @@ export function parseMediaSlash(text: string): MediaSlashCommand | null {
   return { command, url, format, platform };
 }
 
-export function isUrlForPlatform(url: string, platform: MediaPlatform): boolean {
+export function isUrlForPlatform(
+  url: string,
+  platform: MediaPlatform
+): boolean {
   try {
     const host = new URL(url).hostname.toLowerCase();
     if (platform === "tiktok") {

@@ -1,5 +1,5 @@
-import type { MemoryRecord } from "./queries";
 import { daysSince, parseMemoryMetadata } from "./metadata";
+import type { MemoryRecord } from "./queries";
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   preference: 1.25,

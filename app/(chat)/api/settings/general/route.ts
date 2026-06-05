@@ -1,11 +1,11 @@
-import { DEFAULT_MODEL_TIER } from "@/lib/ai/model-tiers";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { requireClientAccess } from "@/lib/security/client-access";
-import { GATE_PIN_LENGTH } from "@/lib/security/gate-edge";
-import { revokeAllGateSessions } from "@/lib/security/gate";
-import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
+import { DEFAULT_MODEL_TIER } from "@/lib/ai/model-tiers";
 import { ChatbotError } from "@/lib/errors";
+import { requireClientAccess } from "@/lib/security/client-access";
+import { revokeAllGateSessions } from "@/lib/security/gate";
+import { GATE_PIN_LENGTH } from "@/lib/security/gate-edge";
+import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
 import {
   getSecretsPublicView,
@@ -149,8 +149,7 @@ export async function PATCH(request: Request) {
   }
 
   const secrets = await getSecretsPublicView(session.user.id);
-  const settings =
-    savedSettings ?? (await getUserSettings(session.user.id));
+  const settings = savedSettings ?? (await getUserSettings(session.user.id));
 
   return Response.json({
     ok: true,

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
+import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,8 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { memoryCategories, type MemoryCategory } from "@/lib/db/schema";
-import { toast } from "@/components/chat/toast";
+import { type MemoryCategory, memoryCategories } from "@/lib/db/schema";
 
 type MemoryItem = {
   id: string;
@@ -131,11 +131,13 @@ export function MemoryManager() {
     revalidateOnFocus: false,
   });
 
-  const { data: memories = [], mutate, isLoading } = useSWR(
-    ["memories", filter],
-    () => fetchMemories(filter),
-    { revalidateOnFocus: false }
-  );
+  const {
+    data: memories = [],
+    mutate,
+    isLoading,
+  } = useSWR(["memories", filter], () => fetchMemories(filter), {
+    revalidateOnFocus: false,
+  });
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -213,7 +215,10 @@ export function MemoryManager() {
   );
 
   const clearAll = useCallback(async () => {
-    if (filter === "all" && !confirm("Hapus SEMUA memori? Tidak bisa dibatalkan.")) {
+    if (
+      filter === "all" &&
+      !confirm("Hapus SEMUA memori? Tidak bisa dibatalkan.")
+    ) {
       return;
     }
     if (filter === "visual" && !confirm("Hapus semua memori visual?")) {
@@ -258,7 +263,8 @@ export function MemoryManager() {
           type="button"
           variant="ghost"
         >
-          Hapus {filter === "visual" ? "visual" : filter === "all" ? "semua" : ""}
+          Hapus{" "}
+          {filter === "visual" ? "visual" : filter === "all" ? "semua" : ""}
         </Button>
       </div>
 
@@ -273,9 +279,7 @@ export function MemoryManager() {
           />
         </div>
         <Select
-          onValueChange={(v) =>
-            setCategoryFilter(v as MemoryCategory | "all")
-          }
+          onValueChange={(v) => setCategoryFilter(v as MemoryCategory | "all")}
           value={categoryFilter}
         >
           <SelectTrigger className="w-full sm:w-[160px]">
@@ -290,7 +294,10 @@ export function MemoryManager() {
             ))}
           </SelectContent>
         </Select>
-        <Select onValueChange={(v) => setSort(v as "recent" | "importance")} value={sort}>
+        <Select
+          onValueChange={(v) => setSort(v as "recent" | "importance")}
+          value={sort}
+        >
           <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue />
           </SelectTrigger>
@@ -386,7 +393,9 @@ export function MemoryManager() {
                         Visual
                       </span>
                     )}
-                    <span className="tabular-nums">Penting {m.importance}/10</span>
+                    <span className="tabular-nums">
+                      Penting {m.importance}/10
+                    </span>
                     {m.updatedAt && (
                       <span>
                         {new Intl.DateTimeFormat("id-ID", {

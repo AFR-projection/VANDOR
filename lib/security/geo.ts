@@ -84,8 +84,7 @@ export function mergeVercelGeo(
     return null;
   }
 
-  const latitude =
-    parseCoord(vercelGeo.latitude) ?? fallback?.latitude ?? null;
+  const latitude = parseCoord(vercelGeo.latitude) ?? fallback?.latitude ?? null;
   const longitude =
     parseCoord(vercelGeo.longitude) ?? fallback?.longitude ?? null;
 

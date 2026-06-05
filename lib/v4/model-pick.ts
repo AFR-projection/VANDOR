@@ -14,9 +14,7 @@ export function applyV4ModelBias(input: {
   useOrchestrator: boolean;
 }): { modelId: string; reason: string | null } {
   const fast =
-    input.models.chatModel?.trim() ||
-    input.models.freeModel1?.trim() ||
-    "";
+    input.models.chatModel?.trim() || input.models.freeModel1?.trim() || "";
 
   if (!fast || !input.useOrchestrator) {
     return { modelId: input.modelId, reason: null };

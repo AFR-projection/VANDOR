@@ -51,10 +51,10 @@ export function CommandPalette() {
 
   return (
     <CommandDialog
+      description="Cari aksi atau model. Tekan ⌘K kapan saja."
       onOpenChange={setOpen}
       open={open}
       title="VANDOR command palette"
-      description="Cari aksi atau model. Tekan ⌘K kapan saja."
     >
       <CommandInput placeholder="Ketik aksi atau model..." />
       <CommandList>

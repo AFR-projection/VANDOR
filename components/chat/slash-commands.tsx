@@ -1,26 +1,26 @@
 "use client";
 
 import {
-  BookMarkedIcon,
   BombIcon,
+  BookMarkedIcon,
   BrainIcon,
-  CloudSunIcon,
   ClockIcon,
+  CloudSunIcon,
+  DownloadIcon,
   ListIcon,
   ListTodoIcon,
+  MusicIcon,
   PaletteIcon,
   PenLineIcon,
   PenSquareIcon,
-  DownloadIcon,
-  MusicIcon,
   SearchIcon,
   StickyNoteIcon,
-  VideoIcon,
   Trash2Icon,
+  VideoIcon,
   XIcon,
 } from "lucide-react";
-import { SLASH_SKILLS } from "@/lib/chat/slash-skills";
 import { type ReactNode, useEffect, useRef } from "react";
+import { SLASH_SKILLS } from "@/lib/chat/slash-skills";
 import { cn } from "@/lib/utils";
 
 export type SlashCommand = {
@@ -98,7 +98,8 @@ const SKILL_COMMANDS: SlashCommand[] = SLASH_SKILLS.map((skill) => ({
   name: skill.name,
   description: skill.description,
   icon: SKILL_ICONS[skill.name] ?? <StickyNoteIcon className="size-3.5" />,
-  action: skill.kind === "ui" ? (skill.action ?? skill.name) : `skill:${skill.name}`,
+  action:
+    skill.kind === "ui" ? (skill.action ?? skill.name) : `skill:${skill.name}`,
   insertText: skill.insertText,
   sendText: skill.sendText,
 }));
@@ -155,7 +156,9 @@ export function SlashCommandMenu({
         {cmd.icon}
       </div>
       <span className="font-mono text-[13px] text-foreground">/{cmd.name}</span>
-      <span className="text-[12px] text-muted-foreground/50">{cmd.description}</span>
+      <span className="text-[12px] text-muted-foreground/50">
+        {cmd.description}
+      </span>
       {cmd.shortcut && (
         <span className="ml-auto text-[11px] text-muted-foreground/30">
           {cmd.shortcut}

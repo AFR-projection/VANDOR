@@ -1,6 +1,7 @@
 import "server-only";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+
 import { APP_USER_AGENT } from "@/lib/version";
 
 const USER_AGENT = `${APP_USER_AGENT}; contact@localhost`;

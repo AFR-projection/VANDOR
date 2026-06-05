@@ -3,10 +3,10 @@
 import { useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
-import { artifactDefinitions } from "./artifact";
 import { toast } from "@/components/chat/toast";
+import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
 import { displayOpenRouterModelName } from "@/lib/ai/model-display";
+import { artifactDefinitions } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
 

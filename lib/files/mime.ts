@@ -19,16 +19,56 @@ export type FileKind =
   | "other";
 
 const CODE_EXT = new Set([
-  "ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "rb", "go", "rs", "java",
-  "kt", "swift", "c", "h", "cpp", "hpp", "cs", "php", "sh", "bash", "zsh",
-  "ps1", "lua", "r", "scala", "clj", "ex", "exs", "dart", "vue", "svelte",
-  "html", "css", "scss", "sass", "less", "sql", "graphql", "yml", "yaml",
-  "toml", "ini", "conf", "env", "dockerfile", "makefile",
+  "ts",
+  "tsx",
+  "js",
+  "jsx",
+  "mjs",
+  "cjs",
+  "py",
+  "rb",
+  "go",
+  "rs",
+  "java",
+  "kt",
+  "swift",
+  "c",
+  "h",
+  "cpp",
+  "hpp",
+  "cs",
+  "php",
+  "sh",
+  "bash",
+  "zsh",
+  "ps1",
+  "lua",
+  "r",
+  "scala",
+  "clj",
+  "ex",
+  "exs",
+  "dart",
+  "vue",
+  "svelte",
+  "html",
+  "css",
+  "scss",
+  "sass",
+  "less",
+  "sql",
+  "graphql",
+  "yml",
+  "yaml",
+  "toml",
+  "ini",
+  "conf",
+  "env",
+  "dockerfile",
+  "makefile",
 ]);
 
-const TEXT_EXT = new Set([
-  "txt", "md", "markdown", "log", "rtf", "tex", "rst",
-]);
+const TEXT_EXT = new Set(["txt", "md", "markdown", "log", "rtf", "tex", "rst"]);
 
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50 MB
 
@@ -88,14 +128,16 @@ export function classify(mime: string, name = ""): FileKind {
   if (m.startsWith("audio/")) return "audio";
   if (m === "application/pdf" || ext === "pdf") return "pdf";
   if (
-    m === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    m ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     m === "application/msword" ||
     ext === "docx" ||
     ext === "doc"
   )
     return "docx";
   if (
-    m === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    m ===
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
     m === "application/vnd.ms-powerpoint" ||
     ext === "pptx" ||
     ext === "ppt"

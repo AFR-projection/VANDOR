@@ -2,13 +2,13 @@
 
 import { BrainIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { toast } from "@/components/chat/toast";
 import { useDataStream } from "@/components/chat/data-stream-provider";
-import type { ChatMessage } from "@/lib/types";
+import { toast } from "@/components/chat/toast";
 import {
   formatMemorySavedToast,
   type MemorySavedNotice,
 } from "@/lib/memory/notice";
+import type { ChatMessage } from "@/lib/types";
 
 function noticeKey(notice: MemorySavedNotice): string {
   return notice.items.map((i) => `mem:${i.content}`).join("|");
@@ -53,10 +53,11 @@ export function MemorySavedHandler({
   }, [dataStream]);
 
   useEffect(() => {
-    if (status === "streaming" || status === "submitted") {
-      if (turnStartedRef.current == null) {
-        turnStartedRef.current = Date.now();
-      }
+    if (
+      (status === "streaming" || status === "submitted") &&
+      turnStartedRef.current == null
+    ) {
+      turnStartedRef.current = Date.now();
     }
   }, [status]);
 
@@ -70,33 +71,36 @@ export function MemorySavedHandler({
       const sinceIso = new Date(turnStartedRef.current - 3000).toISOString();
       turnStartedRef.current = null;
       const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-      fetch(
-        `${base}/api/memory/recent?since=${encodeURIComponent(sinceIso)}`
-      )
+      fetch(`${base}/api/memory/recent?since=${encodeURIComponent(sinceIso)}`)
         .then((res) => (res.ok ? res.json() : null))
-        .then((data: { memories?: { content: string; category: string }[] } | null) => {
-          if (!data?.memories?.length) {
-            return;
-          }
-          const recent = data.memories.filter((m) => {
-            const key = `mem:${m.content}`;
-            if (seenRef.current.has(key)) {
-              return false;
+        .then(
+          (
+            data: { memories?: { content: string; category: string }[] } | null
+          ) => {
+            if (!data?.memories?.length) {
+              return;
             }
-            seenRef.current.add(key);
-            return true;
-          });
-          if (recent.length === 0) {
-            return;
+            const recent = data.memories.filter((m) => {
+              const key = `mem:${m.content}`;
+              if (seenRef.current.has(key)) {
+                return false;
+              }
+              seenRef.current.add(key);
+              return true;
+            });
+            if (recent.length === 0) {
+              return;
+            }
+            showMemoryToast({
+              items: recent.map((m) => ({
+                content: m.content,
+                category:
+                  m.category as MemorySavedNotice["items"][0]["category"],
+              })),
+              source: "post",
+            });
           }
-          showMemoryToast({
-            items: recent.map((m) => ({
-              content: m.content,
-              category: m.category as MemorySavedNotice["items"][0]["category"],
-            })),
-            source: "post",
-          });
-        })
+        )
         .catch(() => null);
     }
 

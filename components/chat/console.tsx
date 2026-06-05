@@ -162,9 +162,7 @@ export function Console({ consoleOutputs, setConsoleOutputs }: ConsoleProps) {
                 <div className="no-scrollbar flex w-full min-w-0 flex-col gap-2 overflow-x-auto text-foreground">
                   {consoleOutput.contents.map((content, contentIndex) =>
                     content.type === "image" ? (
-                      <picture
-                        key={`${consoleOutput.id}-img-${contentIndex}`}
-                      >
+                      <picture key={`${consoleOutput.id}-img-${contentIndex}`}>
                         <img
                           alt="output"
                           className="max-w-full rounded-md"

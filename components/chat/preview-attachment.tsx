@@ -35,7 +35,9 @@ function pickIcon(mime: string, name: string) {
     return FileSpreadsheetIcon;
   if (
     mime === "application/json" ||
-    /\.(json|ya?ml|toml|tsx?|jsx?|py|rb|go|rs|java|c|cpp|cs|php|sh)$/i.test(name)
+    /\.(json|ya?ml|toml|tsx?|jsx?|py|rb|go|rs|java|c|cpp|cs|php|sh)$/i.test(
+      name
+    )
   )
     return FileCodeIcon;
   return GenericFileIcon;

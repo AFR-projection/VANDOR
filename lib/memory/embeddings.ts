@@ -11,8 +11,7 @@ export async function embedText(
   text: string,
   opts?: EmbedTextOptions
 ): Promise<number[]> {
-  const apiKey =
-    opts?.apiKey?.trim() || process.env.OPENROUTER_API_KEY?.trim();
+  const apiKey = opts?.apiKey?.trim() || process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("OpenRouter API key is required for memory embeddings");
   }

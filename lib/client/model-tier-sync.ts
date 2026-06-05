@@ -1,7 +1,7 @@
 import {
+  type ModelTierId,
   normalizeModelTier,
   tierCookieValue,
-  type ModelTierId,
 } from "@/lib/ai/model-tiers";
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";

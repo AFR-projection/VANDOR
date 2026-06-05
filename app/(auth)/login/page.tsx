@@ -22,7 +22,6 @@ export default function Page() {
 
   const { update: updateSession } = useSession();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
     if (state.status === "failed") {
       toast({ type: "error", description: "Invalid credentials!" });

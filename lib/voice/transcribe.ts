@@ -61,7 +61,10 @@ export async function transcribeAudioBuffer({
 
   const text = result.data.choices?.[0]?.message?.content?.trim() ?? "";
   if (!text) {
-    return { ok: false, error: "Transkripsi kosong — coba bicara lebih jelas." };
+    return {
+      ok: false,
+      error: "Transkripsi kosong — coba bicara lebih jelas.",
+    };
   }
 
   return { ok: true, text };

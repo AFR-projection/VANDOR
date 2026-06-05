@@ -34,8 +34,7 @@ export const DEFAULT_FREE_MODEL_CHAIN = [
   OPENROUTER_FREE_MODEL_POOL[2],
 ] as const;
 
-export type OpenRouterFreeModelId =
-  (typeof OPENROUTER_FREE_MODEL_POOL)[number];
+export type OpenRouterFreeModelId = (typeof OPENROUTER_FREE_MODEL_POOL)[number];
 
 export function isOpenRouterFreeModelId(id: string): boolean {
   const v = id.toLowerCase().trim();

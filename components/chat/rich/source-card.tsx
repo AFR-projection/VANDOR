@@ -79,7 +79,11 @@ function SourceCard({
             .slice(0, 10),
         })
       }
-      transition={{ delay: 0.03 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        delay: 0.03 * index,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      }}
       type="button"
     >
       <span className="flex min-w-0 items-center gap-2">

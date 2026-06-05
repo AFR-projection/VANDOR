@@ -37,7 +37,9 @@ export type LoginHistoryRow = {
   active: boolean;
 };
 
-export async function getLockoutStatus(clientId: string): Promise<LockoutStatus> {
+export async function getLockoutStatus(
+  clientId: string
+): Promise<LockoutStatus> {
   if (!process.env.POSTGRES_URL) {
     return {
       locked: false,
@@ -194,7 +196,9 @@ export async function getActiveGateSessionId(): Promise<string | null> {
 }
 
 /** Cabut sesi lama di NumpadSession (riwayat / perangkat lain). */
-export async function revokeAllSessionsExcept(activeSid: string): Promise<void> {
+export async function revokeAllSessionsExcept(
+  activeSid: string
+): Promise<void> {
   if (!process.env.POSTGRES_URL) {
     return;
   }

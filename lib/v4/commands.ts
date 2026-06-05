@@ -1,11 +1,11 @@
 import "server-only";
 
+import type { RequestHints } from "@/lib/ai/prompts";
 import { parseMediaSlash } from "@/lib/chat/media-slash";
-import { getChatSummary } from "@/lib/memory/assistant-db";
-import { getCachedWeather, setCachedWeather } from "@/lib/v4/runtime-cache";
 import {
   createNote,
   createTask,
+  getChatSummary,
   listNotes,
   listTasks,
 } from "@/lib/memory/assistant-db";
@@ -13,7 +13,7 @@ import { memorySavedDataPart } from "@/lib/memory/notice";
 import { saveMemory } from "@/lib/memory/queries";
 import { isExplicitRememberRequest } from "@/lib/memory/remember";
 import { runWebSearch } from "@/lib/search/engine";
-import type { RequestHints } from "@/lib/ai/prompts";
+import { getCachedWeather, setCachedWeather } from "@/lib/v4/runtime-cache";
 
 export type DirectCommand =
   | { kind: "media" }
@@ -39,10 +39,12 @@ export function parseDirectCommand(
     return { kind: "media" };
   }
 
-  if (/^\/?ringkas\s*$/i.test(trimmed) || /^ringkas(kan)?\s+chat/i.test(trimmed)) {
-    if (chatId) {
-      return { kind: "ringkas", chatId };
-    }
+  if (
+    (/^\/?ringkas\s*$/i.test(trimmed) ||
+      /^ringkas(kan)?\s+chat/i.test(trimmed)) &&
+    chatId
+  ) {
+    return { kind: "ringkas", chatId };
   }
 
   if (
@@ -90,10 +92,10 @@ export function parseDirectCommand(
   const taskCreate =
     trimmed.match(/^\/?todo\s+(.+)/is) ||
     trimmed.match(
-      /^(?:buat(?:kan)?|tambah(?:kan)?)\s+(?:task|tugas|todo)\s*[:\-]?\s*(.+)/is
+      /^(?:buat(?:kan)?|tambah(?:kan)?)\s+(?:task|tugas|todo)\s*[:-]?\s*(.+)/is
     ) ||
     trimmed.match(
-      /^(?:catet(?:in|kan)?|catat)\s+(?:task|tugas|todo)?\s*[:\-]?\s*(.+)/is
+      /^(?:catet(?:in|kan)?|catat)\s+(?:task|tugas|todo)?\s*[:-]?\s*(.+)/is
     );
   if (taskCreate?.[1]?.trim() && taskCreate[1].trim().length >= 2) {
     return { kind: "task_create", title: taskCreate[1].trim().slice(0, 500) };

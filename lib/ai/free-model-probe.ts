@@ -1,16 +1,18 @@
 import "server-only";
 
 import { generateText, type ModelMessage } from "ai";
+import { buildOpenRouterProviderOptions } from "@/lib/ai/openrouter-routing";
 import {
   getLanguageModel,
   type OpenRouterClientMeta,
 } from "@/lib/ai/providers";
-import { buildOpenRouterProviderOptions } from "@/lib/ai/openrouter-routing";
 
 const PROBE_MAX_OUTPUT_TOKENS = 12;
 const PROBE_TIMEOUT_MS = 18_000;
 
-function lastUserTextFromMessages(messages: ModelMessage[] | undefined): string {
+function lastUserTextFromMessages(
+  messages: ModelMessage[] | undefined
+): string {
   if (!messages?.length) return "ping";
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];

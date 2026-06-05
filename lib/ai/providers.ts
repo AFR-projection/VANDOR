@@ -1,8 +1,8 @@
 import { customProvider } from "ai";
+import { getOpenRouterApiKey } from "@/lib/settings/secrets-queries";
 import { isTestEnvironment } from "../constants";
 import { titleModel } from "./models";
 import { createOpenRouterClient, openrouter } from "./openrouter";
-import { getOpenRouterApiKey } from "@/lib/settings/secrets-queries";
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -30,9 +30,7 @@ export function getLanguageModel(
     return myProvider.languageModel("chat-model");
   }
 
-  const client = apiKey
-    ? createOpenRouterClient(apiKey, meta)
-    : openrouter;
+  const client = apiKey ? createOpenRouterClient(apiKey, meta) : openrouter;
   return client(modelId);
 }
 
@@ -44,9 +42,7 @@ export function getTitleModel(
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
-  const client = apiKey
-    ? createOpenRouterClient(apiKey, meta)
-    : openrouter;
+  const client = apiKey ? createOpenRouterClient(apiKey, meta) : openrouter;
   const id = modelId?.trim() || titleModel.id;
   return client(id);
 }

@@ -2,8 +2,8 @@ import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { memoryCategories } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
-import { requireClientAccess } from "@/lib/security/client-access";
 import { deleteMemory, updateMemory } from "@/lib/memory/queries";
+import { requireClientAccess } from "@/lib/security/client-access";
 
 const patchSchema = z.object({
   content: z.string().min(3).max(2000).optional(),

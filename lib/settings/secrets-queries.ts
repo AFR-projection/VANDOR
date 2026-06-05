@@ -4,7 +4,11 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { userSecrets } from "@/lib/db/schema";
-import { decryptSecret, encryptSecret, maskSecret } from "@/lib/security/crypto";
+import {
+  decryptSecret,
+  encryptSecret,
+  maskSecret,
+} from "@/lib/security/crypto";
 import { hashNumpadPin } from "@/lib/security/pin-hash";
 
 const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
@@ -36,7 +40,9 @@ async function getRow(userId: string) {
   return rows.at(0) ?? null;
 }
 
-export async function getOpenRouterApiKey(userId: string): Promise<string | null> {
+export async function getOpenRouterApiKey(
+  userId: string
+): Promise<string | null> {
   const row = await getRow(userId);
   if (row?.openrouterApiKeyEnc) {
     const dec = decryptSecret(row.openrouterApiKeyEnc);
@@ -58,9 +64,7 @@ export async function getTavilyApiKey(userId: string): Promise<string | null> {
   return process.env.TAVILY_API_KEY?.trim() || null;
 }
 
-export async function getNumpadPinHash(
-  userId: string
-): Promise<string | null> {
+export async function getNumpadPinHash(userId: string): Promise<string | null> {
   const row = await getRow(userId);
   return row?.numpadPinHash ?? null;
 }
@@ -145,17 +149,17 @@ export async function updateUserSecrets({
     ? null
     : openrouterApiKey?.trim()
       ? encryptSecret(openrouterApiKey.trim())
-      : existing?.openrouterApiKeyEnc ?? null;
+      : (existing?.openrouterApiKeyEnc ?? null);
 
   const tavilyApiKeyEnc = clearTavily
     ? null
     : tavilyApiKey?.trim()
       ? encryptSecret(tavilyApiKey.trim())
-      : existing?.tavilyApiKeyEnc ?? null;
+      : (existing?.tavilyApiKeyEnc ?? null);
 
   const numpadPinHash = newPin
     ? hashNumpadPin(newPin)
-    : existing?.numpadPinHash ?? null;
+    : (existing?.numpadPinHash ?? null);
 
   await db
     .insert(userSecrets)

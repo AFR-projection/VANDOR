@@ -41,7 +41,8 @@ const MODEL_ROUTES: Record<TaskIntent, string | undefined> = {
   simple: process.env.VANDOR_MODEL_SIMPLE,
   reasoning: process.env.VANDOR_MODEL_REASONING,
   coding: process.env.VANDOR_MODEL_CODING,
-  research: process.env.VANDOR_MODEL_RESEARCH ?? process.env.VANDOR_WEB_SEARCH_MODEL,
+  research:
+    process.env.VANDOR_MODEL_RESEARCH ?? process.env.VANDOR_WEB_SEARCH_MODEL,
 };
 
 const DEFAULT_ROUTES: Record<TaskIntent, string> = {

@@ -10,106 +10,42 @@ import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
+import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
+import { isFreeTier, isOrchestratorTier } from "@/lib/ai/chat-modes";
 import {
   entitlementsByUserType,
   isMessageLimitDisabled,
 } from "@/lib/ai/entitlements";
+import { resolveIntegrationModels } from "@/lib/ai/integration-models";
+import { resolveMemoryExtractionModel } from "@/lib/ai/memory-model";
+import { formatOpenRouterError } from "@/lib/ai/model-fallbacks";
+import { normalizeModelTier } from "@/lib/ai/model-tiers";
 import {
   chatModels,
   getCapabilities,
   resolveChatModelId,
 } from "@/lib/ai/models";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import {
-  resolveOpenRouterApiKeyForUser,
-} from "@/lib/ai/providers";
-import {
-  buildWebSearchContextBlock,
-  generalAnswerQualityInstructions,
-  getWebSearchAnswerInstructions,
-} from "@/lib/search/context";
-import { getWebSearchSynthesisModel } from "@/lib/search/config";
-import {
-  classifyContentIntents,
-  classifyResponseMode,
-  detectWebSearchNeed,
-  shouldDisableWebSearchTool,
-} from "@/lib/search/detect";
-import type { RichContent, WebSearchOutput } from "@/lib/search/types";
-import { runWebSearch } from "@/lib/search/engine";
-import { buildRichContent, hasRichContent } from "@/lib/search/rich";
-import { generateRelatedQuestions } from "@/lib/search/related";
-import { geocodePlace } from "@/lib/search/geocode";
-import { buildMemoryContext } from "@/lib/memory/build-context";
-import {
-  extractAndStoreMemories,
-  preExtractUserMemories,
-} from "@/lib/memory/extract";
-import { memorySavedDataPart } from "@/lib/memory/notice";
-import { isExplicitRememberRequest } from "@/lib/memory/remember";
-import { maybeSummarizeChat } from "@/lib/memory/summarize";
-import { captureVisualMemories } from "@/lib/memory/visual-memory";
-import { getUserSettings } from "@/lib/settings/queries";
-import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
-import { isFreeTier, isOrchestratorTier } from "@/lib/ai/chat-modes";
-import { normalizeModelTier } from "@/lib/ai/model-tiers";
-import { resolveIntegrationModels } from "@/lib/ai/integration-models";
-import { resolveMemoryExtractionModel } from "@/lib/ai/memory-model";
-import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
-import { recordToolEvent } from "@/lib/observability/record";
+import { buildFreeModeAttemptChain } from "@/lib/ai/openrouter-routing";
 import {
   isHeavyForFreeMode,
   planOrchestrator,
   resolveFreeModeModel,
 } from "@/lib/ai/orchestrator";
 import { polishResponse } from "@/lib/ai/polish";
-import {
-  getCachedResponse,
-  setCachedResponse,
-} from "@/lib/cache/response-cache";
+import { systemPrompt } from "@/lib/ai/prompts";
+import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
+import { classifyTaskIntent } from "@/lib/ai/router";
+import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
+import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
 import { createDocument } from "@/lib/ai/tools/create-document";
+import { createDocx } from "@/lib/ai/tools/create-docx";
+import { createPdf } from "@/lib/ai/tools/create-pdf";
+import { createSpreadsheet } from "@/lib/ai/tools/create-spreadsheet";
+import { makeDownloadMediaTool } from "@/lib/ai/tools/download-media";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getCurrentTime } from "@/lib/ai/tools/get-current-time";
 import { makeGetLocation } from "@/lib/ai/tools/get-location";
 import { getWeather } from "@/lib/ai/tools/get-weather";
-import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { updateDocument } from "@/lib/ai/tools/update-document";
-import { showMap } from "@/lib/ai/tools/show-map";
-import { makeDownloadMediaTool } from "@/lib/ai/tools/download-media";
-import { makeWebSearch } from "@/lib/ai/tools/web-search";
-import { parseMediaSlash } from "@/lib/chat/media-slash";
-import { shouldPersistChatMessage } from "@/lib/chat/message-visibility";
-import { createMediaDownloadStreamResponse } from "@/lib/media/chat-stream";
-import {
-  executeDirectCommand,
-  parseDirectCommand,
-} from "@/lib/v4/commands";
-import { V4_MAX_AGENT_STEPS } from "@/lib/v4/constants";
-import { createFastTextStreamResponse } from "@/lib/v4/fast-stream";
-import { V4_JARVIS_OS_BLOCK } from "@/lib/v4/jarvis-prompt";
-import { resolveVandorIntent } from "@/lib/v4/intent";
-import { applyV4ModelBias } from "@/lib/v4/model-pick";
-import {
-  maxOutputTokensForTurn,
-  shouldPolishResponse,
-  shouldRunPreExtract,
-} from "@/lib/v4/overhead";
-import { selectActiveTools } from "@/lib/v4/tool-router";
-import { trimUiMessagesForModel } from "@/lib/v4/trim-messages";
-import { estimateTurnUsage } from "@/lib/v4/turn-usage";
-import { requireClientAccess } from "@/lib/security/client-access";
-import { resolveClientGeo } from "@/lib/security/geo";
-import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
-import { formatOpenRouterError } from "@/lib/ai/model-fallbacks";
-import { buildFreeModeAttemptChain } from "@/lib/ai/openrouter-routing";
-import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
-import { classifyTaskIntent } from "@/lib/ai/router";
-import { buildFilesContextBlock, extractAll } from "@/lib/files/extract";
-import { inlineLocalAttachments } from "@/lib/files/inline";
-import { classify, type FileKind } from "@/lib/files/mime";
-import { createDocx } from "@/lib/ai/tools/create-docx";
-import { createPdf } from "@/lib/ai/tools/create-pdf";
-import { createSpreadsheet } from "@/lib/ai/tools/create-spreadsheet";
 import {
   makeEditImageTool,
   makeGenerateImageTool,
@@ -117,6 +53,16 @@ import {
   makeGenerateVoiceTool,
   makeTranscribeAudioTool,
 } from "@/lib/ai/tools/media-tools";
+import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { showMap } from "@/lib/ai/tools/show-map";
+import { updateDocument } from "@/lib/ai/tools/update-document";
+import { makeWebSearch } from "@/lib/ai/tools/web-search";
+import {
+  getCachedResponse,
+  setCachedResponse,
+} from "@/lib/cache/response-cache";
+import { parseMediaSlash } from "@/lib/chat/media-slash";
+import { shouldPersistChatMessage } from "@/lib/chat/message-visibility";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -131,9 +77,61 @@ import {
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
+import { buildFilesContextBlock, extractAll } from "@/lib/files/extract";
+import { inlineLocalAttachments } from "@/lib/files/inline";
+import { classify, type FileKind } from "@/lib/files/mime";
+import { createMediaDownloadStreamResponse } from "@/lib/media/chat-stream";
+import { buildMemoryContext } from "@/lib/memory/build-context";
+import {
+  extractAndStoreMemories,
+  preExtractUserMemories,
+} from "@/lib/memory/extract";
+import { memorySavedDataPart } from "@/lib/memory/notice";
+import { isExplicitRememberRequest } from "@/lib/memory/remember";
+import { maybeSummarizeChat } from "@/lib/memory/summarize";
+import { captureVisualMemories } from "@/lib/memory/visual-memory";
+import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
+import { recordToolEvent } from "@/lib/observability/record";
 import { checkIpRateLimit } from "@/lib/ratelimit";
+import { getWebSearchSynthesisModel } from "@/lib/search/config";
+import {
+  buildWebSearchContextBlock,
+  getWebSearchAnswerInstructions,
+} from "@/lib/search/context";
+import {
+  classifyContentIntents,
+  classifyResponseMode,
+  detectWebSearchNeed,
+  shouldDisableWebSearchTool,
+} from "@/lib/search/detect";
+import { runWebSearch } from "@/lib/search/engine";
+import { geocodePlace } from "@/lib/search/geocode";
+import { generateRelatedQuestions } from "@/lib/search/related";
+import { buildRichContent, hasRichContent } from "@/lib/search/rich";
+import type { RichContent, WebSearchOutput } from "@/lib/search/types";
+import { requireClientAccess } from "@/lib/security/client-access";
+import { resolveClientGeo } from "@/lib/security/geo";
+import { getUserSettings } from "@/lib/settings/queries";
 import type { ChatMessage } from "@/lib/types";
-import { convertToUIMessages, generateUUID, getTextFromMessage } from "@/lib/utils";
+import {
+  convertToUIMessages,
+  generateUUID,
+  getTextFromMessage,
+} from "@/lib/utils";
+import { executeDirectCommand, parseDirectCommand } from "@/lib/v4/commands";
+import { V4_MAX_AGENT_STEPS } from "@/lib/v4/constants";
+import { createFastTextStreamResponse } from "@/lib/v4/fast-stream";
+import { resolveVandorIntent } from "@/lib/v4/intent";
+import { V4_JARVIS_OS_BLOCK } from "@/lib/v4/jarvis-prompt";
+import { applyV4ModelBias } from "@/lib/v4/model-pick";
+import {
+  maxOutputTokensForTurn,
+  shouldPolishResponse,
+  shouldRunPreExtract,
+} from "@/lib/v4/overhead";
+import { selectActiveTools } from "@/lib/v4/tool-router";
+import { trimUiMessagesForModel } from "@/lib/v4/trim-messages";
+import { estimateTurnUsage } from "@/lib/v4/turn-usage";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
@@ -253,9 +251,7 @@ export async function POST(request: Request) {
       ];
     }
 
-    const { geo: ipGeo, hints: requestHints } = await resolveClientGeo(
-      request
-    );
+    const { geo: ipGeo, hints: requestHints } = await resolveClientGeo(request);
 
     if (message?.role === "user") {
       await saveMessages({
@@ -340,8 +336,14 @@ export async function POST(request: Request) {
     // ── Multi-format attachment ingestion ───────────────────────────────
     const attachedFiles = (lastUserMessage?.parts ?? [])
       .filter(
-        (p): p is { type: "file"; mediaType: string; name: string; url: string } =>
-          (p as { type?: string }).type === "file"
+        (
+          p
+        ): p is {
+          type: "file";
+          mediaType: string;
+          name: string;
+          url: string;
+        } => (p as { type?: string }).type === "file"
       )
       .map((p) => ({ url: p.url, name: p.name, mime: p.mediaType }));
 
@@ -420,8 +422,7 @@ export async function POST(request: Request) {
       activeTier
     );
     const openRouterMeta = {
-      appName:
-        userSettings.integrations.openrouterAppName.trim() || "VANDOR",
+      appName: userSettings.integrations.openrouterAppName.trim() || "VANDOR",
       appUrl:
         userSettings.integrations.openrouterAppUrl.trim() ||
         process.env.NEXT_PUBLIC_APP_URL?.trim() ||
@@ -527,10 +528,14 @@ export async function POST(request: Request) {
       : undefined;
 
     if (isFreeTier(initialChatModel)) {
-      const freePick = resolveFreeModeModel(attachmentKinds, integrationModels, {
-        userText: lastUserText,
-        contextChars,
-      });
+      const freePick = resolveFreeModeModel(
+        attachmentKinds,
+        integrationModels,
+        {
+          userText: lastUserText,
+          contextChars,
+        }
+      );
       chatModel = freeAttemptChainEarly?.[0] ?? freePick.modelId;
       freeModeFallbacks = freePick.fallbacks;
       selectionReason =
@@ -608,7 +613,9 @@ export async function POST(request: Request) {
           ...(fallbacksFor[chatModel] ?? []),
           integrationModels.chatModel,
           integrationModels.reasoningModel,
-        ].filter((id, i, arr) => id && id !== chatModel && arr.indexOf(id) === i);
+        ].filter(
+          (id, i, arr) => id && id !== chatModel && arr.indexOf(id) === i
+        );
 
     const documentModelId = freeModeActive
       ? chatModel
@@ -679,7 +686,11 @@ export async function POST(request: Request) {
         let webSearchRetryHint = "";
         let relatedPromise: Promise<string[]> | null = null;
 
-        if (!isToolApprovalFlow && lastUserText.trim() && webSearchDetection.needed) {
+        if (
+          !isToolApprovalFlow &&
+          lastUserText.trim() &&
+          webSearchDetection.needed
+        ) {
           const detection = webSearchDetection;
           if (detection.needed) {
             dataStream.write({
@@ -774,7 +785,11 @@ export async function POST(request: Request) {
             const textId = generateId();
             dataStream.write({ type: "text-start", id: textId });
             for (const chunk of cached.match(/.{1,24}/gs) ?? [cached]) {
-              dataStream.write({ type: "text-delta", id: textId, delta: chunk });
+              dataStream.write({
+                type: "text-delta",
+                id: textId,
+                delta: chunk,
+              });
             }
             dataStream.write({ type: "text-end", id: textId });
 
@@ -865,92 +880,92 @@ export async function POST(request: Request) {
 
         const { stream, resolvedModelId, attemptIndex, attemptedModels } =
           await streamTextWithModelFallback({
-          primaryModelId: streamPrimaryId,
-          apiKey: openRouterApiKey,
-          meta: {
-            appName: userSettings.integrations.openrouterAppName,
-            appUrl: userSettings.integrations.openrouterAppUrl,
-          },
-          freeMode: freeModeActive,
-          isFreeTier: treatAsFreeTier,
-          extraFallbacks: fallbackExtras,
-          attemptModelIds: freeAttemptChain,
-          reasoningEffort:
-            !freeModeActive && modelConfig?.reasoningEffort
-              ? modelConfig.reasoningEffort
-              : undefined,
-          system:
-            systemPrompt({
-              requestHints,
-              supportsTools,
-              memoryContext,
-              filesContext: filesBlock,
-              webSearchContext: webSearchContextBlock,
-              webSearchRetryHint,
+            primaryModelId: streamPrimaryId,
+            apiKey: openRouterApiKey,
+            meta: {
+              appName: userSettings.integrations.openrouterAppName,
+              appUrl: userSettings.integrations.openrouterAppUrl,
+            },
+            freeMode: freeModeActive,
+            isFreeTier: treatAsFreeTier,
+            extraFallbacks: fallbackExtras,
+            attemptModelIds: freeAttemptChain,
+            reasoningEffort:
+              !freeModeActive && modelConfig?.reasoningEffort
+                ? modelConfig.reasoningEffort
+                : undefined,
+            system:
+              systemPrompt({
+                requestHints,
+                supportsTools,
+                memoryContext,
+                filesContext: filesBlock,
+                webSearchContext: webSearchContextBlock,
+                webSearchRetryHint,
+                responseMode,
+                persona: userSettings.persona,
+                activeTools,
+              }) +
+              `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${activeTools.length}.` +
+              (freeModeActive
+                ? `\n\n=== TIER GRATIS ===\nVANDOR mencoba ${freeAttemptChain?.length ?? 15} model :free bergantian (Llama 3.3, GPT-OSS, Nemotron, Kimi, dll.) sampai ada respons.${
+                    freeHeavyReason
+                      ? ` Permintaan ini terdeteksi berat (${freeHeavyReason}). Kerjakan seadanya secara singkat, lalu SARANKAN tier Hemat atau Seimbang di picker model untuk hasil lebih stabil.`
+                      : " Jawab ringkas dan to the point."
+                  }`
+                : ""),
+            messages: modelMessages,
+            maxOutputTokens: maxOutputTokensForTurn({
               responseMode,
-              persona: userSettings.persona,
-              activeTools,
-            }) +
-            `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${activeTools.length}.` +
-            (freeModeActive
-              ? `\n\n=== TIER GRATIS ===\nVANDOR mencoba ${freeAttemptChain?.length ?? 15} model :free bergantian (Llama 3.3, GPT-OSS, Nemotron, Kimi, dll.) sampai ada respons.${
-                  freeHeavyReason
-                    ? ` Permintaan ini terdeteksi berat (${freeHeavyReason}). Kerjakan seadanya secara singkat, lalu SARANKAN tier Hemat atau Seimbang di picker model untuk hasil lebih stabil.`
-                    : " Jawab ringkas dan to the point."
-                }`
-              : ""),
-          messages: modelMessages,
-          maxOutputTokens: maxOutputTokensForTurn({
-            responseMode,
-            webSearchPreloaded: webSearchContextBlock.length > 0,
-          }),
-          temperature: webSearchContextBlock.length > 0 ? 0.4 : undefined,
-          stopWhen: stepCountIs(V4_MAX_AGENT_STEPS),
-          experimental_activeTools:
-            isReasoningModel && !supportsTools ? [] : activeTools,
-          tools: {
-            getCurrentTime,
-            getLocation: makeGetLocation(ipGeo),
-            getWeather,
-            showMap,
-            webSearch: makeWebSearch(session.user.id),
-            downloadMedia: makeDownloadMediaTool(),
-            ...assistantTools,
-            createDocument: createDocument({
-              session,
-              dataStream,
-              modelId: documentModelId,
+              webSearchPreloaded: webSearchContextBlock.length > 0,
             }),
-            editDocument: editDocument({ dataStream, session }),
-            updateDocument: updateDocument({
-              session,
-              dataStream,
-              modelId: documentModelId,
-            }),
-            requestSuggestions: requestSuggestions({
-              session,
-              dataStream,
-              modelId: chatModel,
-            }),
-            createPdf,
-            createDocx,
-            createSpreadsheet,
-            generateImage: makeGenerateImageTool(session.user.id),
-            editImage: makeEditImageTool(
-              session.user.id,
-              extractedFiles
-                .filter((f) => f.kind === "image")
-                .map((f) => f.url)
-            ),
-            generateVideo: makeGenerateVideoTool(session.user.id),
-            generateVoice: makeGenerateVoiceTool(session.user.id),
-            transcribeAudio: makeTranscribeAudioTool(session.user.id),
-          },
-          experimental_telemetry: {
-            isEnabled: isProductionEnvironment,
-            functionId: "stream-text",
-          },
-        });
+            temperature: webSearchContextBlock.length > 0 ? 0.4 : undefined,
+            stopWhen: stepCountIs(V4_MAX_AGENT_STEPS),
+            experimental_activeTools:
+              isReasoningModel && !supportsTools ? [] : activeTools,
+            tools: {
+              getCurrentTime,
+              getLocation: makeGetLocation(ipGeo),
+              getWeather,
+              showMap,
+              webSearch: makeWebSearch(session.user.id),
+              downloadMedia: makeDownloadMediaTool(),
+              ...assistantTools,
+              createDocument: createDocument({
+                session,
+                dataStream,
+                modelId: documentModelId,
+              }),
+              editDocument: editDocument({ dataStream, session }),
+              updateDocument: updateDocument({
+                session,
+                dataStream,
+                modelId: documentModelId,
+              }),
+              requestSuggestions: requestSuggestions({
+                session,
+                dataStream,
+                modelId: chatModel,
+              }),
+              createPdf,
+              createDocx,
+              createSpreadsheet,
+              generateImage: makeGenerateImageTool(session.user.id),
+              editImage: makeEditImageTool(
+                session.user.id,
+                extractedFiles
+                  .filter((f) => f.kind === "image")
+                  .map((f) => f.url)
+              ),
+              generateVideo: makeGenerateVideoTool(session.user.id),
+              generateVoice: makeGenerateVoiceTool(session.user.id),
+              transcribeAudio: makeTranscribeAudioTool(session.user.id),
+            },
+            experimental_telemetry: {
+              isEnabled: isProductionEnvironment,
+              functionId: "stream-text",
+            },
+          });
 
         const usedFallback =
           attemptIndex > 0 || resolvedModelId !== synthesisModelId;
@@ -1065,50 +1080,52 @@ export async function POST(request: Request) {
           const messagesToSave = finishedMessages
             .filter(shouldPersistChatMessage)
             .map((currentMessage) => {
-            let parts = currentMessage.parts;
+              let parts = currentMessage.parts;
 
-            if (
-              currentMessage.role === "assistant" &&
-              webSourcesPayload &&
-              !parts.some((p) => p.type === "data-web-sources")
-            ) {
-              parts = [
-                {
-                  type: "data-web-sources",
-                  data: webSourcesPayload,
-                } as ChatMessage["parts"][number],
-                ...parts,
-              ];
-            }
+              if (
+                currentMessage.role === "assistant" &&
+                webSourcesPayload &&
+                !parts.some((p) => p.type === "data-web-sources")
+              ) {
+                parts = [
+                  {
+                    type: "data-web-sources",
+                    data: webSourcesPayload,
+                  } as ChatMessage["parts"][number],
+                  ...parts,
+                ];
+              }
 
-            if (
-              currentMessage.role === "assistant" &&
-              richContentPayload &&
-              hasRichContent(richContentPayload) &&
-              !parts.some((p) => p.type === "data-rich-content")
-            ) {
-              parts = [
-                {
-                  type: "data-rich-content",
-                  data: richContentPayload,
-                } as ChatMessage["parts"][number],
-                ...parts,
-              ];
-            }
+              if (
+                currentMessage.role === "assistant" &&
+                richContentPayload &&
+                hasRichContent(richContentPayload) &&
+                !parts.some((p) => p.type === "data-rich-content")
+              ) {
+                parts = [
+                  {
+                    type: "data-rich-content",
+                    data: richContentPayload,
+                  } as ChatMessage["parts"][number],
+                  ...parts,
+                ];
+              }
 
-            return {
-              id: currentMessage.id,
-              role: currentMessage.role,
-              parts,
-              createdAt: new Date(),
-              attachments: [],
-              chatId: id,
-            };
-          });
+              return {
+                id: currentMessage.id,
+                role: currentMessage.role,
+                parts,
+                createdAt: new Date(),
+                attachments: [],
+                chatId: id,
+              };
+            });
 
           await saveMessages({ messages: messagesToSave });
 
-          const assistantMsg = finishedMessages.find((m) => m.role === "assistant");
+          const assistantMsg = finishedMessages.find(
+            (m) => m.role === "assistant"
+          );
           if (assistantMsg && lastUserText) {
             const rawText = getTextFromMessage(assistantMsg);
             if (rawText.trim()) {
@@ -1157,9 +1174,9 @@ export async function POST(request: Request) {
                 modelId: memoryExtractionModelId,
                 meta: openRouterMeta,
                 mergeSimilar,
-              }).catch(() => [] as Awaited<
-                ReturnType<typeof extractAndStoreMemories>
-              >);
+              }).catch(
+                () => [] as Awaited<ReturnType<typeof extractAndStoreMemories>>
+              );
 
               if (postSaved.length > 0) {
                 const memoryPart = memorySavedDataPart({

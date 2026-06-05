@@ -16,7 +16,6 @@ import {
   listRecentMemories,
   saveMemory,
   searchAllUserData,
-  searchMemories,
 } from "@/lib/memory/queries";
 
 export function makeAssistantTools(userId: string, chatId: string) {

@@ -12,17 +12,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useActiveChat } from "@/hooks/use-active-chat";
-import { useBreakpoint } from "@/hooks/use-breakpoint";
-import { useVisualViewportInset } from "@/hooks/use-visual-viewport-inset";
 import {
   initialArtifactData,
   useArtifact,
   useArtifactSelector,
 } from "@/hooks/use-artifact";
+import { useBreakpoint } from "@/hooks/use-breakpoint";
 import {
   useSourcePanel,
   useSourcePanelSelector,
 } from "@/hooks/use-source-panel";
+import { useVisualViewportInset } from "@/hooks/use-visual-viewport-inset";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Artifact } from "./artifact";
@@ -32,8 +32,8 @@ import { DataStreamHandler } from "./data-stream-handler";
 import { MemorySavedHandler } from "./memory-saved-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
-import { MultimodalInput } from "./multimodal-input";
 import { MobileChatEffects } from "./mobile-chat-effects";
+import { MultimodalInput } from "./multimodal-input";
 import { SourcePanel } from "./source-panel";
 
 export function ChatShell() {
@@ -64,7 +64,9 @@ export function ChatShell() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [hasMounted, setHasMounted] = useState(false);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
-  const isSourcePanelVisible = useSourcePanelSelector((state) => state.isVisible);
+  const isSourcePanelVisible = useSourcePanelSelector(
+    (state) => state.isVisible
+  );
   const { setArtifact } = useArtifact();
   const { closeSourcePanel } = useSourcePanel();
   const { isMobile, isTablet } = useBreakpoint();
@@ -74,7 +76,8 @@ export function ChatShell() {
     setHasMounted(true);
   }, []);
 
-  const showSidePanel = hasMounted && (isArtifactVisible || isSourcePanelVisible);
+  const showSidePanel =
+    hasMounted && (isArtifactVisible || isSourcePanelVisible);
   const useOverlayPanel = isMobile || isTablet;
 
   const stopRef = useRef(stop);

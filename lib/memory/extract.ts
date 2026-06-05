@@ -5,16 +5,13 @@ import { z } from "zod";
 import type { OpenRouterClientMeta } from "@/lib/ai/providers";
 import { getTitleModel } from "@/lib/ai/providers";
 import type { MemoryCategory } from "@/lib/db/schema";
+import type { SavedMemoryItem } from "./notice";
+import { POST_EXTRACTION_PROMPT, PRE_EXTRACTION_PROMPT } from "./prompts";
+import { saveMemory } from "./queries";
 import {
   isExplicitRememberRequest,
   looksLikeMemorableUserMessage,
 } from "./remember";
-import type { SavedMemoryItem } from "./notice";
-import {
-  POST_EXTRACTION_PROMPT,
-  PRE_EXTRACTION_PROMPT,
-} from "./prompts";
-import { saveMemory } from "./queries";
 
 const memoryItemSchema = z.object({
   content: z.string().min(3).max(500),
@@ -91,7 +88,11 @@ export async function preExtractUserMemories({
   meta?: OpenRouterClientMeta;
   mergeSimilar?: boolean;
 }): Promise<SavedMemoryItem[]> {
-  if (!userMessage.trim() || !hasOpenRouterKey(openRouterApiKey) || maxPerTurn < 1) {
+  if (
+    !userMessage.trim() ||
+    !hasOpenRouterKey(openRouterApiKey) ||
+    maxPerTurn < 1
+  ) {
     return [];
   }
 
@@ -121,9 +122,7 @@ export async function preExtractUserMemories({
           userId,
           content: item.content,
           category: item.category as MemoryCategory,
-          importance: explicit
-            ? Math.max(item.importance, 8)
-            : item.importance,
+          importance: explicit ? Math.max(item.importance, 8) : item.importance,
           sourceChatId: chatId,
           metadata: {
             preExtracted: true,
@@ -167,7 +166,11 @@ export async function extractAndStoreMemories({
   meta?: OpenRouterClientMeta;
   mergeSimilar?: boolean;
 }): Promise<SavedMemoryItem[]> {
-  if (!userMessage.trim() || !hasOpenRouterKey(openRouterApiKey) || maxPerTurn < 1) {
+  if (
+    !userMessage.trim() ||
+    !hasOpenRouterKey(openRouterApiKey) ||
+    maxPerTurn < 1
+  ) {
     return [];
   }
 

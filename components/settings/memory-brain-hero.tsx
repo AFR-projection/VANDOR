@@ -1,7 +1,7 @@
 "use client";
 
 import { BrainIcon, SparklesIcon } from "lucide-react";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -105,7 +105,6 @@ function NeuralOrb({
 
       <div className="absolute inset-[8%] overflow-hidden rounded-full bg-black max-sm:inset-[10%]">
         <video
-          ref={videoRef as RefObject<HTMLVideoElement>}
           autoPlay
           className={cn(
             "absolute left-1/2 top-1/2 min-h-[120%] min-w-[120%] -translate-x-1/2 -translate-y-1/2 object-cover",
@@ -117,6 +116,7 @@ function NeuralOrb({
           muted
           playsInline
           preload="auto"
+          ref={videoRef as RefObject<HTMLVideoElement>}
           src={src}
           tabIndex={-1}
         />

@@ -7,7 +7,7 @@ const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 /** Poll session — perangkat lama cepat tahu kalau login terjadi di tempat lain. */
 const POLL_INTERVAL = 20_000;
-const FIRST_CHECK_DELAY = 8_000;
+const FIRST_CHECK_DELAY = 8000;
 
 type GateStatusPayload = {
   configured?: boolean;

@@ -1,8 +1,8 @@
 import "server-only";
 
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
-import { V4_MAX_ACTIVE_TOOLS } from "@/lib/v4/constants";
 import { detectWebSearchNeed } from "@/lib/search/detect";
+import { V4_MAX_ACTIVE_TOOLS } from "@/lib/v4/constants";
 import type { VandorIntent } from "@/lib/v4/intent";
 
 const CORE: VandorChatToolName[] = ["getCurrentTime", "getLocation"];
@@ -64,8 +64,7 @@ export function selectActiveTools(input: {
   } else if (
     !input.webSearchDisabled &&
     (input.intent === "search" ||
-      (input.userText?.trim() &&
-        detectWebSearchNeed(input.userText).needed))
+      (input.userText?.trim() && detectWebSearchNeed(input.userText).needed))
   ) {
     set.add("webSearch");
   }

@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
+
 import { APP_USER_AGENT } from "@/lib/version";
 
 const USER_AGENT = `${APP_USER_AGENT}; contact@localhost`;
@@ -42,7 +43,10 @@ async function geocode(
     addressdetails: "1",
   });
   if (opts?.nearLat !== undefined && opts?.nearLng !== undefined) {
-    params.set("viewbox", `${opts.nearLng - 0.5},${opts.nearLat + 0.5},${opts.nearLng + 0.5},${opts.nearLat - 0.5}`);
+    params.set(
+      "viewbox",
+      `${opts.nearLng - 0.5},${opts.nearLat + 0.5},${opts.nearLng + 0.5},${opts.nearLat - 0.5}`
+    );
     params.set("bounded", "0");
   }
 

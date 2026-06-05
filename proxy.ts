@@ -49,31 +49,29 @@ export async function proxy(request: NextRequest) {
 
   const snapshot = await getClientAccessSnapshot(request);
 
-  if (isGateConfigured()) {
-    if (snapshot.requiresPin) {
-      const reason = snapshot.sessionRevoked ? "revoked" : "expired";
+  if (isGateConfigured() && snapshot.requiresPin) {
+    const reason = snapshot.sessionRevoked ? "revoked" : "expired";
 
-      if (pathname.startsWith("/api/")) {
-        return clearGateCookieOnResponse(
-          NextResponse.json(
-            {
-              error: "Login required",
-              reason,
-              requiresPin: true,
-            },
-            { status: 401 }
-          ),
-          secureCookie
-        );
-      }
-
+    if (pathname.startsWith("/api/")) {
       return clearGateCookieOnResponse(
-        NextResponse.redirect(
-          new URL(`${base}/gate?reason=${reason}`, request.url)
+        NextResponse.json(
+          {
+            error: "Login required",
+            reason,
+            requiresPin: true,
+          },
+          { status: 401 }
         ),
         secureCookie
       );
     }
+
+    return clearGateCookieOnResponse(
+      NextResponse.redirect(
+        new URL(`${base}/gate?reason=${reason}`, request.url)
+      ),
+      secureCookie
+    );
   }
 
   const token = await getToken({

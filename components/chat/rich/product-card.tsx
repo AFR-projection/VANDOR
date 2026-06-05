@@ -39,7 +39,11 @@ function ProductItem({
       initial={{ opacity: 0, y: 10 }}
       rel="noopener noreferrer"
       target="_blank"
-      transition={{ delay: 0.04 * index, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        delay: 0.04 * index,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      }}
     >
       <span className="relative flex aspect-square w-full items-center justify-center overflow-hidden bg-white">
         <span className="absolute inset-0 flex items-center justify-center bg-muted text-xs text-muted-foreground">

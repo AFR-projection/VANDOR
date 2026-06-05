@@ -49,7 +49,12 @@ function dataUrlToBuffer(dataUrl: string): { buf: Buffer; mime: string } {
 
 async function storeGeneratedImage(
   imageUrl: string,
-  meta: { model: string; prompt?: string; instruction?: string; aspectRatio?: string }
+  meta: {
+    model: string;
+    prompt?: string;
+    instruction?: string;
+    aspectRatio?: string;
+  }
 ) {
   const { buf, mime } = dataUrlToBuffer(imageUrl);
   const ext = mime.split("/")[1]?.split("+")[0] ?? "png";
@@ -335,7 +340,8 @@ export function makeGenerateVoiceTool(userId: string) {
         ok: true as const,
         model: chosen,
         text,
-        result: result.data.choices?.[0]?.message?.content ?? "Audio generated.",
+        result:
+          result.data.choices?.[0]?.message?.content ?? "Audio generated.",
       };
     },
   });

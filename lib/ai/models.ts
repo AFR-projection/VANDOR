@@ -1,5 +1,5 @@
 import { OPENROUTER_FREE_MODEL_POOL } from "@/lib/ai/free-models";
-import { DEFAULT_CHAT_MODE, FREE_TIER_MODEL } from "./chat-modes";
+import { DEFAULT_CHAT_MODE } from "./chat-modes";
 import {
   DEFAULT_MODEL_TIER,
   isVandorTierMode,
@@ -132,9 +132,7 @@ type OpenRouterModel = {
 
 function parseCapabilities(model: OpenRouterModel): ModelCapabilities {
   const params = new Set(model.supported_parameters ?? []);
-  const inputModalities = new Set(
-    model.architecture?.input_modalities ?? []
-  );
+  const inputModalities = new Set(model.architecture?.input_modalities ?? []);
 
   return {
     tools: params.has("tools") || params.has("tool_choice"),
@@ -205,7 +203,6 @@ export async function getAllOpenRouterModels(): Promise<
   OpenRouterModelWithCapabilities[]
 > {
   const remote = await fetchOpenRouterModels();
-  const curatedIds = new Set(chatModels.map((m) => m.id));
 
   return remote
     .filter((m) => m.id.includes("/"))
@@ -232,7 +229,8 @@ export function getActiveModels(): ChatModel[] {
   return chatModels;
 }
 
-const OPENROUTER_MODEL_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i;
+const OPENROUTER_MODEL_ID_PATTERN =
+  /^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i;
 
 export function isValidModelId(modelId: string): boolean {
   return OPENROUTER_MODEL_ID_PATTERN.test(modelId);
@@ -240,7 +238,7 @@ export function isValidModelId(modelId: string): boolean {
 
 let remoteModelIdsCache: Set<string> | null = null;
 let remoteModelIdsCacheAt = 0;
-const REMOTE_MODEL_CACHE_MS = 3600_000;
+const REMOTE_MODEL_CACHE_MS = 3_600_000;
 
 async function getRemoteModelIds(): Promise<Set<string>> {
   const now = Date.now();

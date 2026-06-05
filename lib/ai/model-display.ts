@@ -1,8 +1,8 @@
 import {
   displayTierLabel,
   MODEL_TIER_OPTIONS,
-  normalizeModelTier,
   type ModelTierId,
+  normalizeModelTier,
 } from "@/lib/ai/model-tiers";
 
 const MODEL_SHORT_NAMES: Record<string, string> = {
@@ -51,17 +51,13 @@ export function describeModelSelection(meta: {
   attemptIndex?: number;
   attemptTotal?: number;
 }): string {
-  const tier = meta.modelTier
-    ? normalizeModelTier(meta.modelTier)
-    : null;
+  const tier = meta.modelTier ? normalizeModelTier(meta.modelTier) : null;
   const parts: string[] = [];
   if (tier) parts.push(`Tier ${displayTierLabel(tier)}`);
   if (meta.agentName) parts.push(meta.agentName);
   parts.push(displayOpenRouterModelName(meta.modelId));
   if (meta.fallbackUsed && meta.attemptIndex != null && meta.attemptTotal) {
-    parts.push(
-      `(cadangan ${meta.attemptIndex + 1}/${meta.attemptTotal})`
-    );
+    parts.push(`(cadangan ${meta.attemptIndex + 1}/${meta.attemptTotal})`);
   } else if (meta.reason) {
     parts.push(`— ${meta.reason}`);
   }

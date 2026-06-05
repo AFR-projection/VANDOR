@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export function SettingToggle({
   id,
@@ -78,7 +78,9 @@ export function SettingSlider({
         <Label className="text-sm font-medium" htmlFor={id}>
           {label}
         </Label>
-        <span className="text-xs tabular-nums text-muted-foreground">{value}</span>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {value}
+        </span>
       </div>
       {description && (
         <p className="mb-2 text-[12px] text-muted-foreground">{description}</p>

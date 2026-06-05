@@ -16,7 +16,8 @@ export const TIER_UI: Record<ModelTierId, TierUiStyle> = {
   gratis: {
     label: "Gratis",
     shortTag: "0₽",
-    iconRing: "border-emerald-500/50 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+    iconRing:
+      "border-emerald-500/50 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
     cardSelected:
       "border-emerald-500/50 bg-gradient-to-br from-emerald-500/12 via-card/50 to-transparent ring-1 ring-emerald-500/25",
     cardIdle:
@@ -44,7 +45,8 @@ export const TIER_UI: Record<ModelTierId, TierUiStyle> = {
   seimbang: {
     label: "Seimbang",
     shortTag: "★",
-    iconRing: "border-violet-500/50 bg-violet-500/15 text-violet-600 dark:text-violet-400",
+    iconRing:
+      "border-violet-500/50 bg-violet-500/15 text-violet-600 dark:text-violet-400",
     cardSelected:
       "border-violet-500/50 bg-gradient-to-br from-violet-500/12 via-card/50 to-transparent ring-1 ring-violet-500/25",
     cardIdle:
@@ -58,7 +60,8 @@ export const TIER_UI: Record<ModelTierId, TierUiStyle> = {
   premium: {
     label: "Premium",
     shortTag: "◆",
-    iconRing: "border-amber-500/50 bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    iconRing:
+      "border-amber-500/50 bg-amber-500/15 text-amber-600 dark:text-amber-400",
     cardSelected:
       "border-amber-500/50 bg-gradient-to-br from-amber-500/12 via-card/50 to-transparent ring-1 ring-amber-500/25",
     cardIdle:
