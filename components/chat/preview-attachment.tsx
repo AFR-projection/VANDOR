@@ -66,7 +66,6 @@ export const PreviewAttachment = ({
       {isImage ? (
         // Use plain <img> to bypass next/image optimization — works for any
         // backend (Vercel Blob, local /storage/..., data URLs).
-        // biome-ignore lint/performance/noImgElement: required for local + dynamic storage URLs
         <img
           alt={name ?? "attachment"}
           className="size-full object-cover"

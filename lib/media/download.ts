@@ -544,9 +544,9 @@ export function formatMediaDownloadReply(result: MediaDownloadResult): string {
     return `Gagal mengunduh media (${result.platform}): ${detail}`;
   }
   const sizeMb =
-    result.sizeBytes != null
-      ? ` (${(result.sizeBytes / 1024 / 1024).toFixed(1)} MB)`
-      : "";
+    result.sizeBytes == null
+      ? ""
+      : ` (${(result.sizeBytes / 1024 / 1024).toFixed(1)} MB)`;
   const kind = result.format === "audio" ? "MP3" : "MP4";
   return [
     `Unduhan ${result.platform} (${kind}) siap${sizeMb}.`,

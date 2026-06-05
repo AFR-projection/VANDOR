@@ -62,7 +62,7 @@ export function ImageGallery({ images }: { images: RichImage[] }) {
 
   const thumbs = valid.slice(0, MAX_THUMBS);
   const extra = valid.length - thumbs.length;
-  const activeImage = active !== null ? valid[active] : null;
+  const activeImage = active === null ? null : valid[active];
 
   return (
     <div className="mt-3">

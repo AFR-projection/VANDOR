@@ -7,7 +7,6 @@ export function RichContentSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             className="aspect-[4/3] animate-pulse rounded-xl bg-muted"
-            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
             key={i}
           />
         ))}
@@ -16,7 +15,6 @@ export function RichContentSkeleton() {
         {Array.from({ length: 2 }).map((_, i) => (
           <div
             className="h-16 flex-1 animate-pulse rounded-xl bg-muted"
-            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
             key={i}
           />
         ))}
@@ -31,11 +29,7 @@ export function SourcesSkeleton() {
       <div className="h-3 w-16 animate-pulse rounded bg-muted" />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            className="h-20 animate-pulse rounded-xl bg-muted"
-            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton
-            key={i}
-          />
+          <div className="h-20 animate-pulse rounded-xl bg-muted" key={i} />
         ))}
       </div>
     </div>

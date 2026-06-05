@@ -18,8 +18,8 @@ export {
   LEGACY_VANDOR_MODE_AUTO,
   LEGACY_VANDOR_MODE_FREE,
   MODEL_TIER_OPTIONS,
-  tierCookieValue,
   type ModelTierId,
+  tierCookieValue,
 };
 
 /** Default chat cookie value */

@@ -126,7 +126,7 @@ export function GeneralSettingsPage() {
 
   const saveSecrets = useCallback(
     async (body: Record<string, unknown>) => {
-      if (!currentPin || currentPin.length !== 4) {
+      if (currentPin?.length !== 4) {
         toast({
           type: "error",
           description: "Masukkan PIN saat ini di tab Keamanan atau API",
