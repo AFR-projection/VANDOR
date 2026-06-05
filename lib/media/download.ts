@@ -12,6 +12,7 @@ import {
   reportProgress,
   startSimulatedDownloadProgress,
 } from "@/lib/media/progress";
+import { downloadWithTikwm } from "@/lib/media/tiktok-tikwm";
 import type {
   MediaDownloadFormat,
   MediaDownloadProgressReporter,
@@ -24,6 +25,32 @@ import { toErrorMessage } from "@/lib/utils/error-message";
 const MAX_BYTES = 80 * 1024 * 1024;
 const YTDLP_TIMEOUT_MS = 120_000;
 const FETCH_TIMEOUT_MS = 120_000;
+
+/** Node fetch butuh skema lengkap — browser tidak. */
+function normalizeHttpUrl(raw: string, label: string): string {
+  let candidate = raw.trim();
+  if (!candidate) {
+    throw new Error(`${label} kosong.`);
+  }
+  if (!/^https?:\/\//i.test(candidate)) {
+    candidate = `https://${candidate.replace(/^\/+/, "")}`;
+  }
+  try {
+    return new URL(candidate).href;
+  } catch {
+    throw new Error(
+      `${label} tidak valid ("${raw}"). Contoh benar: https://cobalt-api-production-2f6c.up.railway.app`
+    );
+  }
+}
+
+function resolveCobaltApiBase(): string {
+  const raw = process.env.COBALT_API_URL?.trim();
+  if (!raw) {
+    return "https://api.cobalt.tools";
+  }
+  return normalizeHttpUrl(raw, "COBALT_API_URL").replace(/\/$/, "");
+}
 
 type CobaltResponse = {
   status: string;
@@ -106,8 +133,9 @@ async function fetchRemoteFile(
 ): Promise<Buffer> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const fetchUrl = normalizeHttpUrl(url, "URL unduhan media");
   try {
-    const res = await fetch(url, {
+    const res = await fetch(fetchUrl, {
       signal: controller.signal,
       headers: headers ?? {},
       redirect: "follow",
@@ -275,9 +303,7 @@ async function downloadWithCobalt(
   onProgress: MediaDownloadProgressReporter | undefined,
   platform: MediaPlatform
 ): Promise<{ buffer: Buffer; title: string; filename?: string }> {
-  const base =
-    process.env.COBALT_API_URL?.trim().replace(/\/$/, "") ||
-    "https://api.cobalt.tools";
+  const base = resolveCobaltApiBase();
   const apiKey = process.env.COBALT_API_KEY?.trim();
 
   const headers: Record<string, string> = {
@@ -288,14 +314,17 @@ async function downloadWithCobalt(
     headers.Authorization = `Api-Key ${apiKey}`;
   }
 
-  const body = {
+  const body: Record<string, unknown> = {
     url,
     downloadMode: format === "audio" ? "audio" : "auto",
     audioFormat: "mp3",
     audioBitrate: "128",
-    videoQuality: "1080",
+    videoQuality: platform === "tiktok" ? "720" : "1080",
     filenameStyle: "basic",
   };
+  if (platform === "tiktok") {
+    body.alwaysProxy = true;
+  }
 
   reportProgress(
     onProgress,
@@ -306,13 +335,31 @@ async function downloadWithCobalt(
     })
   );
 
-  const res = await fetch(`${base}/`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    const msg = toErrorMessage(err);
+    if (/failed to parse url/i.test(msg)) {
+      throw new Error(
+        `Tidak bisa menghubungi Cobalt — periksa COBALT_API_URL di Vercel (wajib pakai https://). Nilai saat ini: ${process.env.COBALT_API_URL?.trim() || "(kosong)"}`
+      );
+    }
+    throw err;
+  }
 
-  const data = (await res.json()) as CobaltResponse;
+  let data: CobaltResponse;
+  try {
+    data = (await res.json()) as CobaltResponse;
+  } catch {
+    throw new Error(
+      `Cobalt mengembalikan respons bukan JSON (HTTP ${res.status}). Pastikan COBALT_API_URL mengarah ke instance Cobalt API, bukan halaman lain.`
+    );
+  }
 
   if (!res.ok || data.status === "error") {
     throw new Error(formatCobaltApiError(data.error, res.status));
@@ -375,7 +422,7 @@ export async function downloadSocialMedia(
   try {
     let buffer: Buffer | null = null;
     let title = "media";
-    let backend: "yt-dlp" | "cobalt" = "yt-dlp";
+    let backend: "yt-dlp" | "cobalt" | "tikwm" = "yt-dlp";
     let suggestedName: string | undefined;
 
     reportProgress(
@@ -402,6 +449,58 @@ export async function downloadSocialMedia(
           bytesReceived: buffer.length,
         })
       );
+    } else if (
+      platform === "tiktok" &&
+      process.env.VANDOR_DISABLE_TIKWM !== "1"
+    ) {
+      try {
+        const tikwm = await downloadWithTikwm(url, format, onProgress);
+        buffer = tikwm.buffer;
+        title = tikwm.title;
+        suggestedName = tikwm.filename;
+        backend = "tikwm";
+      } catch (tikwmErr) {
+        const cobaltConfigured =
+          process.env.COBALT_API_URL?.trim() ||
+          process.env.COBALT_ALLOW_PUBLIC === "1";
+        if (!cobaltConfigured) {
+          const msg = toErrorMessage(tikwmErr);
+          reportProgress(
+            onProgress,
+            baseProgress(platform, format, {
+              status: "error",
+              progress: 0,
+              stageLabel: "Gagal mengunduh",
+              error: msg,
+            })
+          );
+          return { ok: false, platform, format, error: msg };
+        }
+        backend = "cobalt";
+        try {
+          const cobalt = await downloadWithCobalt(
+            url,
+            format,
+            onProgress,
+            platform
+          );
+          buffer = cobalt.buffer;
+          title = cobalt.title;
+          suggestedName = cobalt.filename;
+        } catch (cobaltErr) {
+          const msg = `${toErrorMessage(tikwmErr)} (Cobalt: ${toErrorMessage(cobaltErr)})`;
+          reportProgress(
+            onProgress,
+            baseProgress(platform, format, {
+              status: "error",
+              progress: 0,
+              stageLabel: "Gagal mengunduh",
+              error: msg,
+            })
+          );
+          return { ok: false, platform, format, error: msg };
+        }
+      }
     } else if (
       process.env.COBALT_API_URL?.trim() ||
       process.env.COBALT_ALLOW_PUBLIC === "1"
