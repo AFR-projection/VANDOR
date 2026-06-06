@@ -1,8 +1,6 @@
 import "server-only";
 
 import { ClientType, Innertube, Utils } from "youtubei.js";
-
-type YoutubeClient = "ANDROID_VR" | "IOS" | "WEB";
 import { baseProgress, reportProgress } from "@/lib/media/progress";
 import type {
   MediaDownloadFormat,
@@ -10,6 +8,8 @@ import type {
 } from "@/lib/media/types";
 import { extractYoutubeVideoId } from "@/lib/media/youtube-id";
 import { toErrorMessage } from "@/lib/utils/error-message";
+
+type YoutubeClient = "ANDROID_VR" | "IOS" | "WEB";
 
 const CLIENT_CHAIN: Array<{ type: ClientType; label: YoutubeClient }> = [
   { type: ClientType.ANDROID_VR, label: "ANDROID_VR" },

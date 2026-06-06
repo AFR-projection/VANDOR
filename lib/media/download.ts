@@ -23,6 +23,10 @@ import type {
 } from "@/lib/media/types";
 import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
 import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
+import {
+  downloadWithYtdlpApi,
+  hasYtdlpApiBackend,
+} from "@/lib/media/youtube-ytdlp-api";
 import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
@@ -222,8 +226,8 @@ async function fetchCobaltTunnelFile(
   format: MediaDownloadFormat
 ): Promise<Buffer> {
   const fetchUrl = normalizeHttpUrl(url, "URL unduhan media");
-  const maxAttempts = 8;
-  const delayMs = 2000;
+  const maxAttempts = 24;
+  const delayMs = 2500;
   let lastError = "Cobalt tunnel kosong";
   let emptyReads = 0;
 
@@ -256,14 +260,14 @@ async function fetchCobaltTunnelFile(
 
       emptyReads += 1;
       lastError = `Cobalt tunnel belum siap (${buf.length} byte)`;
-      if (emptyReads >= 4) {
+      if (emptyReads >= 12) {
         throw new Error(
-          "Cobalt remux gagal untuk video ini — coba link lain atau tunggu beberapa menit."
+          "Cobalt remux gagal untuk video ini — yt-dlp cadangan akan dicoba."
         );
       }
     } catch (err) {
       lastError = toErrorMessage(err);
-      if (/404|kedaluwarsa|remux gagal|timeout|abort/i.test(lastError)) {
+      if (/404|kedaluwarsa|yt-dlp cadangan/i.test(lastError)) {
         throw new Error(lastError);
       }
     } finally {
@@ -275,7 +279,7 @@ async function fetchCobaltTunnelFile(
         onProgress,
         baseProgress(platform, format, {
           status: "downloading",
-          progress: 28 + Math.min(40, attempt * 3),
+          progress: 28 + Math.min(45, attempt * 2),
           stageLabel: `Cobalt: menunggu remux… (${attempt + 1}/${maxAttempts})`,
         })
       );
@@ -549,7 +553,7 @@ async function downloadWithCobalt(
   return { buffer, title, filename: data.filename };
 }
 
-type YoutubeBackend = "innertube" | "cobalt" | "piped" | "invidious";
+type YoutubeBackend = "ytdlp" | "innertube" | "cobalt" | "piped" | "invidious";
 
 async function downloadYoutube(
   url: string,
@@ -561,13 +565,7 @@ async function downloadYoutube(
   filename?: string;
   backend: YoutubeBackend;
 }> {
-  let innertubeErr: unknown;
-  try {
-    const innertube = await downloadWithInnertube(url, format, onProgress);
-    return { ...innertube, backend: "innertube" };
-  } catch (err) {
-    innertubeErr = err;
-  }
+  const errors: string[] = [];
 
   if (hasCobaltBackend()) {
     try {
@@ -578,29 +576,38 @@ async function downloadYoutube(
         "youtube"
       );
       return { ...cobalt, backend: "cobalt" };
-    } catch (cobaltErr) {
-      try {
-        const fallback = await downloadYoutubeViaFallback(
-          url,
-          format,
-          onProgress
-        );
-        return fallback;
-      } catch (fallbackErr) {
-        throw new Error(
-          `InnerTube: ${toErrorMessage(innertubeErr)}. Cobalt: ${toErrorMessage(cobaltErr)}. Fallback: ${toErrorMessage(fallbackErr)}`
-        );
-      }
+    } catch (err) {
+      errors.push(`Cobalt: ${toErrorMessage(err)}`);
+    }
+  }
+
+  if (hasYtdlpApiBackend()) {
+    try {
+      const ytdlp = await downloadWithYtdlpApi(url, format, onProgress);
+      return { ...ytdlp, backend: "ytdlp" };
+    } catch (err) {
+      errors.push(`yt-dlp: ${toErrorMessage(err)}`);
+    }
+  }
+
+  if (!process.env.VERCEL) {
+    try {
+      const innertube = await downloadWithInnertube(url, format, onProgress);
+      return { ...innertube, backend: "innertube" };
+    } catch (err) {
+      errors.push(`InnerTube: ${toErrorMessage(err)}`);
     }
   }
 
   try {
     return await downloadYoutubeViaFallback(url, format, onProgress);
-  } catch (fallbackErr) {
-    throw new Error(
-      `InnerTube: ${toErrorMessage(innertubeErr)}. Fallback: ${toErrorMessage(fallbackErr)}`
-    );
+  } catch (err) {
+    errors.push(`Fallback: ${toErrorMessage(err)}`);
   }
+
+  throw new Error(
+    `${errors.join(". ")}. Update Railway Cobalt: root folder → services/cobalt-ytdlp lalu redeploy (tanpa env baru di Vercel).`
+  );
 }
 
 export async function downloadSocialMedia(
