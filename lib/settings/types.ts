@@ -9,6 +9,10 @@ import {
 import { memoryCategories } from "@/lib/db/schema";
 
 import { personaTonePresets } from "./persona-presets";
+import {
+  migratePersonaSettings,
+  speechStyleSchema,
+} from "./speech-styles";
 
 export const modelTierSchema = z.enum(MODEL_TIER_IDS);
 
@@ -55,6 +59,9 @@ export const memorySettingsSchema = z.object({
   /** Merge or update rows when a new fact is semantically similar. */
   mergeSimilarMemories: z.boolean(),
 
+  /** Auto-merge duplikat & rapikan memori usang setelah simpan. */
+  autoHygiene: z.boolean(),
+
   enabledCategories: categoryFlagsSchema,
 });
 
@@ -85,7 +92,14 @@ export const advancedSettingsSchema = z.object({
 export const personaSettingsSchema = z.object({
   assistantName: z.string().min(1).max(32),
 
-  tonePreset: z.enum(personaTonePresets),
+  /** Gaya bicara aktif (custom:* atau import). Kosong = gaya default. */
+  activeStyleId: z.string().max(64),
+
+  /** Gaya bicara kustom — buat atau import sendiri. */
+  styles: z.array(speechStyleSchema).max(24),
+
+  /** @deprecated — dipetakan ke activeStyleId saat migrasi. */
+  tonePreset: z.enum(personaTonePresets).optional(),
 
   language: z.enum(["auto", "id", "en"]),
 
@@ -136,17 +150,19 @@ export const defaultUserSettings: UserSettings = {
 
     injectInPrompt: true,
 
-    semanticSearchLimit: 14,
+    semanticSearchLimit: 16,
 
-    recentMemoriesLimit: 10,
+    recentMemoriesLimit: 12,
 
-    minSimilarity: 0.68,
+    minSimilarity: 0.65,
 
-    maxExtractPerTurn: 4,
+    maxExtractPerTurn: 5,
 
     preExtractFromUser: true,
 
     mergeSimilarMemories: true,
+
+    autoHygiene: true,
 
     enabledCategories: { ...defaultEnabledCategories },
   },
@@ -175,11 +191,10 @@ export const defaultUserSettings: UserSettings = {
     richContentLevel: "auto",
   },
 
-  persona: {
+  persona: migratePersonaSettings({
     assistantName: "VANDOR",
-
-    tonePreset: "jarvis",
-
+    activeStyleId: "",
+    styles: [],
     language: "auto",
 
     verbosity: "balanced",
@@ -191,7 +206,7 @@ export const defaultUserSettings: UserSettings = {
     customInstructions: "",
 
     signaturePhrase: "",
-  },
+  }),
 
   integrations: {
     modelTier: DEFAULT_MODEL_TIER,
@@ -256,7 +271,10 @@ export function mergeUserSettings(
 
     advanced: { ...defaultUserSettings.advanced, ...partial.advanced },
 
-    persona: { ...defaultUserSettings.persona, ...partial.persona },
+    persona: migratePersonaSettings({
+      ...defaultUserSettings.persona,
+      ...partial.persona,
+    }),
 
     integrations: migrateIntegrations(
       (partial.integrations ?? {}) as Record<string, unknown>

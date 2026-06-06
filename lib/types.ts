@@ -23,6 +23,7 @@ import type { MediaDownloadProgressData } from "./media/types";
 import type { MemorySavedNotice } from "./memory/notice";
 import type { RichContent, WebSearchOutput } from "./search/types";
 import type { TurnUsageEstimate } from "./v4/turn-usage";
+import type { WeatherPanelPayload } from "./weather/fetch";
 
 export const messageMetadataSchema = z.object({
   createdAt: z.string(),
@@ -130,6 +131,7 @@ export type CustomUIDataTypes = {
     charCount: number;
   };
   "turn-usage": TurnUsageEstimate;
+  weather: WeatherPanelPayload;
 };
 
 export type ChatMessage = UIMessage<

@@ -85,6 +85,7 @@ import { buildMemoryContext } from "@/lib/memory/build-context";
 import {
   extractAndStoreMemories,
   preExtractUserMemories,
+  runMemoryHygieneIfEnabled,
 } from "@/lib/memory/extract";
 import { memorySavedDataPart } from "@/lib/memory/notice";
 import { isExplicitRememberRequest } from "@/lib/memory/remember";
@@ -1190,6 +1191,10 @@ export async function POST(request: Request) {
                     memoryPart as ChatMessage["parts"][number],
                   ],
                 });
+                await runMemoryHygieneIfEnabled(
+                  session.user.id,
+                  userSettings.memory.autoHygiene !== false
+                );
               }
             }
 

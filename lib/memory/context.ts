@@ -39,9 +39,9 @@ export async function buildMemoryContext({
   }
 
   const categories = memorySettings?.enabledCategories;
-  const semanticLimit = Math.min(memorySettings?.semanticSearchLimit ?? 10, 10);
-  const recentLimit = Math.min(memorySettings?.recentMemoriesLimit ?? 6, 6);
-  const minSim = memorySettings?.minSimilarity ?? 0.68;
+  const semanticLimit = Math.min(memorySettings?.semanticSearchLimit ?? 12, 16);
+  const recentLimit = Math.min(memorySettings?.recentMemoriesLimit ?? 8, 12);
+  const minSim = memorySettings?.minSimilarity ?? 0.65;
 
   const [semantic, recent] = await Promise.all([
     searchMemories({

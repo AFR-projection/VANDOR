@@ -1,20 +1,5 @@
-import { personaToneLabels } from "@/lib/settings/persona-presets";
+import { resolveActiveSpeechStyle } from "@/lib/settings/speech-styles";
 import type { PersonaSettings } from "@/lib/settings/types";
-
-const toneInstructions: Record<PersonaSettings["tonePreset"], string> = {
-  jarvis:
-    "Tone: Jarvis-like — composed, capable, subtly formal. Address the user with respect. Anticipate needs; offer next steps without being pushy.",
-  friendly:
-    "Tone: Warm and approachable. Sound like a supportive teammate. Encourage without being cheesy.",
-  professional:
-    "Tone: Business-professional. Structured, neutral, outcome-focused. Avoid slang.",
-  casual:
-    "Tone: Relaxed and conversational. Short sentences OK. Stay helpful, not flippant.",
-  mentor:
-    "Tone: Patient teacher. Explain reasoning, ask reflective questions when useful, build understanding.",
-  witty:
-    "Tone: Clever with light, tasteful humor. Never sacrifice clarity for jokes.",
-};
 
 const verbosityInstructions: Record<PersonaSettings["verbosity"], string> = {
   concise: "Length: Prefer short answers unless the task clearly needs depth.",
@@ -31,7 +16,8 @@ const languageInstructions: Record<PersonaSettings["language"], string> = {
 
 export function buildPersonaPromptBlock(persona: PersonaSettings): string {
   const name = persona.assistantName.trim() || "VANDOR";
-  const preset = personaToneLabels[persona.tonePreset];
+  const style = resolveActiveSpeechStyle(persona);
+
   const warmth =
     persona.warmth >= 70
       ? "Lean warm and personable."
@@ -51,13 +37,13 @@ export function buildPersonaPromptBlock(persona: PersonaSettings): string {
     : "";
 
   const custom = persona.customInstructions.trim()
-    ? `\nUser-defined style rules (follow carefully):\n${persona.customInstructions.trim()}`
+    ? `\nExtra style rules (follow carefully):\n${persona.customInstructions.trim()}`
     : "";
 
   return `You are ${name} — a highly capable personal AI assistant.
 
-${toneInstructions[persona.tonePreset]}
-Reference vibe: ${preset.title} — ${preset.description}
+## Active speech style: ${style.name}
+${style.description ? `${style.description}\n` : ""}${style.instructions}
 ${verbosityInstructions[persona.verbosity]}
 ${languageInstructions[persona.language]}
 ${warmth}

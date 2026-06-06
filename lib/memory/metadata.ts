@@ -10,6 +10,7 @@ export type MemoryMetadata = {
   mergedFrom?: string[];
   preExtracted?: boolean;
   explicitRemember?: boolean;
+  hygieneMerged?: boolean;
 };
 
 export function parseMemoryMetadata(raw: unknown): MemoryMetadata {

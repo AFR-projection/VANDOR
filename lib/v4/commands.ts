@@ -13,11 +13,13 @@ import { memorySavedDataPart } from "@/lib/memory/notice";
 import { saveMemory } from "@/lib/memory/queries";
 import { isExplicitRememberRequest } from "@/lib/memory/remember";
 import { runWebSearch } from "@/lib/search/engine";
-import { getCachedWeather, setCachedWeather } from "@/lib/v4/runtime-cache";
+import { fetchWeatherPanelData } from "@/lib/weather/fetch";
+import { extractWeatherCity } from "@/lib/weather/location-phrases";
+import { weatherDataPart } from "@/lib/weather/notice";
 
 export type DirectCommand =
   | { kind: "media" }
-  | { kind: "cuaca"; hints: RequestHints }
+  | { kind: "cuaca"; hints: RequestHints; city?: string }
   | { kind: "waktu"; timezone?: string }
   | { kind: "catatan_list" }
   | { kind: "task_list" }
@@ -47,19 +49,20 @@ export function parseDirectCommand(
     return { kind: "ringkas", chatId };
   }
 
+  const WEATHER_QUERY_RE =
+    /\b(cuaca|weather|panas|hujan|derajat|suhu|temperature)\b/i;
+
   if (
-    /^\/?cuaca\s*$/i.test(trimmed) ||
-    lower === "cuaca" ||
-    /^cuaca\s+(?:di\s+)?(.+)/i.test(trimmed)
+    WEATHER_QUERY_RE.test(trimmed) &&
+    trimmed.length < 160 &&
+    !/\b(cari|search|berita|news|forecast\s+sales)\b/i.test(trimmed)
   ) {
-    const cityMatch = trimmed.match(/^cuaca\s+(?:di\s+)?(.+)/i);
-    if (cityMatch?.[1]) {
-      return {
-        kind: "cuaca",
-        hints: { ...hints, city: cityMatch[1].trim() },
-      };
-    }
-    return { kind: "cuaca", hints };
+    const city = extractWeatherCity(trimmed) ?? undefined;
+    return {
+      kind: "cuaca",
+      hints,
+      city,
+    };
   }
 
   if (
@@ -126,48 +129,6 @@ export function parseDirectCommand(
   return null;
 }
 
-async function fetchWeatherAt(
-  hints: RequestHints
-): Promise<Record<string, unknown> | { error: string }> {
-  const cached = getCachedWeather(hints);
-  if (cached) {
-    return cached;
-  }
-
-  const lat = Number(hints.latitude);
-  const lng = Number(hints.longitude);
-  const hasCoords =
-    Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
-
-  let latitude = lat;
-  let longitude = lng;
-  let cityName = hints.city ?? "Jakarta";
-
-  if (!hasCoords && cityName) {
-    const geoRes = await fetch(
-      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1`
-    );
-    const geo = (await geoRes.json()) as {
-      results?: Array<{ latitude: number; longitude: number; name: string }>;
-    };
-    const hit = geo.results?.[0];
-    if (!hit) {
-      return { error: `Kota "${cityName}" tidak ditemukan.` };
-    }
-    latitude = hit.latitude;
-    longitude = hit.longitude;
-    cityName = hit.name;
-  }
-
-  const res = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code&timezone=auto`
-  );
-  const data = (await res.json()) as Record<string, unknown>;
-  const payload = { ...data, cityName };
-  setCachedWeather(hints, payload);
-  return payload;
-}
-
 function formatTimeReply(timezone: string) {
   const now = new Date();
   const formatted = new Intl.DateTimeFormat("id-ID", {
@@ -183,18 +144,15 @@ function formatTimeReply(timezone: string) {
 }
 
 function formatWeatherReply(
-  data: Record<string, unknown>,
+  data: { current?: { temperature_2m?: number }; cityName?: string },
   city?: string
 ): string {
-  const current = data.current as
-    | { temperature_2m?: number; time?: string }
-    | undefined;
-  const temp = current?.temperature_2m;
-  const name = (data.cityName as string) ?? city ?? "lokasimu";
+  const temp = data.current?.temperature_2m;
+  const name = data.cityName ?? city ?? "lokasimu";
   if (temp == null) {
     return `Cuaca di **${name}**: data tidak tersedia saat ini.`;
   }
-  return `Cuaca di **${name}** sekarang: **${temp}°C** (Open-Meteo).`;
+  return `Cuaca di **${name}** sekarang: **${temp}°C**. Lihat panel cuaca di bawah.`;
 }
 
 export async function executeDirectCommand(
@@ -210,16 +168,23 @@ export async function executeDirectCommand(
       return { text: "", instantLabel: "Unduh media" };
 
     case "cuaca": {
-      const result = await fetchWeatherAt(cmd.hints);
+      const lat = Number(cmd.hints.latitude);
+      const lng = Number(cmd.hints.longitude);
+      const result = await fetchWeatherPanelData({
+        latitude: Number.isFinite(lat) ? lat : undefined,
+        longitude: Number.isFinite(lng) ? lng : undefined,
+        city: cmd.city,
+        locationLabel: cmd.city ? undefined : cmd.hints.city ?? undefined,
+      });
       if ("error" in result) {
         return { text: String(result.error), instantLabel: "Cuaca" };
       }
+      const place =
+        result.cityName ?? cmd.city ?? cmd.hints.city ?? "lokasimu";
       return {
-        text: formatWeatherReply(
-          result,
-          (result.cityName as string) ?? cmd.hints.city ?? undefined
-        ),
+        text: formatWeatherReply(result, place),
         instantLabel: "Cuaca",
+        extraParts: [weatherDataPart(result)],
       };
     }
 

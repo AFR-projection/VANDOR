@@ -197,6 +197,14 @@ const PurePreviewMessage = ({
       return null;
     }
 
+    if (type === "data-weather") {
+      return (
+        <div className="w-[min(100%,450px)]" key={key}>
+          <Weather weatherAtLocation={"data" in part ? part.data : undefined} />
+        </div>
+      );
+    }
+
     if (
       type === "data-web-sources" ||
       type === "data-rich-content" ||

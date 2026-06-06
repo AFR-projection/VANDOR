@@ -293,7 +293,11 @@ function isValidWeather(data: unknown): data is WeatherAtLocation {
 export function Weather({
   weatherAtLocation,
 }: {
-  weatherAtLocation?: WeatherAtLocation | { error?: string } | null;
+  weatherAtLocation?:
+    | WeatherAtLocation
+    | { error?: string }
+    | Record<string, unknown>
+    | null;
 }) {
   if (weatherAtLocation && !isValidWeather(weatherAtLocation)) {
     const message =

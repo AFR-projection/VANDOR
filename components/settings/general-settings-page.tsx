@@ -18,18 +18,17 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
+import { SpeechStylesPanel } from "@/components/settings/speech-styles-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { type ModelTierId, normalizeModelTier } from "@/lib/ai/model-tiers";
 import { getTierUi } from "@/lib/ai/tier-styles";
 import {
-  type PersonaTonePreset,
   personaLanguageLabels,
-  personaToneLabels,
-  personaTonePresets,
   personaVerbosityLabels,
 } from "@/lib/settings/persona-presets";
+import { resolveActiveSpeechStyle } from "@/lib/settings/speech-styles";
 import type {
   IntegrationsSettings,
   PersonaSettings,
@@ -244,8 +243,9 @@ export function GeneralSettingsPage() {
   const { secrets, settings, gate, envRequired } = data;
   const p = settings.persona;
   const int = settings.integrations;
+  const activeStyle = resolveActiveSpeechStyle(p);
   const preview =
-    personaToneLabels[p.tonePreset]?.sample ?? "Halo! Saya siap membantu.";
+    activeStyle.samplePhrase?.trim() || "Halo! Saya siap membantu.";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
@@ -365,34 +365,27 @@ export function GeneralSettingsPage() {
                 </section>
 
                 <section className="space-y-3 rounded-xl border border-border/40 bg-card/30 p-4">
-                  <h2 className="text-sm font-semibold">Gaya bicara</h2>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {personaTonePresets.map((tone) => {
-                      const meta = personaToneLabels[tone];
-                      const active = p.tonePreset === tone;
-                      return (
-                        <button
-                          className={`rounded-xl border px-3 py-3 text-left transition-all ${
-                            active
-                              ? "border-primary bg-primary/10 shadow-sm"
-                              : "border-border/40 hover:border-primary/30 hover:bg-muted/30"
-                          }`}
-                          key={tone}
-                          onClick={() =>
-                            patchPersona({
-                              tonePreset: tone as PersonaTonePreset,
-                            })
-                          }
-                          type="button"
-                        >
-                          <p className="text-sm font-medium">{meta.title}</p>
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            {meta.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <h2 className="text-sm font-semibold">Gaya bicara kustom</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Buat atau import JSON gaya bicara sendiri. Pilih gaya aktif
+                    — VANDOR mengikutinya di setiap chat.
+                  </p>
+                  <SpeechStylesPanel
+                    onChange={(partial) =>
+                      mutate(
+                        {
+                          ...data,
+                          settings: {
+                            ...data.settings,
+                            persona: { ...p, ...partial },
+                          },
+                        },
+                        false
+                      )
+                    }
+                    onSave={(partial) => savePersona({ persona: partial })}
+                    persona={p}
+                  />
                 </section>
 
                 <section className="space-y-3 rounded-xl border border-border/40 bg-card/30 p-4">

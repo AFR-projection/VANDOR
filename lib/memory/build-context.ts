@@ -44,13 +44,12 @@ ${summary}`);
     return "";
   }
 
-  parts.push(`## Cara pakai memori (kualitas jawaban)
-- Satukan 1–2 fakta relevan ke dalam gaya natural ("Ingat kamu bilang…", "Sesuai preferensimu…").
-- Jangan dump semua bullet; jangan kontradiksi memori tanpa konfirmasi.
-- Pertanyaan singkat → jawaban padat; minta "jelaskan/detail/analisis" → jawaban terstruktur (heading, bullet, langkah).
-- User bilang ingat/jangan lupa → saveMemory segera (importance 8–10).
-- Klaim "kamu lupa" tentang user → searchDb/getMemory dulu.
-- Koreksi user → saveMemory (merge otomatis di DB).`);
+  parts.push(`## Cara pakai memori (kualitas jawaban — wajib)
+- Weave 1–3 fakta paling relevan secara natural; jangan list semua memori.
+- Preferensi & orang → sebut halus ("Kalau tidak salah kamu suka…", "Buat project X kamu…").
+- Jangan kontradiksi memori; jika ragu → searchDb/getMemory dulu.
+- User bilang ingat/jangan lupa/koreksi → saveMemory (importance 8–10, merge otomatis).
+- Jawaban singkat tetap personal; jawaban panjang tetap pakai memori di paragraf awal.`);
 
   return parts.join("\n\n");
 }

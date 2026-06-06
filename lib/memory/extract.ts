@@ -5,12 +5,14 @@ import { z } from "zod";
 import type { OpenRouterClientMeta } from "@/lib/ai/providers";
 import { getTitleModel } from "@/lib/ai/providers";
 import type { MemoryCategory } from "@/lib/db/schema";
+import { runMemoryHygiene } from "./hygiene";
 import type { SavedMemoryItem } from "./notice";
 import { POST_EXTRACTION_PROMPT, PRE_EXTRACTION_PROMPT } from "./prompts";
 import { saveMemory } from "./queries";
 import {
   isExplicitRememberRequest,
   looksLikeMemorableUserMessage,
+  shouldPostExtractMemories,
 } from "./remember";
 
 const memoryItemSchema = z.object({
@@ -138,6 +140,9 @@ export async function preExtractUserMemories({
         }
       })
     );
+    if (saved.length > 0 && mergeSimilar) {
+      runMemoryHygiene(userId).catch(() => null);
+    }
     return saved;
   } catch (error) {
     console.error("Memory pre-extraction failed:", error);
@@ -174,6 +179,10 @@ export async function extractAndStoreMemories({
     return [];
   }
 
+  if (!shouldPostExtractMemories(userMessage, assistantMessage)) {
+    return [];
+  }
+
   try {
     const items = await runExtraction({
       system: POST_EXTRACTION_PROMPT,
@@ -207,9 +216,21 @@ export async function extractAndStoreMemories({
         }
       })
     );
+    if (saved.length > 0 && mergeSimilar) {
+      runMemoryHygiene(userId).catch(() => null);
+    }
     return saved;
   } catch (error) {
     console.error("Memory extraction failed:", error);
     return [];
+  }
+}
+
+export async function runMemoryHygieneIfEnabled(
+  userId: string,
+  enabled: boolean
+): Promise<void> {
+  if (enabled) {
+    await runMemoryHygiene(userId).catch(() => null);
   }
 }

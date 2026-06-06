@@ -219,6 +219,15 @@ export function MemorySettingsPage() {
                     }
                   />
                   <SettingToggle
+                    checked={m.autoHygiene !== false}
+                    description="Setelah ekstraksi: gabung duplikat, turunkan memori usang, dan rapikan otomatis."
+                    id="memory-hygiene"
+                    label="Perawatan memori otomatis"
+                    onCheckedChange={(autoHygiene) =>
+                      patch({ memory: { ...m, autoHygiene } })
+                    }
+                  />
+                  <SettingToggle
                     checked={m.injectInPrompt}
                     description="Sisipkan memori relevan ke konteks AI sebelum menjawab."
                     id="memory-inject"

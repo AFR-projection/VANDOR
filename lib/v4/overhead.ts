@@ -18,7 +18,7 @@ export function shouldRunPreExtract(input: {
   if (input.intent === "chat_simple" || input.intent === "command") {
     return false;
   }
-  if (input.userText.length < 24) {
+  if (input.userText.length < 16) {
     return false;
   }
   return true;

@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   return {
-    name: "VANDOR — Asisten Pribadi",
+    name: "VANDOR — ByAFR",
     short_name: "VANDOR",
     description: "Asisten AI pribadi dengan memori dan tools Jarvis-style",
     start_url: `${base}/`,
