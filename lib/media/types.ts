@@ -38,6 +38,8 @@ export type MediaDownloadResult = {
   sizeBytes?: number;
   contentType?: string;
   backend?: "yt-dlp" | "cobalt" | "tikwm" | "piped" | "invidious" | "innertube" | "ytdlp";
+  /** direct = link Cobalt di browser; blob = file di storage VANDOR */
+  delivery?: "direct" | "blob";
   error?: string;
 };
 

@@ -5,7 +5,15 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { isUrlForPlatform } from "@/lib/chat/media-slash";
-import { formatCobaltApiError } from "@/lib/media/cobalt-error";
+import {
+  hasCobaltBackend,
+  normalizeHttpUrl,
+  resolveCobaltApiBase,
+} from "@/lib/media/cobalt-shared";
+import {
+  isCobaltTunnelLink,
+  requestCobaltDownload,
+} from "@/lib/media/cobalt-resolve";
 import {
   baseProgress,
   reportProgress,
@@ -35,94 +43,18 @@ const MIN_BYTES = 1024;
 const YTDLP_TIMEOUT_MS = 120_000;
 const FETCH_TIMEOUT_MS = 120_000;
 
-/** Node fetch butuh skema lengkap — browser tidak. */
-function normalizeHttpUrl(raw: string, label: string): string {
-  let candidate = raw.trim();
-  if (!candidate) {
-    throw new Error(`${label} kosong.`);
-  }
-  if (!/^https?:\/\//i.test(candidate)) {
-    candidate = `https://${candidate.replace(/^\/+/, "")}`;
-  }
-  try {
-    return new URL(candidate).href;
-  } catch {
-    throw new Error(
-      `${label} tidak valid ("${raw}"). Contoh benar: https://cobalt-api-production-2f6c.up.railway.app`
-    );
-  }
-}
-
-function resolveCobaltApiBase(): string {
-  const raw = process.env.COBALT_API_URL?.trim();
-  if (!raw) {
-    return "https://api.cobalt.tools";
-  }
-  return normalizeHttpUrl(raw, "COBALT_API_URL").replace(/\/$/, "");
-}
-
-type CobaltResponse = {
-  status: string;
-  url?: string;
-  filename?: string;
-  error?: { code?: string; context?: unknown };
-  headers?: Record<string, string>;
-};
-
-/** Cobalt tunnel URLs are sometimes relative (`/tunnel?…`) — must join with API base. */
-export function resolveCobaltDownloadUrl(
-  cobaltBase: string,
-  url: string
-): string {
-  const trimmed = url.trim();
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-  const base = cobaltBase.replace(/\/$/, "");
-  if (trimmed.startsWith("/")) {
-    return `${base}${trimmed}`;
-  }
-  return new URL(trimmed, `${base}/`).href;
-}
-
-function isOnCobaltHost(cobaltBase: string, downloadUrl: string): boolean {
-  try {
-    return new URL(downloadUrl).host === new URL(cobaltBase).host;
-  } catch {
+function shouldUseYoutubeDirectLink(): boolean {
+  if (process.env.VANDOR_YT_BLOB === "1") {
     return false;
   }
-}
-
-function isCobaltTunnelUrl(cobaltBase: string, downloadUrl: string): boolean {
-  try {
-    const baseHost = new URL(cobaltBase).host;
-    const target = new URL(downloadUrl);
-    return target.host === baseHost && target.pathname.includes("/tunnel");
-  } catch {
-    return downloadUrl.includes("/tunnel");
+  if (process.env.VANDOR_YT_DIRECT === "1") {
+    return true;
   }
-}
-
-function buildCobaltFetchHeaders(input: {
-  status: string;
-  downloadUrl: string;
-  cobaltBase: string;
-  responseHeaders?: Record<string, string>;
-  apiKey?: string;
-}): Record<string, string> {
-  const headers: Record<string, string> = {
-    ...(input.responseHeaders ?? {}),
-    Accept: "*/*",
-  };
-  if (
-    input.apiKey &&
-    (input.status === "tunnel" ||
-      isCobaltTunnelUrl(input.cobaltBase, input.downloadUrl) ||
-      isOnCobaltHost(input.cobaltBase, input.downloadUrl))
-  ) {
-    headers.Authorization = `Api-Key ${input.apiKey}`;
+  if (process.env.VANDOR_YT_DIRECT === "0") {
+    return false;
   }
-  return headers;
+  // Vercel IP diblokir YouTube — hanya link Cobalt yang andal di cloud.
+  return Boolean(process.env.VERCEL);
 }
 
 function assertNonEmptyDownload(buffer: Buffer, backend: string): void {
@@ -136,12 +68,6 @@ function assertNonEmptyDownload(buffer: Buffer, backend: string): void {
   );
 }
 
-function hasCobaltBackend(): boolean {
-  return Boolean(
-    process.env.COBALT_API_URL?.trim() ||
-      process.env.COBALT_ALLOW_PUBLIC === "1"
-  );
-}
 
 function shouldTryYtDlpFirst(): boolean {
   if (process.env.VERCEL) {
@@ -433,124 +359,84 @@ async function downloadWithCobalt(
   platform: MediaPlatform
 ): Promise<{ buffer: Buffer; title: string; filename?: string }> {
   const base = resolveCobaltApiBase();
-  const apiKey = process.env.COBALT_API_KEY?.trim();
-
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  };
-  if (apiKey) {
-    headers.Authorization = `Api-Key ${apiKey}`;
-  }
-
-  const body: Record<string, unknown> = {
+  const resolved = await requestCobaltDownload(
     url,
-    downloadMode: format === "audio" ? "audio" : "auto",
-    audioFormat: "mp3",
-    audioBitrate: "128",
-    videoQuality: platform === "tiktok" ? "720" : "1080",
-    filenameStyle: "basic",
-    // Cloud/serverless IPs are blocked by YouTube CDN on direct redirect — force tunnel.
-    alwaysProxy: true,
-  };
-  if (platform === "youtube") {
-    body.youtubeVideoCodec = "h264";
-    body.youtubeVideoContainer = "mp4";
-  }
-
-  reportProgress(
-    onProgress,
-    baseProgress(platform, format, {
-      status: "resolving",
-      progress: 22,
-      stageLabel: "Cobalt: menyiapkan link unduhan…",
-    })
+    format,
+    platform,
+    onProgress
   );
 
-  let res: Response;
-  try {
-    res = await fetch(`${base}/`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    const msg = toErrorMessage(err);
-    if (/failed to parse url/i.test(msg)) {
-      throw new Error(
-        `Tidak bisa menghubungi Cobalt — periksa COBALT_API_URL di Vercel (wajib pakai https://). Nilai saat ini: ${process.env.COBALT_API_URL?.trim() || "(kosong)"}`
+  const buffer = isCobaltTunnelLink(base, resolved.downloadUrl, resolved.status)
+    ? await fetchCobaltTunnelFile(
+        resolved.downloadUrl,
+        resolved.fetchHeaders,
+        onProgress,
+        platform,
+        format
+      )
+    : await fetchRemoteFile(
+        resolved.downloadUrl,
+        resolved.fetchHeaders,
+        onProgress,
+        platform,
+        format
       );
-    }
-    throw err;
+
+  return {
+    buffer,
+    title: resolved.title,
+    filename: resolved.filename,
+  };
+}
+
+async function tryYoutubeDirectLink(
+  url: string,
+  format: MediaDownloadFormat,
+  onProgress: MediaDownloadProgressReporter | undefined
+): Promise<MediaDownloadResult | null> {
+  if (!shouldUseYoutubeDirectLink() || !hasCobaltBackend()) {
+    return null;
   }
 
-  let data: CobaltResponse;
   try {
-    data = (await res.json()) as CobaltResponse;
-  } catch {
-    throw new Error(
-      `Cobalt mengembalikan respons bukan JSON (HTTP ${res.status}). Pastikan COBALT_API_URL mengarah ke instance Cobalt API, bukan halaman lain.`
+    const resolved = await requestCobaltDownload(
+      url,
+      format,
+      "youtube",
+      onProgress
     );
-  }
-
-  if (!res.ok || data.status === "error") {
-    throw new Error(formatCobaltApiError(data.error, res.status));
-  }
-
-  if (data.status === "picker") {
-    throw new Error(
-      "Link punya beberapa pilihan media — buka di browser atau coba link yang lebih spesifik."
+    const filename = sanitizeFilename(
+      resolved.filename ?? resolved.title,
+      format
     );
-  }
 
-  if (data.status === "local-processing") {
-    throw new Error(
-      "Cobalt membutuhkan remux lokal (ffmpeg) yang tidak tersedia di server VANDOR. " +
-        "Gunakan instance Cobalt yang otomatis remux, atau yt-dlp di VPS/lokal."
+    reportProgress(
+      onProgress,
+      baseProgress("youtube", format, {
+        status: "complete",
+        progress: 100,
+        stageLabel: "Link unduhan siap — buka di browser",
+        downloadUrl: resolved.downloadUrl,
+        title: resolved.title,
+      })
     );
+
+    return {
+      ok: true,
+      url: resolved.downloadUrl,
+      filename,
+      title: resolved.title,
+      platform: "youtube",
+      format,
+      backend: "cobalt",
+      delivery: "direct",
+    };
+  } catch (err) {
+    if (process.env.VERCEL) {
+      throw err;
+    }
+    return null;
   }
-
-  if (!data.url) {
-    throw new Error("Cobalt tidak mengembalikan URL unduhan.");
-  }
-
-  const downloadUrl = resolveCobaltDownloadUrl(base, data.url);
-  if (
-    platform === "youtube" &&
-    data.status === "redirect" &&
-    !isOnCobaltHost(base, downloadUrl)
-  ) {
-    throw new Error(
-      "Cobalt mengembalikan redirect CDN YouTube — tidak bisa di-fetch dari server cloud."
-    );
-  }
-
-  const fetchHeaders = buildCobaltFetchHeaders({
-    status: data.status,
-    downloadUrl,
-    cobaltBase: base,
-    responseHeaders: data.headers,
-    apiKey,
-  });
-
-  const buffer =
-    data.status === "tunnel" || isCobaltTunnelUrl(base, downloadUrl)
-      ? await fetchCobaltTunnelFile(
-          downloadUrl,
-          fetchHeaders,
-          onProgress,
-          platform,
-          format
-        )
-      : await fetchRemoteFile(
-          downloadUrl,
-          fetchHeaders,
-          onProgress,
-          platform,
-          format
-        );
-  const title = data.filename?.replace(/\.[^.]+$/, "") ?? "media";
-  return { buffer, title, filename: data.filename };
 }
 
 type YoutubeBackend = "ytdlp" | "innertube" | "cobalt" | "piped" | "invidious";
@@ -567,6 +453,24 @@ async function downloadYoutube(
 }> {
   const errors: string[] = [];
 
+  if (!process.env.VERCEL) {
+    try {
+      const innertube = await downloadWithInnertube(url, format, onProgress);
+      return { ...innertube, backend: "innertube" };
+    } catch (err) {
+      errors.push(`InnerTube: ${toErrorMessage(err)}`);
+    }
+  }
+
+  if (hasYtdlpApiBackend()) {
+    try {
+      const ytdlp = await downloadWithYtdlpApi(url, format, onProgress);
+      return { ...ytdlp, backend: "ytdlp" };
+    } catch (err) {
+      errors.push(`yt-dlp: ${toErrorMessage(err)}`);
+    }
+  }
+
   if (hasCobaltBackend()) {
     try {
       const cobalt = await downloadWithCobalt(
@@ -581,33 +485,13 @@ async function downloadYoutube(
     }
   }
 
-  if (hasYtdlpApiBackend()) {
-    try {
-      const ytdlp = await downloadWithYtdlpApi(url, format, onProgress);
-      return { ...ytdlp, backend: "ytdlp" };
-    } catch (err) {
-      errors.push(`yt-dlp: ${toErrorMessage(err)}`);
-    }
-  }
-
-  if (!process.env.VERCEL) {
-    try {
-      const innertube = await downloadWithInnertube(url, format, onProgress);
-      return { ...innertube, backend: "innertube" };
-    } catch (err) {
-      errors.push(`InnerTube: ${toErrorMessage(err)}`);
-    }
-  }
-
   try {
     return await downloadYoutubeViaFallback(url, format, onProgress);
   } catch (err) {
     errors.push(`Fallback: ${toErrorMessage(err)}`);
   }
 
-  throw new Error(
-    `${errors.join(". ")}. Update Railway Cobalt: root folder → services/cobalt-ytdlp lalu redeploy (tanpa env baru di Vercel).`
-  );
+  throw new Error(errors.join(". "));
 }
 
 export async function downloadSocialMedia(
@@ -740,6 +624,52 @@ export async function downloadSocialMedia(
         }
       }
     } else if (platform === "youtube") {
+      if (process.env.VERCEL && process.env.VANDOR_YT_BLOB !== "1") {
+        if (!hasCobaltBackend()) {
+          const errMsg =
+            "YouTube di Vercel butuh COBALT_API_URL — tambahkan di Vercel → Project → Settings → Environment Variables (sama seperti .env.local), lalu redeploy.";
+          reportProgress(
+            onProgress,
+            baseProgress(platform, format, {
+              status: "error",
+              progress: 0,
+              stageLabel: "Env belum lengkap",
+              error: errMsg,
+            })
+          );
+          stopResolvePulse?.();
+          stopResolvePulse = null;
+          return { ok: false, platform, format, error: errMsg };
+        }
+
+        try {
+          const direct = await tryYoutubeDirectLink(
+            url,
+            format,
+            onProgress
+          );
+          if (direct?.ok) {
+            stopResolvePulse?.();
+            stopResolvePulse = null;
+            return direct;
+          }
+        } catch (directErr) {
+          const msg = toErrorMessage(directErr);
+          reportProgress(
+            onProgress,
+            baseProgress(platform, format, {
+              status: "error",
+              progress: 0,
+              stageLabel: "Gagal mengunduh",
+              error: msg,
+            })
+          );
+          stopResolvePulse?.();
+          stopResolvePulse = null;
+          return { ok: false, platform, format, error: msg };
+        }
+      }
+
       try {
         const yt = await downloadYoutube(url, format, onProgress);
         buffer = yt.buffer;
@@ -747,6 +677,19 @@ export async function downloadSocialMedia(
         suggestedName = yt.filename;
         backend = yt.backend;
       } catch (ytErr) {
+        if (!process.env.VERCEL) {
+          const direct = await tryYoutubeDirectLink(
+            url,
+            format,
+            onProgress
+          );
+          if (direct?.ok) {
+            stopResolvePulse?.();
+            stopResolvePulse = null;
+            return direct;
+          }
+        }
+
         const msg = toErrorMessage(ytErr);
         reportProgress(
           onProgress,
@@ -877,6 +820,7 @@ export async function downloadSocialMedia(
       sizeBytes: uploaded.sizeBytes,
       contentType: uploaded.contentType,
       backend,
+      delivery: "blob",
     };
 
     reportProgress(
@@ -951,6 +895,20 @@ export function formatMediaDownloadReply(result: MediaDownloadResult): string {
     const detail = toErrorMessage(result.error);
     return `Gagal mengunduh media (${result.platform}): ${detail}`;
   }
+
+  if (result.delivery === "direct" && result.url) {
+    const kind = mediaKindLabel(result);
+    return [
+      `Link unduhan ${result.platform} (${kind}) siap.`,
+      result.title ? `**${result.title}**` : "",
+      `[Unduh di sini](${result.url})`,
+      "_Buka link di browser — tunggu sebentar jika Cobalt masih remux._",
+      result.backend ? `_via ${result.backend}_` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
   const sizeMb =
     result.sizeBytes == null
       ? ""
