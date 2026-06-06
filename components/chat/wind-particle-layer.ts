@@ -1,4 +1,4 @@
-import type { Layer, Map } from "leaflet";
+import type { Layer, Map as LeafletMap } from "leaflet";
 
 type WindGrid = {
   nx: number;
@@ -12,7 +12,7 @@ type WindGrid = {
 };
 
 export function createWindParticleLayer(grid: WindGrid): Layer {
-  let map: Map | null = null;
+  let map: LeafletMap | null = null;
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
   let raf = 0;
@@ -96,7 +96,7 @@ export function createWindParticleLayer(grid: WindGrid): Layer {
   }
 
   return {
-    onAdd(m: Map) {
+    onAdd(m: LeafletMap) {
       map = m;
       canvas = document.createElement("canvas");
       canvas.className = "leaflet-wind-particles";
@@ -111,7 +111,7 @@ export function createWindParticleLayer(grid: WindGrid): Layer {
       m.on("resize move zoom", resize);
       tick();
     },
-    onRemove(m: Map) {
+    onRemove(m: LeafletMap) {
       cancelAnimationFrame(raf);
       m.off("resize move zoom", resize);
       canvas?.remove();

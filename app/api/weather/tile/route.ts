@@ -32,7 +32,13 @@ function clampOpacity(value: string | null, fallback: number): number {
   return Math.min(1, Math.max(0.1, n));
 }
 
-function v1TileUrl(apiKey: string, layer: string, z: string, x: string, y: string) {
+function v1TileUrl(
+  apiKey: string,
+  layer: string,
+  z: string,
+  x: string,
+  y: string
+) {
   return `${OWM_TILES_V1}/${layer}/${z}/${x}/${y}.png?appid=${apiKey}`;
 }
 
@@ -71,8 +77,18 @@ export async function GET(request: Request) {
   const fillBound = searchParams.get("fill_bound") !== "0";
   const version = searchParams.get("v") ?? "1";
 
-  if (!z || !x || !y || !/^\d+$/.test(z) || !/^\d+$/.test(x) || !/^\d+$/.test(y)) {
-    return NextResponse.json({ error: "Invalid tile coordinates" }, { status: 400 });
+  if (
+    !z ||
+    !x ||
+    !y ||
+    !/^\d+$/.test(z) ||
+    !/^\d+$/.test(x) ||
+    !/^\d+$/.test(y)
+  ) {
+    return NextResponse.json(
+      { error: "Invalid tile coordinates" },
+      { status: 400 }
+    );
   }
 
   const v1Layer =
@@ -112,7 +128,8 @@ export async function GET(request: Request) {
     return new NextResponse(body, {
       headers: {
         "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
+        "Cache-Control":
+          "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400",
       },
     });
   } catch {

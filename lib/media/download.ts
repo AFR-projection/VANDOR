@@ -64,7 +64,10 @@ type CobaltResponse = {
 };
 
 /** Cobalt tunnel URLs are sometimes relative (`/tunnel?…`) — must join with API base. */
-export function resolveCobaltDownloadUrl(cobaltBase: string, url: string): string {
+export function resolveCobaltDownloadUrl(
+  cobaltBase: string,
+  url: string
+): string {
   const trimmed = url.trim();
   if (/^https?:\/\//i.test(trimmed)) {
     return trimmed;
@@ -735,7 +738,9 @@ export function formatMediaDownloadReply(result: MediaDownloadResult): string {
     return `Gagal mengunduh media (${result.platform}): ${detail}`;
   }
   const sizeMb =
-    result.sizeBytes == null ? "" : ` (${formatDownloadSize(result.sizeBytes)})`;
+    result.sizeBytes == null
+      ? ""
+      : ` (${formatDownloadSize(result.sizeBytes)})`;
   const kind = result.format === "audio" ? "MP3" : "MP4";
   return [
     `Unduhan ${result.platform} (${kind}) siap${sizeMb}.`,

@@ -26,7 +26,6 @@ export function latLonToTile(
   const x = ((lon + 180) / 360) * n;
   const latRad = (lat * Math.PI) / 180;
   const y =
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) *
-    n;
+    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
   return { x, y, xFrac: x - Math.floor(x), yFrac: y - Math.floor(y) };
 }

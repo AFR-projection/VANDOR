@@ -34,7 +34,10 @@ export async function GET(request: Request) {
   try {
     const res = await fetch(url.toString(), { next: { revalidate: 600 } });
     if (!res.ok) {
-      return NextResponse.json({ error: "Wind data unavailable" }, { status: 502 });
+      return NextResponse.json(
+        { error: "Wind data unavailable" },
+        { status: 502 }
+      );
     }
 
     const raw = await res.json();
@@ -44,9 +47,7 @@ export async function GET(request: Request) {
     const rows = Array.isArray(raw) ? raw : [raw];
     for (const row of rows) {
       const speed =
-        row.current?.wind_speed_10m ??
-        row.current_weather?.windspeed ??
-        0;
+        row.current?.wind_speed_10m ?? row.current_weather?.windspeed ?? 0;
       const dir =
         row.current?.wind_direction_10m ??
         row.current_weather?.winddirection ??
@@ -81,7 +82,10 @@ export async function GET(request: Request) {
   }
 }
 
-function speedDirToUV(speedMs: number, directionDeg: number): { u: number; v: number } {
+function speedDirToUV(
+  speedMs: number,
+  directionDeg: number
+): { u: number; v: number } {
   const rad = (directionDeg * Math.PI) / 180;
   return {
     u: -speedMs * Math.sin(rad),

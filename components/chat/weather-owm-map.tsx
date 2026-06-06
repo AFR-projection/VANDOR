@@ -53,8 +53,7 @@ const LAYERS: Array<{
     icon: WindIcon,
     legend: {
       title: "Kecepatan angin",
-      gradient:
-        "linear-gradient(to right, #ffffff, #eececc, #b364bc, #4600af)",
+      gradient: "linear-gradient(to right, #ffffff, #eececc, #b364bc, #4600af)",
       min: "lemah",
       max: "kuat",
     },
@@ -87,8 +86,7 @@ const LAYERS: Array<{
     icon: GaugeIcon,
     legend: {
       title: "Tekanan udara",
-      gradient:
-        "linear-gradient(to right, #0073ff, #8de7c7, #f0b800, #c60000)",
+      gradient: "linear-gradient(to right, #0073ff, #8de7c7, #f0b800, #c60000)",
       min: "940",
       max: "1060 hPa",
     },
@@ -133,7 +131,11 @@ export function WeatherOwmMap({
   const layerMeta = LAYERS.find((l) => l.id === activeLayer) ?? LAYERS[0];
 
   const attachWindParticles = useCallback(
-    async (map: import("leaflet").Map, centerLat: number, centerLon: number) => {
+    async (
+      map: import("leaflet").Map,
+      centerLat: number,
+      centerLon: number
+    ) => {
       windLayerRef.current?.remove();
       windLayerRef.current = null;
 
@@ -291,7 +293,7 @@ export function WeatherOwmMap({
           <MapPinIcon className="size-3.5 shrink-0 text-[#ea580c]" />
           <span className="truncate font-medium">{label}</span>
         </div>
-        {!fullScreen ? (
+        {fullScreen ? null : (
           <a
             className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[#ea580c]/15 px-2 py-1 text-[11px] font-medium text-[#c2410c]"
             href={mapPageUrl}
@@ -301,7 +303,7 @@ export function WeatherOwmMap({
             Layar penuh
             <ExternalLinkIcon className="size-3" />
           </a>
-        ) : null}
+        )}
       </div>
 
       <div className={`relative w-full ${mapHeight}`}>

@@ -1,8 +1,8 @@
 import "server-only";
 
 import { resolveWeatherLocation } from "./geocode";
-import { buildOwmWeatherMapUrl } from "./map-url";
 import { isUserLocationPhrase } from "./location-phrases";
+import { buildOwmWeatherMapUrl } from "./map-url";
 
 export type WeatherPanelPayload = {
   latitude: number;
