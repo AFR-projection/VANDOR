@@ -174,13 +174,12 @@ export async function executeDirectCommand(
         latitude: Number.isFinite(lat) ? lat : undefined,
         longitude: Number.isFinite(lng) ? lng : undefined,
         city: cmd.city,
-        locationLabel: cmd.city ? undefined : cmd.hints.city ?? undefined,
+        locationLabel: cmd.city ? undefined : (cmd.hints.city ?? undefined),
       });
       if ("error" in result) {
         return { text: String(result.error), instantLabel: "Cuaca" };
       }
-      const place =
-        result.cityName ?? cmd.city ?? cmd.hints.city ?? "lokasimu";
+      const place = result.cityName ?? cmd.city ?? cmd.hints.city ?? "lokasimu";
       return {
         text: formatWeatherReply(result, place),
         instantLabel: "Cuaca",

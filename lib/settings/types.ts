@@ -9,10 +9,7 @@ import {
 import { memoryCategories } from "@/lib/db/schema";
 
 import { personaTonePresets } from "./persona-presets";
-import {
-  migratePersonaSettings,
-  speechStyleSchema,
-} from "./speech-styles";
+import { migratePersonaSettings, speechStyleSchema } from "./speech-styles";
 
 export const modelTierSchema = z.enum(MODEL_TIER_IDS);
 

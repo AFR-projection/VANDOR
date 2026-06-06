@@ -69,7 +69,7 @@ export async function fetchWeatherPanelData(input: {
   let latitude = input.latitude;
   let longitude = input.longitude;
   let cityName = input.city?.trim();
-  let locationLabel = input.locationLabel?.trim();
+  const locationLabel = input.locationLabel?.trim();
 
   if (cityName && isUserLocationPhrase(cityName)) {
     cityName = undefined;

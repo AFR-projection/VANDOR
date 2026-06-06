@@ -47,7 +47,7 @@ export function createCustomSpeechStyle(
 export function migratePersonaSettings(
   persona: Partial<PersonaSettings>
 ): PersonaSettings {
-  let styles = Array.isArray(persona.styles)
+  const styles = Array.isArray(persona.styles)
     ? persona.styles.filter(
         (s) =>
           s?.id &&

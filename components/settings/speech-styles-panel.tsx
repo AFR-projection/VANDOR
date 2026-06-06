@@ -78,7 +78,9 @@ export function SpeechStylesPanel({ persona, onChange, onSave }: Props) {
   const deleteStyle = (id: string) => {
     const styles = persona.styles.filter((s) => s.id !== id);
     const activeStyleId =
-      persona.activeStyleId === id ? (styles[0]?.id ?? "") : persona.activeStyleId;
+      persona.activeStyleId === id
+        ? (styles[0]?.id ?? "")
+        : persona.activeStyleId;
     applyStyles(styles, activeStyleId);
     toast.success("Gaya dihapus");
   };
@@ -176,71 +178,71 @@ export function SpeechStylesPanel({ persona, onChange, onSave }: Props) {
           <strong>Import JSON</strong> untuk mulai.
         </p>
       ) : (
-      <div className="grid gap-2 sm:grid-cols-2">
-        {persona.styles.map((style) => {
-          const isActive = persona.activeStyleId === style.id;
-          return (
-            <div
-              className={cn(
-                "rounded-xl border p-3 transition-all",
-                isActive
-                  ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary/20"
-                  : "border-border/40 bg-card/30 hover:border-primary/25"
-              )}
-              key={style.id}
-            >
-              <button
-                className="w-full text-left"
-                onClick={() => {
-                  onChange({ activeStyleId: style.id });
-                  onSave({ activeStyleId: style.id });
-                }}
-                type="button"
+        <div className="grid gap-2 sm:grid-cols-2">
+          {persona.styles.map((style) => {
+            const isActive = persona.activeStyleId === style.id;
+            return (
+              <div
+                className={cn(
+                  "rounded-xl border p-3 transition-all",
+                  isActive
+                    ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary/20"
+                    : "border-border/40 bg-card/30 hover:border-primary/25"
+                )}
+                key={style.id}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">{style.name}</p>
-                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                      {style.description || style.instructions.slice(0, 80)}
-                    </p>
+                <button
+                  className="w-full text-left"
+                  onClick={() => {
+                    onChange({ activeStyleId: style.id });
+                    onSave({ activeStyleId: style.id });
+                  }}
+                  type="button"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold">{style.name}</p>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                        {style.description || style.instructions.slice(0, 80)}
+                      </p>
+                    </div>
+                    {isActive && (
+                      <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                        Aktif
+                      </span>
+                    )}
                   </div>
-                  {isActive && (
-                    <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                      Aktif
-                    </span>
-                  )}
+                </button>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <Button
+                    onClick={() => openEdit(style)}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <PencilIcon className="size-3" />
+                  </Button>
+                  <Button
+                    onClick={() => duplicateStyle(style)}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <CopyIcon className="size-3" />
+                  </Button>
+                  <Button
+                    onClick={() => deleteStyle(style.id)}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Trash2Icon className="size-3 text-destructive" />
+                  </Button>
                 </div>
-              </button>
-              <div className="mt-2 flex flex-wrap gap-1">
-                <Button
-                  onClick={() => openEdit(style)}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <PencilIcon className="size-3" />
-                </Button>
-                <Button
-                  onClick={() => duplicateStyle(style)}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <CopyIcon className="size-3" />
-                </Button>
-                <Button
-                  onClick={() => deleteStyle(style.id)}
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Trash2Icon className="size-3 text-destructive" />
-                </Button>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
       )}
 
       {editing && draft && (
