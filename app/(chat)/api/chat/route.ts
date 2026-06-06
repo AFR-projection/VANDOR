@@ -92,7 +92,7 @@ import { isExplicitRememberRequest } from "@/lib/memory/remember";
 import { maybeSummarizeChat } from "@/lib/memory/summarize";
 import { captureVisualMemories } from "@/lib/memory/visual-memory";
 import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
-import { recordToolEvent } from "@/lib/observability/record";
+import { recordActivityLog, recordToolEvent } from "@/lib/observability/record";
 import { checkIpRateLimit } from "@/lib/ratelimit";
 import { getWebSearchSynthesisModel } from "@/lib/search/config";
 import {
@@ -310,6 +310,7 @@ export async function POST(request: Request) {
     if (mediaSlash) {
       return createMediaDownloadStreamResponse({
         chatId: id,
+        userId: session.user.id,
         slash: mediaSlash,
         consumeSseStream,
       });
@@ -1235,6 +1236,14 @@ export async function POST(request: Request) {
       onError: (error) => {
         const msg = error instanceof Error ? error.message : String(error);
         console.error("Chat stream error:", error);
+        recordActivityLog({
+          userId: session.user.id,
+          chatId: id,
+          source: "chat/stream",
+          level: "error",
+          message: "Stream chat gagal",
+          detail: msg.slice(0, 4000),
+        }).catch(() => null);
         return formatOpenRouterError(msg, chatModel);
       },
     });

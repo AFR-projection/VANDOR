@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ActivityIcon,
   ArrowLeftIcon,
   BookMarkedIcon,
   BrainIcon,
@@ -13,6 +12,7 @@ import {
   ServerIcon,
   ShieldIcon,
   SparklesIcon,
+  TerminalIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -81,7 +81,7 @@ const tabs = [
   { id: "notes", label: "Catatan", icon: BookMarkedIcon },
   { id: "api", label: "API & integrasi", icon: ServerIcon },
   { id: "security", label: "Keamanan", icon: ShieldIcon },
-  { id: "activity", label: "Aktivitas", icon: ActivityIcon },
+  { id: "activity", label: "Log", icon: TerminalIcon },
   { id: "guide", label: "Panduan", icon: CircleHelpIcon },
 ] as const;
 

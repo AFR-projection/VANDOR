@@ -6,6 +6,7 @@ import {
   downloadSocialMedia,
   formatMediaDownloadReply,
 } from "@/lib/media/download";
+import { recordMediaDownloadLog } from "@/lib/observability/log-media";
 
 export const maxDuration = 120;
 
@@ -50,6 +51,12 @@ export async function POST(request: Request) {
   }
 
   const result = await downloadSocialMedia({ url, format, platform });
+  recordMediaDownloadLog({
+    userId: session.user.id,
+    command: slash?.command ?? `api/${platform}`,
+    url,
+    result,
+  });
   return NextResponse.json({
     ...result,
     message: formatMediaDownloadReply(result),

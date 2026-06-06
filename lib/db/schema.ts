@@ -343,6 +343,12 @@ export const toolEvent = pgTable("ToolEvent", {
     .references(() => user.id, { onDelete: "cascade" }),
   chatId: uuid("chatId").references(() => chat.id, { onDelete: "set null" }),
   toolName: varchar("toolName", { length: 64 }).notNull(),
+  level: varchar("level", {
+    enum: ["info", "warn", "error", "success"],
+  })
+    .notNull()
+    .default("info"),
+  message: text("message"),
   status: varchar("status", { enum: ["ok", "error"] }).notNull(),
   durationMs: integer("durationMs"),
   detail: text("detail"),

@@ -222,9 +222,10 @@ async function fetchCobaltTunnelFile(
   format: MediaDownloadFormat
 ): Promise<Buffer> {
   const fetchUrl = normalizeHttpUrl(url, "URL unduhan media");
-  const maxAttempts = 40;
-  const delayMs = 3000;
+  const maxAttempts = 8;
+  const delayMs = 2000;
   let lastError = "Cobalt tunnel kosong";
+  let emptyReads = 0;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const controller = new AbortController();
@@ -237,7 +238,7 @@ async function fetchCobaltTunnelFile(
       });
 
       if (res.status === 404) {
-        throw new Error("Cobalt tunnel kedaluwarsa sebelum file siap.");
+        throw new Error("Cobalt remux gagal (tunnel kedaluwarsa).");
       }
 
       const buf = await readResponseWithProgress(
@@ -253,10 +254,16 @@ async function fetchCobaltTunnelFile(
         return buf;
       }
 
+      emptyReads += 1;
       lastError = `Cobalt tunnel belum siap (${buf.length} byte)`;
+      if (emptyReads >= 4) {
+        throw new Error(
+          "Cobalt remux gagal untuk video ini — coba link lain atau tunggu beberapa menit."
+        );
+      }
     } catch (err) {
       lastError = toErrorMessage(err);
-      if (/404|kedaluwarsa|timeout|abort/i.test(lastError)) {
+      if (/404|kedaluwarsa|remux gagal|timeout|abort/i.test(lastError)) {
         throw new Error(lastError);
       }
     } finally {
@@ -268,7 +275,7 @@ async function fetchCobaltTunnelFile(
         onProgress,
         baseProgress(platform, format, {
           status: "downloading",
-          progress: 28 + Math.min(40, attempt * 2),
+          progress: 28 + Math.min(40, attempt * 3),
           stageLabel: `Cobalt: menunggu remux… (${attempt + 1}/${maxAttempts})`,
         })
       );

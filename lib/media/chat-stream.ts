@@ -10,11 +10,13 @@ import {
   formatMediaDownloadReply,
 } from "@/lib/media/download";
 import type { MediaDownloadProgressData } from "@/lib/media/types";
+import { recordMediaDownloadLog } from "@/lib/observability/log-media";
 import { generateUUID } from "@/lib/utils";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
 export function createMediaDownloadStreamResponse(input: {
   chatId: string;
+  userId: string;
   slash: MediaSlashCommand;
   consumeSseStream?: Parameters<
     typeof createUIMessageStreamResponse
@@ -45,6 +47,14 @@ export function createMediaDownloadStreamResponse(input: {
         },
         pushProgress
       );
+
+      recordMediaDownloadLog({
+        userId: input.userId,
+        chatId: input.chatId,
+        command: input.slash.command,
+        url: input.slash.url,
+        result,
+      });
 
       if (!result.ok) {
         pushProgress({
