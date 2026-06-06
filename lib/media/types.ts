@@ -37,7 +37,7 @@ export type MediaDownloadResult = {
   format: MediaDownloadFormat;
   sizeBytes?: number;
   contentType?: string;
-  backend?: "yt-dlp" | "cobalt" | "tikwm";
+  backend?: "yt-dlp" | "cobalt" | "tikwm" | "piped" | "invidious";
   error?: string;
 };
 

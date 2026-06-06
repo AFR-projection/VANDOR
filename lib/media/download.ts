@@ -21,6 +21,7 @@ import type {
   MediaDownloadResult,
   MediaPlatform,
 } from "@/lib/media/types";
+import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
 import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
@@ -79,6 +80,14 @@ export function resolveCobaltDownloadUrl(
   return new URL(trimmed, `${base}/`).href;
 }
 
+function isOnCobaltHost(cobaltBase: string, downloadUrl: string): boolean {
+  try {
+    return new URL(downloadUrl).host === new URL(cobaltBase).host;
+  } catch {
+    return false;
+  }
+}
+
 function isCobaltTunnelUrl(cobaltBase: string, downloadUrl: string): boolean {
   try {
     const baseHost = new URL(cobaltBase).host;
@@ -103,7 +112,8 @@ function buildCobaltFetchHeaders(input: {
   if (
     input.apiKey &&
     (input.status === "tunnel" ||
-      isCobaltTunnelUrl(input.cobaltBase, input.downloadUrl))
+      isCobaltTunnelUrl(input.cobaltBase, input.downloadUrl) ||
+      isOnCobaltHost(input.cobaltBase, input.downloadUrl))
   ) {
     headers.Authorization = `Api-Key ${input.apiKey}`;
   }
@@ -160,8 +170,25 @@ function sanitizeFilename(name: string, format: MediaDownloadFormat): string {
     .replace(/[^\w\s.-]/g, "_")
     .replace(/\s+/g, "_")
     .slice(0, 80);
+  if (/\.(mp3|m4a|mp4|webm|mkv)$/i.test(base)) {
+    return base;
+  }
   const ext = extForFormat(format);
-  return base.endsWith(`.${ext}`) ? base : `${base || "download"}.${ext}`;
+  return `${base || "download"}.${ext}`;
+}
+
+function contentTypeForFilename(
+  filename: string,
+  format: MediaDownloadFormat
+): string {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".m4a")) {
+    return "audio/mp4";
+  }
+  if (lower.endsWith(".webm")) {
+    return format === "audio" ? "audio/webm" : "video/webm";
+  }
+  return contentTypeForFormat(format);
 }
 
 async function uploadBuffer(
@@ -174,14 +201,15 @@ async function uploadBuffer(
       `File terlalu besar (${Math.round(buffer.length / 1024 / 1024)}MB). Maks ${MAX_BYTES / 1024 / 1024}MB.`
     );
   }
+  const contentType = contentTypeForFilename(filename, format);
   const stored = await putFile(`media/${filename}`, buffer, {
-    contentType: contentTypeForFormat(format),
+    contentType,
     addRandomSuffix: true,
   });
   return {
     url: stored.url,
     sizeBytes: buffer.length,
-    contentType: contentTypeForFormat(format),
+    contentType,
   };
 }
 
@@ -410,6 +438,16 @@ async function downloadWithCobalt(
   }
 
   const downloadUrl = resolveCobaltDownloadUrl(base, data.url);
+  if (
+    platform === "youtube" &&
+    data.status === "redirect" &&
+    !isOnCobaltHost(base, downloadUrl)
+  ) {
+    throw new Error(
+      "Cobalt mengembalikan redirect CDN YouTube — tidak bisa di-fetch dari server cloud."
+    );
+  }
+
   const fetchHeaders = buildCobaltFetchHeaders({
     status: data.status,
     downloadUrl,
@@ -427,6 +465,69 @@ async function downloadWithCobalt(
   );
   const title = data.filename?.replace(/\.[^.]+$/, "") ?? "media";
   return { buffer, title, filename: data.filename };
+}
+
+type YoutubeBackend = "cobalt" | "piped" | "invidious";
+
+async function downloadYoutube(
+  url: string,
+  format: MediaDownloadFormat,
+  onProgress: MediaDownloadProgressReporter | undefined
+): Promise<{
+  buffer: Buffer;
+  title: string;
+  filename?: string;
+  backend: YoutubeBackend;
+}> {
+  if (process.env.VERCEL) {
+    try {
+      return await downloadYoutubeViaFallback(url, format, onProgress);
+    } catch (fallbackErr) {
+      if (!hasCobaltBackend()) {
+        throw fallbackErr;
+      }
+      try {
+        const cobalt = await downloadWithCobalt(
+          url,
+          format,
+          onProgress,
+          "youtube"
+        );
+        return { ...cobalt, backend: "cobalt" };
+      } catch (cobaltErr) {
+        throw new Error(
+          `Fallback: ${toErrorMessage(fallbackErr)}. Cobalt: ${toErrorMessage(cobaltErr)}`
+        );
+      }
+    }
+  }
+
+  let cobaltErr: unknown;
+
+  if (hasCobaltBackend()) {
+    try {
+      const cobalt = await downloadWithCobalt(
+        url,
+        format,
+        onProgress,
+        "youtube"
+      );
+      return { ...cobalt, backend: "cobalt" };
+    } catch (err) {
+      cobaltErr = err;
+    }
+  }
+
+  try {
+    const fallback = await downloadYoutubeViaFallback(url, format, onProgress);
+    return fallback;
+  } catch (fallbackErr) {
+    const cobaltMsg = cobaltErr ? toErrorMessage(cobaltErr) : null;
+    const fallbackMsg = toErrorMessage(fallbackErr);
+    throw new Error(
+      cobaltMsg ? `Cobalt: ${cobaltMsg}. Fallback: ${fallbackMsg}` : fallbackMsg
+    );
+  }
 }
 
 export async function downloadSocialMedia(
@@ -467,7 +568,7 @@ export async function downloadSocialMedia(
   try {
     let buffer: Buffer | null = null;
     let title = "media";
-    let backend: "yt-dlp" | "cobalt" | "tikwm" = "yt-dlp";
+    let backend: MediaDownloadResult["backend"] = "yt-dlp";
     let suggestedName: string | undefined;
 
     reportProgress(
@@ -557,6 +658,28 @@ export async function downloadSocialMedia(
           stopResolvePulse = null;
           return { ok: false, platform, format, error: msg };
         }
+      }
+    } else if (platform === "youtube") {
+      try {
+        const yt = await downloadYoutube(url, format, onProgress);
+        buffer = yt.buffer;
+        title = yt.title;
+        suggestedName = yt.filename;
+        backend = yt.backend;
+      } catch (ytErr) {
+        const msg = toErrorMessage(ytErr);
+        reportProgress(
+          onProgress,
+          baseProgress(platform, format, {
+            status: "error",
+            progress: 0,
+            stageLabel: "Gagal mengunduh",
+            error: msg,
+          })
+        );
+        stopResolvePulse?.();
+        stopResolvePulse = null;
+        return { ok: false, platform, format, error: msg };
       }
     } else if (
       process.env.COBALT_API_URL?.trim() ||
@@ -732,6 +855,17 @@ function formatDownloadSize(sizeBytes: number): string {
   return `${sizeBytes} B`;
 }
 
+function mediaKindLabel(result: MediaDownloadResult): string {
+  if (result.format === "video") {
+    return "MP4";
+  }
+  const name = result.filename?.toLowerCase() ?? "";
+  if (name.endsWith(".m4a")) {
+    return "M4A";
+  }
+  return "MP3";
+}
+
 export function formatMediaDownloadReply(result: MediaDownloadResult): string {
   if (!result.ok) {
     const detail = toErrorMessage(result.error);
@@ -741,7 +875,7 @@ export function formatMediaDownloadReply(result: MediaDownloadResult): string {
     result.sizeBytes == null
       ? ""
       : ` (${formatDownloadSize(result.sizeBytes)})`;
-  const kind = result.format === "audio" ? "MP3" : "MP4";
+  const kind = mediaKindLabel(result);
   return [
     `Unduhan ${result.platform} (${kind}) siap${sizeMb}.`,
     result.title ? `**${result.title}**` : "",
