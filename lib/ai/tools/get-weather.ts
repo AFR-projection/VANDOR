@@ -14,10 +14,12 @@ export const getWeather = tool({
       .optional(),
   }),
   execute: async (input) => {
+    const city = input.city?.trim();
+    const useIpLocation = !city;
     const result = await fetchWeatherPanelData({
-      latitude: input.latitude,
-      longitude: input.longitude,
-      city: input.city,
+      latitude: useIpLocation ? input.latitude : undefined,
+      longitude: useIpLocation ? input.longitude : undefined,
+      city,
     });
     return result;
   },

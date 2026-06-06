@@ -25,6 +25,7 @@ import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
 const MAX_BYTES = 80 * 1024 * 1024;
+const MIN_BYTES = 1024;
 const YTDLP_TIMEOUT_MS = 120_000;
 const FETCH_TIMEOUT_MS = 120_000;
 
@@ -61,6 +62,61 @@ type CobaltResponse = {
   error?: { code?: string; context?: unknown };
   headers?: Record<string, string>;
 };
+
+/** Cobalt tunnel URLs are sometimes relative (`/tunnel?…`) — must join with API base. */
+export function resolveCobaltDownloadUrl(cobaltBase: string, url: string): string {
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  const base = cobaltBase.replace(/\/$/, "");
+  if (trimmed.startsWith("/")) {
+    return `${base}${trimmed}`;
+  }
+  return new URL(trimmed, `${base}/`).href;
+}
+
+function isCobaltTunnelUrl(cobaltBase: string, downloadUrl: string): boolean {
+  try {
+    const baseHost = new URL(cobaltBase).host;
+    const target = new URL(downloadUrl);
+    return target.host === baseHost && target.pathname.includes("/tunnel");
+  } catch {
+    return downloadUrl.includes("/tunnel");
+  }
+}
+
+function buildCobaltFetchHeaders(input: {
+  status: string;
+  downloadUrl: string;
+  cobaltBase: string;
+  responseHeaders?: Record<string, string>;
+  apiKey?: string;
+}): Record<string, string> {
+  const headers: Record<string, string> = {
+    ...(input.responseHeaders ?? {}),
+    Accept: "*/*",
+  };
+  if (
+    input.apiKey &&
+    (input.status === "tunnel" ||
+      isCobaltTunnelUrl(input.cobaltBase, input.downloadUrl))
+  ) {
+    headers.Authorization = `Api-Key ${input.apiKey}`;
+  }
+  return headers;
+}
+
+function assertNonEmptyDownload(buffer: Buffer, backend: string): void {
+  if (buffer.length >= MIN_BYTES) {
+    return;
+  }
+  throw new Error(
+    `File unduhan kosong (${buffer.length} byte) via ${backend}. ` +
+      "Di Vercel: pastikan COBALT_API_URL benar, COBALT_API_KEY jika instance pakai auth, " +
+      "dan API_URL di instance Cobalt mengarah ke domain publik Railway/VPS (tunnel butuh ini)."
+  );
+}
 
 function hasCobaltBackend(): boolean {
   return Boolean(
@@ -154,6 +210,7 @@ async function fetchRemoteFile(
         `File terlalu besar (${Math.round(buf.length / 1024 / 1024)}MB).`
       );
     }
+    assertNonEmptyDownload(buf, "fetch");
     return buf;
   } finally {
     clearTimeout(timer);
@@ -285,9 +342,12 @@ async function downloadWithCobalt(
     audioBitrate: "128",
     videoQuality: platform === "tiktok" ? "720" : "1080",
     filenameStyle: "basic",
+    // Cloud/serverless IPs are blocked by YouTube CDN on direct redirect — force tunnel.
+    alwaysProxy: true,
   };
-  if (platform === "tiktok") {
-    body.alwaysProxy = true;
+  if (platform === "youtube") {
+    body.youtubeVideoCodec = "h264";
+    body.youtubeVideoContainer = "mp4";
   }
 
   reportProgress(
@@ -335,13 +395,29 @@ async function downloadWithCobalt(
     );
   }
 
+  if (data.status === "local-processing") {
+    throw new Error(
+      "Cobalt membutuhkan remux lokal (ffmpeg) yang tidak tersedia di server VANDOR. " +
+        "Gunakan instance Cobalt yang otomatis remux, atau yt-dlp di VPS/lokal."
+    );
+  }
+
   if (!data.url) {
     throw new Error("Cobalt tidak mengembalikan URL unduhan.");
   }
 
+  const downloadUrl = resolveCobaltDownloadUrl(base, data.url);
+  const fetchHeaders = buildCobaltFetchHeaders({
+    status: data.status,
+    downloadUrl,
+    cobaltBase: base,
+    responseHeaders: data.headers,
+    apiKey,
+  });
+
   const buffer = await fetchRemoteFile(
-    data.url,
-    data.headers,
+    downloadUrl,
+    fetchHeaders,
     onProgress,
     platform,
     format
@@ -542,6 +618,13 @@ export async function downloadSocialMedia(
     stopResolvePulse?.();
     stopResolvePulse = null;
 
+    if (!buffer || buffer.length < MIN_BYTES) {
+      throw new Error(
+        `File unduhan kosong (${buffer?.length ?? 0} byte). ` +
+          "Periksa COBALT_API_URL, COBALT_API_KEY, dan API_URL di instance Cobalt."
+      );
+    }
+
     reportProgress(
       onProgress,
       baseProgress(platform, format, {
@@ -636,15 +719,23 @@ export async function downloadSocialMedia(
   }
 }
 
+function formatDownloadSize(sizeBytes: number): string {
+  if (sizeBytes >= 1024 * 1024) {
+    return `${(sizeBytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+  if (sizeBytes >= 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  }
+  return `${sizeBytes} B`;
+}
+
 export function formatMediaDownloadReply(result: MediaDownloadResult): string {
   if (!result.ok) {
     const detail = toErrorMessage(result.error);
     return `Gagal mengunduh media (${result.platform}): ${detail}`;
   }
   const sizeMb =
-    result.sizeBytes == null
-      ? ""
-      : ` (${(result.sizeBytes / 1024 / 1024).toFixed(1)} MB)`;
+    result.sizeBytes == null ? "" : ` (${formatDownloadSize(result.sizeBytes)})`;
   const kind = result.format === "audio" ? "MP3" : "MP4";
   return [
     `Unduhan ${result.platform} (${kind}) siap${sizeMb}.`,

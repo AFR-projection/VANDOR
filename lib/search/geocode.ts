@@ -20,14 +20,23 @@ type GeocodeHit = {
 };
 
 export async function geocodePlace(
-  query: string
+  query: string,
+  opts?: { nearLat?: number; nearLng?: number; limit?: number }
 ): Promise<GeocodeResult | null> {
   const params = new URLSearchParams({
     q: query,
     format: "json",
-    limit: "1",
+    limit: String(opts?.limit ?? 1),
     addressdetails: "1",
   });
+
+  if (opts?.nearLat !== undefined && opts?.nearLng !== undefined) {
+    params.set(
+      "viewbox",
+      `${opts.nearLng - 0.5},${opts.nearLat + 0.5},${opts.nearLng + 0.5},${opts.nearLat - 0.5}`
+    );
+    params.set("bounded", "0");
+  }
 
   try {
     const res = await fetch(`${NOMINATIM}?${params}`, {

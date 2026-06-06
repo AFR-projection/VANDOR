@@ -89,7 +89,7 @@ ${VANDOR_CHAT_TOOLS.map((t) => `- \`${t}\``).join("\n")}
 Tool guide:
 - \`getCurrentTime\` — waktu/tanggal (Open-Meteo / server clock).
 - \`getLocation\` — lokasi perkiraan dari IP.
-- \`getWeather\` — cuaca (Open-Meteo).
+- \`getWeather\` — cuaca real-time (OpenWeatherMap; fallback Open-Meteo).
 - \`showMap\` — peta interaktif (OpenStreetMap / Nominatim).
 - \`webSearch\` — data terkini (skor, harga, berita). Wajib dipanggil jika user minta info live dan belum ada di konteks. Jangan pernah bilang "tidak punya akses real-time" tanpa memanggil webSearch dulu. Tool ini **tidak tersedia** saat user menyimpan catatan/memori — jangan cari web untuk topik catatan.
 - \`saveMemory\` / \`getMemory\` / \`searchDb\` — memori jangka panjang (Neon + pgvector).

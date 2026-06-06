@@ -144,7 +144,13 @@ function formatTimeReply(timezone: string) {
 }
 
 function formatWeatherReply(
-  data: { current?: { temperature_2m?: number }; cityName?: string },
+  data: {
+    current?: { temperature_2m?: number };
+    cityName?: string;
+    conditionDescription?: string;
+    feelsLike?: number;
+    humidity?: number;
+  },
   city?: string
 ): string {
   const temp = data.current?.temperature_2m;
@@ -152,7 +158,17 @@ function formatWeatherReply(
   if (temp == null) {
     return `Cuaca di **${name}**: data tidak tersedia saat ini.`;
   }
-  return `Cuaca di **${name}** sekarang: **${temp}°C**. Lihat panel cuaca di bawah.`;
+  const parts = [`**${temp}°C**`];
+  if (data.conditionDescription) {
+    parts.push(data.conditionDescription);
+  }
+  if (data.feelsLike != null) {
+    parts.push(`terasa ${data.feelsLike}°C`);
+  }
+  if (data.humidity != null) {
+    parts.push(`kelembapan ${data.humidity}%`);
+  }
+  return `Cuaca di **${name}** sekarang: ${parts.join(", ")}. Lihat panel cuaca di bawah.`;
 }
 
 export async function executeDirectCommand(
@@ -170,11 +186,14 @@ export async function executeDirectCommand(
     case "cuaca": {
       const lat = Number(cmd.hints.latitude);
       const lng = Number(cmd.hints.longitude);
+      const useIpLocation = !cmd.city;
       const result = await fetchWeatherPanelData({
-        latitude: Number.isFinite(lat) ? lat : undefined,
-        longitude: Number.isFinite(lng) ? lng : undefined,
+        latitude: useIpLocation && Number.isFinite(lat) ? lat : undefined,
+        longitude: useIpLocation && Number.isFinite(lng) ? lng : undefined,
         city: cmd.city,
-        locationLabel: cmd.city ? undefined : (cmd.hints.city ?? undefined),
+        locationLabel: useIpLocation
+          ? (cmd.hints.city ?? undefined)
+          : undefined,
       });
       if ("error" in result) {
         return { text: String(result.error), instantLabel: "Cuaca" };

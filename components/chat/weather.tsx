@@ -3,6 +3,7 @@
 import cx from "classnames";
 import { format, isWithinInterval } from "date-fns";
 import { useEffect, useState } from "react";
+import { WeatherOwmMap } from "./weather-owm-map";
 
 const SunIcon = ({ size = 40 }: { size?: number }) => (
   <svg fill="none" height={size} viewBox="0 0 24 24" width={size}>
@@ -83,12 +84,22 @@ const CloudIcon = ({ size = 24 }: { size?: number }) => (
 type WeatherAtLocation = {
   latitude: number;
   longitude: number;
-  generationtime_ms: number;
-  utc_offset_seconds: number;
+  generationtime_ms?: number;
+  utc_offset_seconds?: number;
   timezone: string;
-  timezone_abbreviation: string;
-  elevation: number;
+  timezone_abbreviation?: string;
+  elevation?: number;
   cityName?: string;
+  country?: string;
+  condition?: string;
+  conditionDescription?: string;
+  iconUrl?: string;
+  humidity?: number;
+  feelsLike?: number;
+  windSpeed?: number;
+  mapUrl?: string;
+  mapLayerAvailable?: boolean;
+  provider?: "openweathermap" | "open-meteo";
   current_units: {
     time: string;
     interval: string;
@@ -99,7 +110,7 @@ type WeatherAtLocation = {
     interval: number;
     temperature_2m: number;
   };
-  hourly_units: {
+  hourly_units?: {
     time: string;
     temperature_2m: string;
   };
@@ -107,13 +118,13 @@ type WeatherAtLocation = {
     time: string[];
     temperature_2m: number[];
   };
-  daily_units: {
+  daily_units?: {
     time: string;
     sunrise: string;
     sunset: string;
   };
   daily: {
-    time: string[];
+    time?: string[];
     sunrise: string[];
     sunset: string[];
   };
@@ -360,8 +371,13 @@ function WeatherCard({
   );
 
   const location =
-    weatherAtLocation.cityName ||
+    [weatherAtLocation.cityName, weatherAtLocation.country]
+      .filter(Boolean)
+      .join(", ") ||
     `${weatherAtLocation.latitude?.toFixed(1)}°, ${weatherAtLocation.longitude?.toFixed(1)}°`;
+
+  const conditionLabel =
+    weatherAtLocation.conditionDescription ?? weatherAtLocation.condition;
 
   return (
     <div
@@ -379,28 +395,56 @@ function WeatherCard({
       <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
 
       <div className="relative z-10">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="font-medium text-white/80 text-xs">{location}</div>
-          <div className="text-white/60 text-xs">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div>
+            <div className="font-medium text-white/80 text-xs">{location}</div>
+            {conditionLabel ? (
+              <div className="mt-0.5 capitalize text-white/60 text-[11px]">
+                {conditionLabel}
+              </div>
+            ) : null}
+          </div>
+          <div className="text-right text-white/60 text-xs">
             {format(new Date(weatherAtLocation.current.time), "MMM d, h:mm a")}
+            {weatherAtLocation.provider === "openweathermap" ? (
+              <div className="text-[10px] text-white/40">OpenWeatherMap</div>
+            ) : null}
           </div>
         </div>
 
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className={cx("text-white/90", {
-                "text-yellow-200": isDay,
-                "text-blue-200": !isDay,
-              })}
-            >
-              {isDay ? <SunIcon size={32} /> : <MoonIcon size={32} />}
-            </div>
-            <div className="font-light text-3xl text-white">
-              {n(weatherAtLocation.current.temperature_2m)}
-              <span className="text-lg text-white/80">
-                {weatherAtLocation.current_units.temperature_2m}
-              </span>
+            {weatherAtLocation.iconUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- external OWM icon URL
+              <img
+                alt={conditionLabel ?? "Cuaca"}
+                className="size-14 drop-shadow-md"
+                height={56}
+                src={weatherAtLocation.iconUrl}
+                width={56}
+              />
+            ) : (
+              <div
+                className={cx("text-white/90", {
+                  "text-yellow-200": isDay,
+                  "text-blue-200": !isDay,
+                })}
+              >
+                {isDay ? <SunIcon size={32} /> : <MoonIcon size={32} />}
+              </div>
+            )}
+            <div>
+              <div className="font-light text-3xl text-white">
+                {n(weatherAtLocation.current.temperature_2m)}
+                <span className="text-lg text-white/80">
+                  {weatherAtLocation.current_units.temperature_2m}
+                </span>
+              </div>
+              {weatherAtLocation.feelsLike != null ? (
+                <div className="text-white/70 text-xs">
+                  Terasa {n(weatherAtLocation.feelsLike)}°
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -409,6 +453,11 @@ function WeatherCard({
               H: {n(currentHigh)}°
             </div>
             <div className="text-white/70 text-xs">L: {n(currentLow)}°</div>
+            {weatherAtLocation.humidity != null ? (
+              <div className="text-white/60 text-[11px]">
+                💧 {weatherAtLocation.humidity}%
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -454,15 +503,35 @@ function WeatherCard({
           </div>
         </div>
 
-        <div className="mt-2 flex justify-between text-white/60 text-xs">
-          <div>
-            Sunrise:{" "}
-            {format(new Date(weatherAtLocation.daily.sunrise[0]), "h:mm a")}
+        <WeatherOwmMap
+          hasOwmKey={weatherAtLocation.mapLayerAvailable !== false}
+          key={`map-${weatherAtLocation.latitude.toFixed(5)}-${weatherAtLocation.longitude.toFixed(5)}`}
+          label={location}
+          lat={weatherAtLocation.latitude}
+          lon={weatherAtLocation.longitude}
+        />
+
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-white/60 text-xs">
+          <div className="flex gap-3">
+            <div>
+              Sunrise:{" "}
+              {format(new Date(weatherAtLocation.daily.sunrise[0]), "h:mm a")}
+            </div>
+            <div>
+              Sunset:{" "}
+              {format(new Date(weatherAtLocation.daily.sunset[0]), "h:mm a")}
+            </div>
           </div>
-          <div>
-            Sunset:{" "}
-            {format(new Date(weatherAtLocation.daily.sunset[0]), "h:mm a")}
-          </div>
+          {weatherAtLocation.mapUrl ? (
+            <a
+              className="rounded-md bg-white/15 px-2 py-1 font-medium text-white/90 transition hover:bg-white/25"
+              href={weatherAtLocation.mapUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Peta layar penuh →
+            </a>
+          ) : null}
         </div>
       </div>
     </div>

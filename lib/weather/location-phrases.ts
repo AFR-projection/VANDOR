@@ -28,7 +28,11 @@ export function isUserLocationPhrase(text: string): boolean {
 
 function cleanCityCandidate(raw: string): string {
   return raw
-    .replace(/\s*(?:sekarang|hari ini|today|now|please|tolong|dong)\s*$/i, "")
+    .replace(/^(?:check|cek|lihat|tanya|tolong)\s+/i, "")
+    .replace(
+      /\s*(?:sekarang|hari ini|today|now|please|tolong|dong|ya|deh|thanks|makasih)\s*$/i,
+      ""
+    )
     .trim();
 }
 
@@ -51,7 +55,7 @@ export function extractWeatherCity(text: string): string | null {
     if (!candidate || isUserLocationPhrase(candidate)) {
       continue;
     }
-    if (candidate.length >= 2 && candidate.length <= 40) {
+    if (candidate.length >= 2 && candidate.length <= 80) {
       return candidate;
     }
   }
