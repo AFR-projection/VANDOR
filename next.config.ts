@@ -62,6 +62,7 @@ const nextConfig: NextConfig = {
     "xlsx",
     "jsdom",
     "@mozilla/readability",
+    "youtubei.js",
   ],
   experimental: {
     prefetchInlining: true,

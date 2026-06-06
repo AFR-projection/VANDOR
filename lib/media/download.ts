@@ -22,6 +22,7 @@ import type {
   MediaPlatform,
 } from "@/lib/media/types";
 import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
+import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
 import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
@@ -211,6 +212,71 @@ async function uploadBuffer(
     sizeBytes: buffer.length,
     contentType,
   };
+}
+
+async function fetchCobaltTunnelFile(
+  url: string,
+  headers: Record<string, string>,
+  onProgress: MediaDownloadProgressReporter | undefined,
+  platform: MediaPlatform,
+  format: MediaDownloadFormat
+): Promise<Buffer> {
+  const fetchUrl = normalizeHttpUrl(url, "URL unduhan media");
+  const maxAttempts = 40;
+  const delayMs = 3000;
+  let lastError = "Cobalt tunnel kosong";
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(fetchUrl, {
+        signal: controller.signal,
+        headers,
+        redirect: "follow",
+      });
+
+      if (res.status === 404) {
+        throw new Error("Cobalt tunnel kedaluwarsa sebelum file siap.");
+      }
+
+      const buf = await readResponseWithProgress(
+        res,
+        onProgress,
+        platform,
+        format,
+        { from: 24, to: 76 },
+        "Cobalt"
+      );
+
+      if (buf.length >= MIN_BYTES) {
+        return buf;
+      }
+
+      lastError = `Cobalt tunnel belum siap (${buf.length} byte)`;
+    } catch (err) {
+      lastError = toErrorMessage(err);
+      if (/404|kedaluwarsa|timeout|abort/i.test(lastError)) {
+        throw new Error(lastError);
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (attempt < maxAttempts - 1) {
+      reportProgress(
+        onProgress,
+        baseProgress(platform, format, {
+          status: "downloading",
+          progress: 28 + Math.min(40, attempt * 2),
+          stageLabel: `Cobalt: menunggu remux… (${attempt + 1}/${maxAttempts})`,
+        })
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(lastError);
 }
 
 async function fetchRemoteFile(
@@ -456,18 +522,27 @@ async function downloadWithCobalt(
     apiKey,
   });
 
-  const buffer = await fetchRemoteFile(
-    downloadUrl,
-    fetchHeaders,
-    onProgress,
-    platform,
-    format
-  );
+  const buffer =
+    data.status === "tunnel" || isCobaltTunnelUrl(base, downloadUrl)
+      ? await fetchCobaltTunnelFile(
+          downloadUrl,
+          fetchHeaders,
+          onProgress,
+          platform,
+          format
+        )
+      : await fetchRemoteFile(
+          downloadUrl,
+          fetchHeaders,
+          onProgress,
+          platform,
+          format
+        );
   const title = data.filename?.replace(/\.[^.]+$/, "") ?? "media";
   return { buffer, title, filename: data.filename };
 }
 
-type YoutubeBackend = "cobalt" | "piped" | "invidious";
+type YoutubeBackend = "innertube" | "cobalt" | "piped" | "invidious";
 
 async function downloadYoutube(
   url: string,
@@ -479,30 +554,13 @@ async function downloadYoutube(
   filename?: string;
   backend: YoutubeBackend;
 }> {
-  if (process.env.VERCEL) {
-    try {
-      return await downloadYoutubeViaFallback(url, format, onProgress);
-    } catch (fallbackErr) {
-      if (!hasCobaltBackend()) {
-        throw fallbackErr;
-      }
-      try {
-        const cobalt = await downloadWithCobalt(
-          url,
-          format,
-          onProgress,
-          "youtube"
-        );
-        return { ...cobalt, backend: "cobalt" };
-      } catch (cobaltErr) {
-        throw new Error(
-          `Fallback: ${toErrorMessage(fallbackErr)}. Cobalt: ${toErrorMessage(cobaltErr)}`
-        );
-      }
-    }
+  let innertubeErr: unknown;
+  try {
+    const innertube = await downloadWithInnertube(url, format, onProgress);
+    return { ...innertube, backend: "innertube" };
+  } catch (err) {
+    innertubeErr = err;
   }
-
-  let cobaltErr: unknown;
 
   if (hasCobaltBackend()) {
     try {
@@ -513,19 +571,27 @@ async function downloadYoutube(
         "youtube"
       );
       return { ...cobalt, backend: "cobalt" };
-    } catch (err) {
-      cobaltErr = err;
+    } catch (cobaltErr) {
+      try {
+        const fallback = await downloadYoutubeViaFallback(
+          url,
+          format,
+          onProgress
+        );
+        return fallback;
+      } catch (fallbackErr) {
+        throw new Error(
+          `InnerTube: ${toErrorMessage(innertubeErr)}. Cobalt: ${toErrorMessage(cobaltErr)}. Fallback: ${toErrorMessage(fallbackErr)}`
+        );
+      }
     }
   }
 
   try {
-    const fallback = await downloadYoutubeViaFallback(url, format, onProgress);
-    return fallback;
+    return await downloadYoutubeViaFallback(url, format, onProgress);
   } catch (fallbackErr) {
-    const cobaltMsg = cobaltErr ? toErrorMessage(cobaltErr) : null;
-    const fallbackMsg = toErrorMessage(fallbackErr);
     throw new Error(
-      cobaltMsg ? `Cobalt: ${cobaltMsg}. Fallback: ${fallbackMsg}` : fallbackMsg
+      `InnerTube: ${toErrorMessage(innertubeErr)}. Fallback: ${toErrorMessage(fallbackErr)}`
     );
   }
 }
