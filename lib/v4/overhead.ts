@@ -39,7 +39,7 @@ export function shouldPolishResponse(input: {
   if (
     input.intent === "chat_simple" ||
     input.intent === "task" ||
-    input.intent === "notes" ||
+    input.intent === "vault" ||
     input.intent === "memory" ||
     input.intent === "weather" ||
     input.intent === "time"

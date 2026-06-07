@@ -21,6 +21,12 @@ import type { webSearch } from "./ai/tools/web-search";
 import type { Suggestion } from "./db/schema";
 import type { MediaDownloadProgressData } from "./media/types";
 import type { MemorySavedNotice } from "./memory/notice";
+import type {
+  VaultDetailNotice,
+  VaultListNotice,
+  VaultOpenNotice,
+  VaultUploadNotice,
+} from "./vault/notice";
 import type { RichContent, WebSearchOutput } from "./search/types";
 import type { TurnUsageEstimate } from "./v4/turn-usage";
 import type { WeatherPanelPayload } from "./weather/fetch";
@@ -51,7 +57,7 @@ type AssistantTools = ReturnType<typeof makeAssistantTools>;
 type saveMemoryTool = InferUITool<AssistantTools["saveMemory"]>;
 type getMemoryTool = InferUITool<AssistantTools["getMemory"]>;
 type searchDbTool = InferUITool<AssistantTools["searchDb"]>;
-type manageNotesTool = InferUITool<AssistantTools["manageNotes"]>;
+type manageVaultTool = InferUITool<AssistantTools["manageVault"]>;
 type updateTaskTool = InferUITool<AssistantTools["updateTask"]>;
 
 export type ChatTools = {
@@ -72,7 +78,7 @@ export type ChatTools = {
   saveMemory: saveMemoryTool;
   getMemory: getMemoryTool;
   searchDb: searchDbTool;
-  manageNotes: manageNotesTool;
+  manageVault: manageVaultTool;
   updateTask: updateTaskTool;
 };
 
@@ -132,6 +138,10 @@ export type CustomUIDataTypes = {
   };
   "turn-usage": TurnUsageEstimate;
   weather: WeatherPanelPayload;
+  "vault-list": VaultListNotice;
+  "vault-open": VaultOpenNotice;
+  "vault-detail": VaultDetailNotice;
+  "vault-upload": VaultUploadNotice;
 };
 
 export type ChatMessage = UIMessage<

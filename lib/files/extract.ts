@@ -24,7 +24,32 @@ function truncate(text: string): { text: string; truncated: boolean } {
   };
 }
 
-async function fetchBuffer(url: string): Promise<Buffer> {
+async function fetchBuffer(
+  url: string,
+  userId?: string
+): Promise<Buffer> {
+  if (userId) {
+    const { isVaultOpenUrl, readVaultAttachment } = await import(
+      "./vault-attachment"
+    );
+    if (isVaultOpenUrl(url)) {
+      const vault = await readVaultAttachment(userId, url);
+      if (vault) {
+        return vault.data;
+      }
+    }
+  }
+  const { isChatFileServeUrl, isPrivateR2Url, r2ChatKeyFromUrl } = await import(
+    "./chat-file-url"
+  );
+  if (isPrivateR2Url(url) || isChatFileServeUrl(url)) {
+    const key = r2ChatKeyFromUrl(url);
+    if (key) {
+      const { getR2Object } = await import("@/lib/storage/r2");
+      return getR2Object(key);
+    }
+  }
+
   const res = await fetch(url);
   if (!res.ok) throw new Error(`fetch ${url} -> ${res.status}`);
   const ab = await res.arrayBuffer();
@@ -104,11 +129,48 @@ async function extractText(
   return { text: buf.toString("utf8"), meta: {} };
 }
 
-export async function extractFile(input: {
-  url: string;
-  name: string;
-  mime: string;
-}): Promise<ExtractedFile> {
+export async function extractFromBuffer(
+  buf: Buffer,
+  mime: string,
+  name: string
+): Promise<{ text: string; meta: Record<string, unknown> } | null> {
+  const kind = classify(mime, name);
+  if (!isExtractable(kind)) {
+    return null;
+  }
+
+  let raw: { text: string; meta: Record<string, unknown> };
+  switch (kind) {
+    case "pdf":
+      raw = await extractPdf(buf);
+      break;
+    case "docx":
+      raw = await extractDocx(buf);
+      break;
+    case "xlsx":
+      raw = await extractXlsx(buf);
+      break;
+    case "csv":
+    case "json":
+    case "text":
+    case "code":
+      raw = await extractText(buf);
+      break;
+    default:
+      return null;
+  }
+  const { text } = truncate(raw.text);
+  return { text, meta: raw.meta };
+}
+
+export async function extractFile(
+  input: {
+    url: string;
+    name: string;
+    mime: string;
+  },
+  userId?: string
+): Promise<ExtractedFile> {
   const kind = classify(input.mime, input.name);
   const base: ExtractedFile = {
     url: input.url,
@@ -126,7 +188,7 @@ export async function extractFile(input: {
   }
 
   try {
-    const buf = await fetchBuffer(input.url);
+    const buf = await fetchBuffer(input.url, userId);
     base.bytes = buf.byteLength;
 
     let raw: { text: string; meta: Record<string, unknown> };
@@ -165,9 +227,10 @@ export async function extractFile(input: {
 }
 
 export async function extractAll(
-  inputs: { url: string; name: string; mime: string }[]
+  inputs: { url: string; name: string; mime: string }[],
+  userId?: string
 ): Promise<ExtractedFile[]> {
-  return Promise.all(inputs.map(extractFile));
+  return Promise.all(inputs.map((input) => extractFile(input, userId)));
 }
 
 /** Build a compact block to inject into the system prompt. */

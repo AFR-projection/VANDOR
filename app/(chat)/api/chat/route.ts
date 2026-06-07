@@ -154,8 +154,12 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
-    return new ChatbotError("bad_request:api").toResponse();
+  } catch (err) {
+    console.error("[chat] invalid request body:", err);
+    return new ChatbotError(
+      "bad_request:api",
+      "Format pesan tidak valid (cek lampiran file / teks kosong)."
+    ).toResponse();
   }
 
   try {
@@ -347,10 +351,33 @@ export async function POST(request: Request) {
           url: string;
         } => (p as { type?: string }).type === "file"
       )
-      .map((p) => ({ url: p.url, name: p.name, mime: p.mediaType }));
+      .map((p) => ({
+        url: p.url,
+        name: (p as { filename?: string; name?: string }).filename ??
+          (p as { name?: string }).name ??
+          "file",
+        mime: p.mediaType,
+      }));
+
+    const { getActiveVaultOpen } = await import("@/lib/vault/chat-context");
+    const activeVault = getActiveVaultOpen(uiMessages);
+    const isVaultSlash = /^\/?v\s+(list|get|del|up|open)\b/i.test(
+      lastUserText.trim()
+    );
+    if (
+      attachedFiles.length === 0 &&
+      activeVault &&
+      !isVaultSlash
+    ) {
+      attachedFiles.push({
+        url: activeVault.openUrl,
+        name: activeVault.file.name,
+        mime: activeVault.file.mimeType,
+      });
+    }
 
     const extractedFiles = attachedFiles.length
-      ? await extractAll(attachedFiles)
+      ? await extractAll(attachedFiles, session.user.id)
       : [];
     const filesBlock = buildFilesContextBlock(extractedFiles);
     const attachmentKinds: FileKind[] = attachedFiles.map((a) =>
@@ -630,7 +657,10 @@ export async function POST(request: Request) {
     // Replace `/storage/...` URLs (unreachable from external LLM providers)
     // with inline base64 data URLs so the model actually receives the bytes.
     const trimmedUi = trimUiMessagesForModel(uiMessages);
-    const inlinedMessages = await inlineLocalAttachments(trimmedUi);
+    const inlinedMessages = await inlineLocalAttachments(
+      trimmedUi,
+      session.user.id
+    );
     const modelMessages = await convertToModelMessages(inlinedMessages);
 
     let webSourcesPayload: WebSearchOutput | null = null;
@@ -837,7 +867,7 @@ export async function POST(request: Request) {
           weather: "Mengecek cuaca",
           time: "Mengecek waktu",
           task: "Mengelola task",
-          notes: "Mengelola catatan",
+          vault: "Berangkas pribadi",
           document: "Menyiapkan dokumen",
           code: "Menulis kode",
           image: "Memproses gambar",

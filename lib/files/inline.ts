@@ -2,6 +2,12 @@ import "server-only";
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  isChatFileServeUrl,
+  isPrivateR2Url,
+  r2ChatKeyFromUrl,
+} from "@/lib/files/chat-file-url";
+import { isVaultOpenUrl, readVaultAttachment } from "@/lib/files/vault-attachment";
 import type { ChatMessage } from "@/lib/types";
 
 const LOCAL_STORAGE_DIR = path.join(process.cwd(), "public", "storage");
@@ -62,8 +68,41 @@ async function localFileToDataUrl(
  *  - File is larger than MAX_INLINE_BYTES
  *  - File can't be read
  */
+async function chatFileToDataUrl(
+  url: string,
+  mime: string
+): Promise<string | null> {
+  const key = r2ChatKeyFromUrl(url);
+  if (!key) {
+    return null;
+  }
+  try {
+    const { getR2Object } = await import("@/lib/storage/r2");
+    const buf = await getR2Object(key);
+    if (buf.byteLength > MAX_INLINE_BYTES) {
+      return null;
+    }
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
+async function vaultFileToDataUrl(
+  userId: string,
+  url: string,
+  mime: string
+): Promise<string | null> {
+  const vault = await readVaultAttachment(userId, url);
+  if (!vault || vault.data.byteLength > MAX_INLINE_BYTES) {
+    return null;
+  }
+  return `data:${mime};base64,${vault.data.toString("base64")}`;
+}
+
 export async function inlineLocalAttachments(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  userId?: string
 ): Promise<ChatMessage[]> {
   const transformed = await Promise.all(
     messages.map(async (msg) => {
@@ -76,6 +115,30 @@ export async function inlineLocalAttachments(
           ) {
             return part;
           }
+
+          if (userId && isVaultOpenUrl(part.url)) {
+            const dataUrl = await vaultFileToDataUrl(
+              userId,
+              part.url,
+              part.mediaType
+            );
+            if (dataUrl) {
+              return { ...part, url: dataUrl };
+            }
+            return part;
+          }
+
+          if (
+            isPrivateR2Url(part.url) ||
+            isChatFileServeUrl(part.url)
+          ) {
+            const dataUrl = await chatFileToDataUrl(part.url, part.mediaType);
+            if (dataUrl) {
+              return { ...part, url: dataUrl };
+            }
+            return part;
+          }
+
           if (!isLocalStorageUrl(part.url)) {
             return part;
           }

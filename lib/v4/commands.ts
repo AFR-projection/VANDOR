@@ -3,10 +3,22 @@ import "server-only";
 import type { RequestHints } from "@/lib/ai/prompts";
 import { parseMediaSlash } from "@/lib/chat/media-slash";
 import {
-  createNote,
+  parseVaultDelete,
+  parseVaultGet,
+  parseVaultList,
+  parseVaultOpen,
+  parseVaultUploaded,
+} from "@/lib/chat/vault-slash";
+import {
+  vaultDetailDataPart,
+  vaultListDataPart,
+  vaultOpenDataPart,
+  vaultUploadDataPart,
+  vaultUrls,
+} from "@/lib/vault/notice";
+import {
   createTask,
   getChatSummary,
-  listNotes,
   listTasks,
 } from "@/lib/memory/assistant-db";
 import { memorySavedDataPart } from "@/lib/memory/notice";
@@ -21,13 +33,16 @@ export type DirectCommand =
   | { kind: "media" }
   | { kind: "cuaca"; hints: RequestHints; city?: string }
   | { kind: "waktu"; timezone?: string }
-  | { kind: "catatan_list" }
   | { kind: "task_list" }
   | { kind: "task_create"; title: string }
-  | { kind: "note_create"; title: string; content: string }
   | { kind: "memory_save"; content: string }
   | { kind: "cari"; query: string }
-  | { kind: "ringkas"; chatId: string };
+  | { kind: "ringkas"; chatId: string }
+  | { kind: "vault_list" }
+  | { kind: "vault_get"; query: string }
+  | { kind: "vault_del"; target: string }
+  | { kind: "vault_open"; fileId: string }
+  | { kind: "vault_uploaded"; fileId: string };
 
 export function parseDirectCommand(
   text: string,
@@ -39,6 +54,30 @@ export function parseDirectCommand(
 
   if (parseMediaSlash(trimmed)) {
     return { kind: "media" };
+  }
+
+  if (parseVaultList(trimmed)) {
+    return { kind: "vault_list" };
+  }
+
+  const vaultOpen = parseVaultOpen(trimmed);
+  if (vaultOpen) {
+    return { kind: "vault_open", fileId: vaultOpen.fileId };
+  }
+
+  const vaultUploaded = parseVaultUploaded(trimmed);
+  if (vaultUploaded) {
+    return { kind: "vault_uploaded", fileId: vaultUploaded.fileId };
+  }
+
+  const vaultGet = parseVaultGet(trimmed);
+  if (vaultGet) {
+    return { kind: "vault_get", query: vaultGet };
+  }
+
+  const vaultDel = parseVaultDelete(trimmed);
+  if (vaultDel) {
+    return { kind: "vault_del", target: vaultDel };
   }
 
   if (
@@ -76,10 +115,6 @@ export function parseDirectCommand(
     };
   }
 
-  if (/^\/?catatan\s*$/i.test(trimmed) || /daftar\s+catatan/i.test(trimmed)) {
-    return { kind: "catatan_list" };
-  }
-
   if (
     /^\/?todo\s*$/i.test(trimmed) ||
     /daftar\s+(?:task|tugas|todo)/i.test(trimmed)
@@ -102,16 +137,6 @@ export function parseDirectCommand(
     );
   if (taskCreate?.[1]?.trim() && taskCreate[1].trim().length >= 2) {
     return { kind: "task_create", title: taskCreate[1].trim().slice(0, 500) };
-  }
-
-  const judulMatch = trimmed.match(/^judul\s*:\s*(.+)/im);
-  const isiMatch = trimmed.match(/^isi\s*:\s*([\s\S]+)/im);
-  if (judulMatch && isiMatch) {
-    return {
-      kind: "note_create",
-      title: judulMatch[1].trim().slice(0, 200),
-      content: isiMatch[1].trim().slice(0, 8000),
-    };
   }
 
   if (isExplicitRememberRequest(trimmed)) {
@@ -214,21 +239,6 @@ export async function executeDirectCommand(
       };
     }
 
-    case "catatan_list": {
-      const notes = await listNotes(ctx.userId, 30);
-      if (notes.length === 0) {
-        return {
-          text: "Belum ada catatan. Pakai `/catat` atau tulis `Judul:` / `Isi:`.",
-          instantLabel: "Catatan",
-        };
-      }
-      const lines = notes.map((n, i) => `${i + 1}. **${n.title}**`);
-      return {
-        text: `**Catatan kamu** (${notes.length}):\n\n${lines.join("\n")}\n\nBuka: \`/baca <judul>\``,
-        instantLabel: "Catatan",
-      };
-    }
-
     case "task_list": {
       const tasks = await listTasks(ctx.userId, 25);
       if (tasks.length === 0) {
@@ -255,18 +265,6 @@ export async function executeDirectCommand(
       return {
         text: `Task disimpan: **${row.title}**`,
         instantLabel: "Task",
-      };
-    }
-
-    case "note_create": {
-      const row = await createNote({
-        userId: ctx.userId,
-        title: cmd.title,
-        content: cmd.content,
-      });
-      return {
-        text: `Catatan **${row.title}** tersimpan.`,
-        instantLabel: "Catatan",
       };
     }
 
@@ -302,6 +300,126 @@ export async function executeDirectCommand(
       return {
         text: `**Ringkasan chat**\n\n${row.summary}`,
         instantLabel: "Ringkas",
+      };
+    }
+
+    case "vault_list": {
+      const { listVaultFiles, countVaultFiles } = await import(
+        "@/lib/vault/queries"
+      );
+      const [files, total] = await Promise.all([
+        listVaultFiles({ userId: ctx.userId, limit: 30 }),
+        countVaultFiles(ctx.userId),
+      ]);
+      if (files.length === 0) {
+        return {
+          text: "Berangkas kosong. Upload dengan `/v up` lalu pilih file.",
+          instantLabel: "Berangkas",
+        };
+      }
+      return {
+        text: `**${total} file** di berangkas pribadi kamu. Lihat kartu di bawah untuk detail & aksi.`,
+        instantLabel: "Berangkas",
+        extraParts: [vaultListDataPart({ files, total })],
+      };
+    }
+
+    case "vault_open": {
+      const { getVaultFileById } = await import("@/lib/vault/queries");
+      const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
+      const row = await getVaultFileById({
+        userId: ctx.userId,
+        fileId: cmd.fileId,
+      });
+      if (!row) {
+        return {
+          text: "File berangkas tidak ditemukan. Cek ID dengan `/v list`.",
+          instantLabel: "Berangkas",
+        };
+      }
+      const file = toVaultSnapshot(row);
+      const urls = vaultUrls(file.id);
+      return {
+        text: `**${file.name}** dibuka dari berangkas. File aktif untuk sesi chat ini.`,
+        instantLabel: "Berangkas",
+        extraParts: [
+          vaultOpenDataPart({ file, openUrl: urls.openUrl, downloadUrl: urls.downloadUrl }),
+        ],
+      };
+    }
+
+    case "vault_uploaded": {
+      const { getVaultFileById } = await import("@/lib/vault/queries");
+      const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
+      const row = await getVaultFileById({
+        userId: ctx.userId,
+        fileId: cmd.fileId,
+      });
+      if (!row) {
+        return {
+          text: "Upload berangkas selesai, tapi metadata file belum bisa dimuat.",
+          instantLabel: "Berangkas",
+        };
+      }
+      const file = toVaultSnapshot(row);
+      return {
+        text: `**${file.name}** tersimpan terenkripsi di berangkas pribadi kamu.`,
+        instantLabel: "Berangkas",
+        extraParts: [vaultUploadDataPart({ file })],
+      };
+    }
+
+    case "vault_get": {
+      const { resolveVaultFileTarget } = await import("@/lib/vault/queries");
+      const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
+      const row = await resolveVaultFileTarget({
+        userId: ctx.userId,
+        target: cmd.query,
+      });
+      if (!row) {
+        return {
+          text: `File berangkas tidak ditemukan untuk “${cmd.query}”.`,
+          instantLabel: "Berangkas",
+        };
+      }
+      const file = toVaultSnapshot(row);
+      const urls = vaultUrls(file.id);
+      return {
+        text: `Metadata **${file.name}** — lihat kartu di bawah.`,
+        instantLabel: "Berangkas",
+        extraParts: [
+          vaultDetailDataPart({
+            file,
+            openUrl: urls.openUrl,
+            downloadUrl: urls.downloadUrl,
+          }),
+        ],
+      };
+    }
+
+    case "vault_del": {
+      const { resolveVaultFileTarget, deleteVaultFile } = await import(
+        "@/lib/vault/queries"
+      );
+      const row = await resolveVaultFileTarget({
+        userId: ctx.userId,
+        target: cmd.target,
+      });
+      if (!row) {
+        return {
+          text: `File vault tidak ditemukan untuk “${cmd.target}”.`,
+          instantLabel: "Vault",
+        };
+      }
+      const removed = await deleteVaultFile({
+        userId: ctx.userId,
+        fileId: row.id,
+      });
+      return {
+        text: removed
+          ? `File **${row.fileName}** dihapus dari Vault.`
+          : `Gagal menghapus **${row.fileName}**.`,
+        instantLabel: "Vault",
       };
     }
 

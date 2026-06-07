@@ -356,3 +356,86 @@ export const toolEvent = pgTable("ToolEvent", {
 });
 
 export type ToolEvent = InferSelectModel<typeof toolEvent>;
+
+export const vaultFileTypes = [
+  "image",
+  "video",
+  "audio",
+  "pdf",
+  "docx",
+  "pptx",
+  "xlsx",
+  "csv",
+  "text",
+  "code",
+  "json",
+  "archive",
+  "document",
+  "other",
+] as const;
+
+export type VaultFileType = (typeof vaultFileTypes)[number];
+
+export const vaultSourceTypes = [
+  "upload",
+  "chat",
+  "export",
+  "note",
+  "backup",
+] as const;
+
+export type VaultSourceType = (typeof vaultSourceTypes)[number];
+
+export const vaultAuditActions = [
+  "upload",
+  "download",
+  "delete",
+  "decrypt",
+  "search",
+] as const;
+
+export type VaultAuditAction = (typeof vaultAuditActions)[number];
+
+export const vaultFile = pgTable("VaultFile", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  fileName: text("fileName").notNull(),
+  fileType: varchar("fileType", { length: 32 }).notNull(),
+  mimeType: varchar("mimeType", { length: 128 }).notNull(),
+  fileSize: integer("fileSize").notNull(),
+  r2Key: text("r2Key").notNull(),
+  encrypted: boolean("encrypted").notNull().default(true),
+  encIv: text("encIv").notNull(),
+  encTag: text("encTag").notNull(),
+  summary: text("summary"),
+  tags: json("tags").$type<string[]>().default([]),
+  extractedText: text("extractedText"),
+  sourceType: varchar("sourceType", { length: 32 }).notNull().default("upload"),
+  sourceChatId: uuid("sourceChatId"),
+  sourceMessageId: uuid("sourceMessageId"),
+  linkedMemoryId: uuid("linkedMemoryId"),
+  metadata: json("metadata"),
+  storageBackend: varchar("storageBackend", { length: 16 })
+    .notNull()
+    .default("r2"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type VaultFile = InferSelectModel<typeof vaultFile>;
+
+export const vaultAuditLog = pgTable("VaultAuditLog", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  fileId: uuid("fileId").references(() => vaultFile.id, { onDelete: "set null" }),
+  action: varchar("action", { length: 32 }).notNull(),
+  detail: json("detail"),
+  ip: text("ip"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type VaultAuditLog = InferSelectModel<typeof vaultAuditLog>;

@@ -23,18 +23,16 @@ describe("detectWebSearchNeed", () => {
     assert.equal(r.needed, false);
   });
 
-  it("skips personal note with biaya transfer", () => {
+  it("skips vault upload with biaya transfer", () => {
     const r = detectWebSearchNeed(
-      "Judul: ayam petelur\nIsi: username BDR@ biaya transfer 50rb rekening BCA"
+      "simpan ke berangkas: username BDR@ biaya transfer 50rb rekening BCA"
     );
     assert.equal(r.needed, false);
     assert.equal(r.reason, "local_task");
   });
 
-  it("skips catat slash-style note", () => {
-    const r = detectWebSearchNeed(
-      "simpan catatan usaha ayam petelur modal 5 juta biaya pakan bulanan"
-    );
+  it("skips berangkas slash command", () => {
+    const r = detectWebSearchNeed("/v list");
     assert.equal(r.needed, false);
   });
 
@@ -46,7 +44,9 @@ describe("detectWebSearchNeed", () => {
   });
 
   it("does not search bare biaya without live context", () => {
-    const r = detectWebSearchNeed("catat biaya operasional bulan ini 2 juta");
+    const r = detectWebSearchNeed(
+      "upload ke berangkas biaya operasional bulan ini 2 juta"
+    );
     assert.equal(r.needed, false);
   });
 
@@ -71,11 +71,9 @@ describe("detectWebSearchNeed", () => {
     assert.equal(r.reason, "link_request");
   });
 
-  it("disables web search tool for local notes", () => {
+  it("disables web search tool for local vault tasks", () => {
     assert.equal(
-      shouldDisableWebSearchTool(
-        "Judul: ayam petelur\nIsi: BDR@ biaya transfer"
-      ),
+      shouldDisableWebSearchTool("simpan ke berangkas file kontrak BDR@"),
       true
     );
     assert.equal(

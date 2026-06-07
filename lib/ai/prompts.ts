@@ -4,7 +4,7 @@ import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
-import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
+import { VAULT_SKILL_SYSTEM_HINT } from "@/lib/chat/vault-slash";
 import { generalAnswerQualityInstructions } from "@/lib/search/context";
 import type { ResponseMode } from "@/lib/search/detect";
 import {
@@ -91,9 +91,9 @@ Tool guide:
 - \`getLocation\` — lokasi perkiraan dari IP.
 - \`getWeather\` — cuaca real-time (OpenWeatherMap; fallback Open-Meteo).
 - \`showMap\` — peta interaktif (OpenStreetMap / Nominatim).
-- \`webSearch\` — data terkini (skor, harga, berita). Wajib dipanggil jika user minta info live dan belum ada di konteks. Jangan pernah bilang "tidak punya akses real-time" tanpa memanggil webSearch dulu. Tool ini **tidak tersedia** saat user menyimpan catatan/memori — jangan cari web untuk topik catatan.
+- \`webSearch\` — data terkini (skor, harga, berita). Wajib dipanggil jika user minta info live dan belum ada di konteks. Jangan pernah bilang "tidak punya akses real-time" tanpa memanggil webSearch dulu. Tool ini **tidak tersedia** saat user menyimpan berangkas/memori — jangan cari web untuk topik pribadi lokal.
 - \`saveMemory\` / \`getMemory\` / \`searchDb\` — memori jangka panjang (Neon + pgvector).
-- \`manageNotes\` — catatan pribadi (buat, list judul, buka isi, update, hapus). Slash: /catat /catatan /baca.
+- \`manageVault\` — berangkas pribadi terenkripsi (terpisah dari upload chat 📎): list/search metadata, tag, hapus. **Tidak pernah** raw file. User simpan via \`/v up\`. Baca isi file hanya jika user \`/v open <id>\` di chat aktif.
 - \`updateTask\` — task (create, list, update status).
 - \`createDocument\` / \`editDocument\` / \`updateDocument\` — artifact panel (teks/kode/sheet).
 - \`requestSuggestions\` — saran edit untuk dokumen artifact yang sudah ada.
@@ -114,7 +114,7 @@ images are attached).
 Tool usage rules:
 - Prefer tools over saying "I don't know" or "I can't access".
 - **Skor / harga / berita live:** gunakan konteks WEB SEARCH di bawah, atau panggil \`webSearch\`. Jangan menolak dengan alasan tidak ada akses internet.
-- **Catatan / memori / task:** jangan panggil \`webSearch\` — pakai \`manageNotes\`, \`saveMemory\`, \`updateTask\` saja. Jangan tampilkan kartu SUMBER untuk simpan catatan.
+- **Berangkas / memori / task:** jangan panggil \`webSearch\` — pakai \`manageVault\`, \`saveMemory\`, \`updateTask\` saja. Jangan tampilkan kartu SUMBER untuk simpan data pribadi.
 - **PDF/DOCX/XLSX:** panggil \`createPdf\` / \`createDocx\` / \`createSpreadsheet\` — butuh Vercel Blob atau R2 di server; jika tool mengembalikan error storage, jelaskan ke user cara set \`BLOB_READ_WRITE_TOKEN\` atau R2.
 - Web search may already be injected in your context — if so, do NOT call \`webSearch\` again; follow the answer instructions given there (clean prose with inline [n] citations; the app renders source cards, image galleries, and follow-up questions for you — never paste raw URLs, link lists, or image markdown).
 - When no web search context: answer naturally, clearly, like ChatGPT — structured paragraphs, bullets when helpful.
@@ -125,9 +125,10 @@ Tool usage rules:
 - For createPdf/createDocx/createSpreadsheet, also use when the user wants an
   updated export after editing attached spreadsheet/PDF content.
 - For memory: use \`saveMemory\` when the user says ingat/remember or shares durable facts. Use \`searchDb\` before claiming you forgot something. Similar memories merge automatically in the database.
+- Upload chat biasa (📎) ≠ Vault. Lampiran chat untuk analisis langsung; Vault (\`/v up\`) untuk penyimpanan jangka panjang terenkripsi.
 - Weave recalled memory naturally — e.g. "Kalau tidak salah kamu pernah bilang…" — without dumping everything at once.
 
-${NOTES_SKILL_SYSTEM_HINT}
+${VAULT_SKILL_SYSTEM_HINT}
 
 ${MEDIA_SLASH_HINT}
 

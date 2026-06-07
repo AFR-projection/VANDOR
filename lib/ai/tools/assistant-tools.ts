@@ -1,22 +1,22 @@
 import { tool } from "ai";
 import { z } from "zod";
-import {
-  createNote,
-  createTask,
-  deleteNote,
-  getNoteById,
-  getNoteByTitle,
-  listNotes,
-  listTasks,
-  updateNote,
-  updateTask,
-} from "@/lib/memory/assistant-db";
+import { createTask, listTasks, updateTask } from "@/lib/memory/assistant-db";
 import {
   getMemoryById,
   listRecentMemories,
   saveMemory,
   searchAllUserData,
 } from "@/lib/memory/queries";
+import { vaultFileTypes } from "@/lib/db/schema";
+import {
+  deleteVaultFile,
+  getVaultFileById,
+  listVaultFiles,
+  resolveVaultFileTarget,
+  searchVaultFiles,
+  updateVaultFileMeta,
+} from "@/lib/vault/queries";
+import { toVaultSnapshot } from "@/lib/vault/snapshot";
 
 export function makeAssistantTools(userId: string, chatId: string) {
   const saveMemoryTool = tool({
@@ -61,7 +61,7 @@ export function makeAssistantTools(userId: string, chatId: string) {
 
   const searchDbTool = tool({
     description:
-      "Semantic search across user memories, notes, and tasks. Use when user asks 'pernah bahas?', 'ingat gak?', or needs past context.",
+      "Semantic search across user memories, vault metadata, and tasks. Use when user asks 'pernah bahas?', 'ingat gak?', or needs past context.",
     inputSchema: z.object({
       query: z.string().min(2),
       limit: z.number().int().min(1).max(10).optional(),
@@ -71,88 +71,137 @@ export function makeAssistantTools(userId: string, chatId: string) {
     },
   });
 
-  const manageNotesTool = tool({
+  const vaultTypeEnum = z.enum(
+    vaultFileTypes as unknown as [string, ...string[]]
+  );
+
+  const manageVaultTool = tool({
     description:
-      "Personal notes (catatan): create, list titles only, get full note by title/id, update, delete. Use for /catat, 'catatan saya', or when user picks a title from the list.",
+      "Berangkas pribadi terenkripsi (terpisah dari upload chat). Hanya metadata: id, name, type, summary, tags — tanpa isi file. Simpan via /v up. Buka isi hanya jika user /v open <id>.",
     inputSchema: z.object({
-      action: z.enum(["create", "list", "get", "update", "delete"]),
-      title: z.string().min(1).max(200).optional(),
-      content: z.string().min(1).max(8000).optional(),
-      noteId: z.string().uuid().optional(),
-      limit: z.number().int().min(1).max(50).optional(),
+      action: z.enum(["list", "search", "get", "tag", "delete"]),
+      query: z.string().min(1).max(500).optional(),
+      fileId: z.string().uuid().optional(),
+      fileType: vaultTypeEnum.optional(),
+      tag: z.string().max(64).optional(),
+      tags: z.array(z.string().max(64)).max(20).optional(),
+      summary: z.string().max(500).optional(),
+      limit: z.number().int().min(1).max(20).optional(),
     }),
-    execute: async ({ action, title, content, noteId, limit }) => {
+    execute: async ({
+      action,
+      query,
+      fileId,
+      fileType,
+      tag,
+      tags,
+      summary,
+      limit,
+    }) => {
+      const resolveId = async (): Promise<string | null> => {
+        if (fileId) return fileId;
+        if (query?.trim()) {
+          const row = await resolveVaultFileTarget({
+            userId,
+            target: query.trim(),
+          });
+          return row?.id ?? null;
+        }
+        return null;
+      };
+
       if (action === "list") {
-        const notes = await listNotes(userId, limit ?? 30);
+        const files = await listVaultFiles({
+          userId,
+          limit: limit ?? 20,
+          fileType: fileType as Parameters<typeof listVaultFiles>[0]["fileType"],
+          tag,
+          search: query,
+        });
         return {
-          count: notes.length,
-          notes: notes.map((n, i) => ({
-            index: i + 1,
-            id: n.id,
-            title: n.title,
-            updatedAt: n.updatedAt,
-          })),
+          ok: true,
+          count: files.length,
+          files,
+          hint:
+            files.length === 0
+              ? "Vault kosong. User bisa /v up untuk upload."
+              : "Metadata saja. Buka isi: /v open <id>",
+        };
+      }
+
+      if (action === "search") {
+        const q = query?.trim();
+        if (!q || q.length < 2) {
+          return {
+            ok: false,
+            error: "Query search minimal 2 karakter",
+          };
+        }
+        const result = await searchVaultFiles({
+          userId,
+          query: q,
+          limit: limit ?? 10,
+          fileType: fileType as Parameters<
+            typeof searchVaultFiles
+          >[0]["fileType"],
+        });
+        return {
+          ok: true,
+          ...result,
+          hint: "Hanya metadata. Isi file tidak diekspos ke AI.",
         };
       }
 
       if (action === "get") {
-        const note =
-          noteId && !title
-            ? await getNoteById({ userId, noteId })
-            : title
-              ? await getNoteByTitle({ userId, titleQuery: title })
-              : null;
-        if (!note) {
-          return { ok: false, error: "Catatan tidak ditemukan" };
+        const targetId = await resolveId();
+        if (!targetId) {
+          return {
+            ok: false,
+            error: "Butuh fileId atau query (nama/id file)",
+          };
+        }
+        const file = await getVaultFileById({ userId, fileId: targetId });
+        if (!file) {
+          return { ok: false, error: "File tidak ditemukan di berangkas" };
         }
         return {
           ok: true,
-          note: {
-            id: note.id,
-            title: note.title,
-            content: note.content,
-            updatedAt: note.updatedAt,
-          },
+          file: toVaultSnapshot(file),
+          hint: `User buka untuk AI: /v open ${file.id}`,
         };
       }
 
-      if (action === "create") {
-        if (!title?.trim() || !content?.trim()) {
-          return { ok: false, error: "Judul dan isi wajib untuk create" };
+      if (action === "tag") {
+        const targetId = await resolveId();
+        if (!targetId) {
+          return { ok: false, error: "Butuh fileId atau query untuk tag" };
         }
-        const note = await createNote({
+        const file = await updateVaultFileMeta({
           userId,
-          title: title.trim(),
-          content: content.trim(),
+          fileId: targetId,
+          summary,
+          tags,
         });
-        return { ok: true, message: `Catatan "${note.title}" disimpan.`, note };
-      }
-
-      if (action === "update") {
-        if (!noteId) {
-          return { ok: false, error: "noteId wajib untuk update" };
-        }
-        const note = await updateNote({
-          userId,
-          noteId,
-          title: title?.trim(),
-          content: content?.trim(),
-        });
-        return { ok: Boolean(note), note };
+        return {
+          ok: Boolean(file),
+          file,
+          error: file ? undefined : "Gagal memperbarui tag/summary",
+        };
       }
 
       if (action === "delete") {
-        if (!noteId) {
-          return { ok: false, error: "noteId wajib untuk delete" };
+        const targetId = await resolveId();
+        if (!targetId) {
+          return { ok: false, error: "Butuh fileId atau query untuk hapus" };
         }
-        const removed = await deleteNote({ userId, noteId });
+        const removed = await deleteVaultFile({ userId, fileId: targetId });
         return {
-          ok: Boolean(removed),
-          deleted: removed ? { id: removed.id, title: removed.title } : null,
+          ok: removed,
+          error: removed ? undefined : "Gagal menghapus file",
         };
       }
 
-      return { ok: false, error: "Invalid action" };
+      return { ok: false, error: "Aksi vault tidak valid" };
     },
   });
 
@@ -185,7 +234,7 @@ export function makeAssistantTools(userId: string, chatId: string) {
     saveMemory: saveMemoryTool,
     getMemory: getMemoryTool,
     searchDb: searchDbTool,
-    manageNotes: manageNotesTool,
+    manageVault: manageVaultTool,
     updateTask: updateTaskTool,
   };
 }

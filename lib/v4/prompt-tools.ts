@@ -1,6 +1,6 @@
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
-import { NOTES_SKILL_SYSTEM_HINT } from "@/lib/chat/slash-skills";
+import { VAULT_SKILL_SYSTEM_HINT } from "@/lib/chat/vault-slash";
 
 const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   getCurrentTime: "waktu/tanggal",
@@ -10,8 +10,8 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   webSearch: "data live (jika belum di konteks)",
   saveMemory: "simpan memori",
   getMemory: "ambil memori",
-  searchDb: "cari memori/notes/tasks",
-  manageNotes: "catatan pribadi",
+  searchDb: "cari memori/berangkas/tasks",
+  manageVault: "berangkas file terenkripsi",
   updateTask: "task/todo",
   createDocument: "artifact teks/kode/sheet",
   editDocument: "edit artifact",
@@ -44,7 +44,7 @@ No tools enabled for this turn — answer from context only. Do not invent tool 
     `## Tools aktif (VANDOR v4 — hanya ${activeTools.length} tool ini)
 Jangan panggil tool di luar daftar. UI menampilkan kartu/map/sumber — jangan ulang data panjang di chat.`,
     ...lines,
-    "- Catatan/memori/task: jangan webSearch.",
+    "- Berangkas/memori/task: jangan webSearch.",
     "- Web search sudah di konteks → jangan panggil webSearch lagi.",
     ...(activeTools.includes("webSearch")
       ? [
@@ -53,8 +53,8 @@ Jangan panggil tool di luar daftar. UI menampilkan kartu/map/sumber — jangan u
       : []),
   ];
 
-  if (activeTools.includes("manageNotes")) {
-    extras.push(NOTES_SKILL_SYSTEM_HINT);
+  if (activeTools.includes("manageVault")) {
+    extras.push(VAULT_SKILL_SYSTEM_HINT);
   }
   if (activeTools.includes("downloadMedia")) {
     extras.push(MEDIA_SLASH_HINT);

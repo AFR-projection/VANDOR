@@ -12,7 +12,7 @@ export const SPECIALIST_AGENTS: AgentSpec[] = [
       "saveMemory",
       "getMemory",
       "searchDb",
-      "manageNotes",
+      "manageVault",
       "updateTask",
     ],
     memoryScope: "long-term",

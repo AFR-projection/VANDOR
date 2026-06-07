@@ -2,11 +2,11 @@
 
 import {
   BombIcon,
-  BookMarkedIcon,
   BrainIcon,
   ClockIcon,
   CloudSunIcon,
   DownloadIcon,
+  FolderLockIcon,
   ListIcon,
   ListTodoIcon,
   MusicIcon,
@@ -14,13 +14,13 @@ import {
   PenLineIcon,
   PenSquareIcon,
   SearchIcon,
-  StickyNoteIcon,
   Trash2Icon,
   VideoIcon,
   XIcon,
 } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { SLASH_SKILLS } from "@/lib/chat/slash-skills";
+import { VAULT_SLASH_SKILLS } from "@/lib/chat/vault-slash";
 import { cn } from "@/lib/utils";
 
 export type SlashCommand = {
@@ -79,9 +79,6 @@ const UI_COMMANDS: SlashCommand[] = [
 ];
 
 const SKILL_ICONS: Record<string, ReactNode> = {
-  catat: <StickyNoteIcon className="size-3.5" />,
-  catatan: <BookMarkedIcon className="size-3.5" />,
-  baca: <BookMarkedIcon className="size-3.5" />,
   todo: <ListTodoIcon className="size-3.5" />,
   ingat: <BrainIcon className="size-3.5" />,
   cari: <SearchIcon className="size-3.5" />,
@@ -92,12 +89,29 @@ const SKILL_ICONS: Record<string, ReactNode> = {
   ytv: <VideoIcon className="size-3.5" />,
   yts: <MusicIcon className="size-3.5" />,
   ig: <DownloadIcon className="size-3.5" />,
+  "v up": <FolderLockIcon className="size-3.5" />,
+  "v list": <FolderLockIcon className="size-3.5" />,
+  "v get": <FolderLockIcon className="size-3.5" />,
+  "v open": <FolderLockIcon className="size-3.5" />,
+  "v del": <FolderLockIcon className="size-3.5" />,
 };
+
+const VAULT_COMMANDS: SlashCommand[] = VAULT_SLASH_SKILLS.map((skill) => ({
+  name: skill.name,
+  description: skill.description,
+  icon: SKILL_ICONS[skill.name] ?? (
+    <FolderLockIcon className="size-3.5" />
+  ),
+  action:
+    skill.kind === "ui" ? (skill.action ?? skill.name) : `skill:${skill.name}`,
+  insertText: skill.insertText,
+  sendText: skill.sendText,
+}));
 
 const SKILL_COMMANDS: SlashCommand[] = SLASH_SKILLS.map((skill) => ({
   name: skill.name,
   description: skill.description,
-  icon: SKILL_ICONS[skill.name] ?? <StickyNoteIcon className="size-3.5" />,
+  icon: SKILL_ICONS[skill.name] ?? <ListTodoIcon className="size-3.5" />,
   action:
     skill.kind === "ui" ? (skill.action ?? skill.name) : `skill:${skill.name}`,
   insertText: skill.insertText,
@@ -105,6 +119,7 @@ const SKILL_COMMANDS: SlashCommand[] = SLASH_SKILLS.map((skill) => ({
 }));
 
 export const slashCommands: SlashCommand[] = [
+  ...VAULT_COMMANDS,
   ...SKILL_COMMANDS,
   ...UI_COMMANDS,
 ];

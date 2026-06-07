@@ -92,6 +92,13 @@
       "when": 1780785000000,
       "tag": "0012_activity_log_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780900000000,
+      "tag": "0013_vault_storage",
+      "breakpoints": true
     }
   ]
 }

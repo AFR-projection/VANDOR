@@ -1,5 +1,5 @@
 /**
- * Slash skills (/catat, /todo, …) — prompt templates & one-shot actions for VANDOR chat.
+ * Slash skills (/todo, /ingat, …) — prompt templates & one-shot actions for VANDOR chat.
  */
 
 export type SlashSkillKind = "ui" | "insert" | "send";
@@ -17,29 +17,6 @@ export type SlashSkillDef = {
 };
 
 export const SLASH_SKILLS: SlashSkillDef[] = [
-  {
-    name: "catat",
-    description: "Simpan catatan (judul + isi) ke database pribadi",
-    kind: "insert",
-    insertText: `Judul: 
-
-Isi:
-
-(Simpan sebagai catatan pribadi — setelah kamu isi judul & isi di atas, kirim pesan ini.)`,
-  },
-  {
-    name: "catatan",
-    description: "Lihat daftar judul catatan kamu",
-    kind: "send",
-    sendText: "/catatan",
-  },
-  {
-    name: "baca",
-    description: "Buka satu catatan berdasarkan judul",
-    kind: "insert",
-    insertText:
-      "Buka catatan dengan judul: \n\n(Tulis judul persis atau sebagian — VANDOR akan menampilkan judul lengkap + isi penuh.)",
-  },
   {
     name: "todo",
     description: "Buat atau lihat daftar tugas",
@@ -105,12 +82,3 @@ Isi:
     insertText: "/ig ",
   },
 ];
-
-/** Hint for the model when user message matches /catat workflow */
-export const NOTES_SKILL_SYSTEM_HINT = `
-## Catatan pribadi (/catat, /catatan, /baca)
-- Simpan: \`manageNotes\` action \`create\` — wajib judul + isi. User bisa kirim format "Judul:" / "Isi:" atau paragraf bebas (ambil judul baris pertama).
-- Daftar: action \`list\` — tampilkan **hanya nomor + judul**. Jangan dump isi penuh kecuali user minta satu judul.
-- Buka satu: action \`get\` dengan \`title\` atau \`noteId\` — tampilkan **judul lengkap + isi penuh**.
-- Update/hapus: action \`update\` / \`delete\` bila user minta ubah atau hapus catatan.
-`.trim();

@@ -25,7 +25,7 @@ export function applyV4ModelBias(input: {
     "time",
     "weather",
     "task",
-    "notes",
+    "vault",
     "memory",
     "map",
   ];

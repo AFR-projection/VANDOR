@@ -11,6 +11,7 @@ import {
   isServerlessRuntime,
   storageSetupHint,
 } from "@/lib/storage/config";
+import { chatFileServeUrl } from "@/lib/files/chat-file-url";
 import { putR2File } from "@/lib/storage/r2";
 
 export type StoredFile = {
@@ -80,7 +81,7 @@ export async function putFile(
   if (hasR2Storage()) {
     const result = await putR2File(filename, buf, contentType, addSuffix);
     return {
-      url: result.url,
+      url: chatFileServeUrl(result.pathname),
       pathname: result.pathname,
       backend: "r2",
     };

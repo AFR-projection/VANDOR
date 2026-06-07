@@ -16,6 +16,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast as notify } from "@/components/chat/toast";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
@@ -24,6 +25,8 @@ import { OpenRouterModelPicker } from "@/components/chat/openrouter-model-picker
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ModelCapabilities } from "@/lib/ai/models";
 import { isBareMediaSlash, parseMediaSlash } from "@/lib/chat/media-slash";
+import { isBareVaultUp } from "@/lib/chat/vault-slash";
+import { resolveChatFileDisplayUrl } from "@/lib/files/chat-file-url";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -194,12 +197,16 @@ function PureMultimodalInput({
           },
         });
         break;
+      case "vault_upload":
+        vaultFileInputRef.current?.click();
+        break;
       default:
         break;
     }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const vaultFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
@@ -219,6 +226,7 @@ function PureMultimodalInput({
           type: "file" as const,
           url: attachment.url,
           name: attachment.name,
+          filename: attachment.name,
           mediaType: attachment.contentType,
         })),
         {
@@ -246,6 +254,48 @@ function PureMultimodalInput({
     chatId,
   ]);
 
+  const uploadVaultFile = useCallback(
+    async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vault/upload`,
+          { method: "POST", body: formData }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const fileId = data.vaultFileId ?? data.file?.id;
+          notify({
+            type: "success",
+            description: `Tersimpan terenkripsi di Berangkas: ${data.file?.name ?? file.name}`,
+          });
+          if (fileId) {
+            sendMessage({
+              role: "user",
+              parts: [{ type: "text", text: `/v uploaded ${fileId}` }],
+            });
+          }
+          return true;
+        }
+        const { error } = await response.json();
+        notify({
+          type: "error",
+          description: error ?? "Upload berangkas gagal",
+        });
+      } catch {
+        notify({
+          type: "error",
+          description: "Upload berangkas gagal — cek R2 & koneksi",
+        });
+      }
+      return false;
+    },
+    [sendMessage]
+  );
+
   const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -264,7 +314,7 @@ function PureMultimodalInput({
         const { url, pathname, contentType } = data;
 
         return {
-          url,
+          url: resolveChatFileDisplayUrl(url),
           name: pathname,
           contentType,
         };
@@ -300,6 +350,19 @@ function PureMultimodalInput({
       }
     },
     [setAttachments, uploadFile]
+  );
+
+  const handleVaultFileChange = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files || []);
+      for (const file of files) {
+        await uploadVaultFile(file);
+      }
+      if (vaultFileInputRef.current) {
+        vaultFileInputRef.current.value = "";
+      }
+    },
+    [uploadVaultFile]
   );
 
   const handlePaste = useCallback(
@@ -403,6 +466,15 @@ function PureMultimodalInput({
         tabIndex={-1}
         type="file"
       />
+      <input
+        accept="image/*,video/*,audio/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/*,application/json,application/zip,application/x-zip-compressed,application/x-7z-compressed,application/x-rar-compressed,application/x-tar,application/gzip,.txt,.md,.csv,.json,.yaml,.yml,.toml,.ini,.log,.sql,.html,.css,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cpp,.cs,.php,.sh"
+        className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
+        multiple
+        onChange={handleVaultFileChange}
+        ref={vaultFileInputRef}
+        tabIndex={-1}
+        type="file"
+      />
 
       <div className="relative">
         {slashOpen && (
@@ -417,7 +489,7 @@ function PureMultimodalInput({
 
       <PromptInput
         className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:border-primary/25 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
-        onSubmit={() => {
+        onSubmit={async () => {
           const trySubmit = () => {
             if (status === "ready" || status === "error") {
               submitForm();
@@ -437,12 +509,18 @@ function PureMultimodalInput({
               return;
             }
 
+            if (isBareVaultUp(input)) {
+              vaultFileInputRef.current?.click();
+              setInput("");
+              return;
+            }
+
             if (parseMediaSlash(input)) {
               trySubmit();
               return;
             }
 
-            // Satu kata saja: /cuaca, /catatan, /tt (menu) — jalankan skill UI
+            // Satu kata saja: /cuaca, /v list, /tt (menu) — jalankan skill UI
             if (!trimmed.includes(" ")) {
               const cmd = slashCommands.find((c) => c.name === firstToken);
               if (cmd) {

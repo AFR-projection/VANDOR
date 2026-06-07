@@ -6,7 +6,7 @@ import { detectWebSearchNeed } from "@/lib/search/detect";
 export type VandorIntent =
   | "command"
   | "task"
-  | "notes"
+  | "vault"
   | "memory"
   | "weather"
   | "time"
@@ -30,8 +30,8 @@ export type ResolvedIntent = {
 const TASK_RE =
   /\b(todo|task|tugas|to-?do)\b|buat(?:kan)?\s+(?:task|tugas|todo)|tambah(?:kan)?\s+(?:task|tugas)|daftar\s+(?:task|tugas|todo)|list\s+task/i;
 
-const NOTES_RE =
-  /\b(catatan|note|memo)\b|\/catat|judul\s*:|\/catatan|\/baca|daftar\s+catatan|list\s+catatan/i;
+const VAULT_RE =
+  /\b(berangkas|vault)\b|\/v\s+(up|list|get|open|del|uploaded)\b|daftar\s+file\s+berangkas/i;
 
 const MEMORY_RE =
   /\b(ingat|jangan lupa|remember|save\s+memory|simpan\s+ke\s+memori)\b/i;
@@ -95,11 +95,11 @@ export function resolveVandorIntent(input: {
     };
   }
 
-  if (NOTES_RE.test(text) && text.length < 500) {
+  if (VAULT_RE.test(text) && text.length < 500) {
     return {
-      intent: "notes",
+      intent: "vault",
       needsLargeModel: false,
-      bypassLlm: Boolean(text.match(/^judul\s*:/im) || /^\/catat/i.test(text)),
+      bypassLlm: /^\/?v\s+(list|uploaded|open)\b/i.test(text),
     };
   }
 

@@ -322,25 +322,35 @@ export async function searchAllUserData({
   limit?: number;
 }): Promise<{
   memories: MemoryRecord[];
-  notes: Array<{ id: string; title: string; content: string }>;
+  vaultFiles: Array<{
+    id: string;
+    name: string;
+    type: string;
+    summary: string | null;
+    tags: string[];
+  }>;
   tasks: Array<{ id: string; title: string; status: string }>;
 }> {
-  const [memories, notes, tasks] = await Promise.all([
+  const [memories, vaultResult, tasks] = await Promise.all([
     searchMemories({ userId, query, limit, minSimilarity: 0.55 }),
-    import("./assistant-db").then((m) => m.listNotes(userId, limit)),
+    import("@/lib/vault/queries").then((m) =>
+      m.searchVaultFiles({ userId, query, limit })
+    ),
     import("./assistant-db").then((m) => m.listTasks(userId, limit)),
   ]);
 
   const q = query.toLowerCase();
-  const filteredNotes = notes.filter(
-    (n) =>
-      n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)
-  );
   const filteredTasks = tasks.filter((t) => t.title.toLowerCase().includes(q));
 
   return {
     memories,
-    notes: filteredNotes.slice(0, limit),
+    vaultFiles: vaultResult.files.map((f) => ({
+      id: f.id,
+      name: f.name,
+      type: f.type,
+      summary: f.summary,
+      tags: f.tags,
+    })),
     tasks: filteredTasks.slice(0, limit),
   };
 }

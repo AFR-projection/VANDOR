@@ -11,7 +11,7 @@ export const VANDOR_CHAT_TOOLS = [
   "saveMemory",
   "getMemory",
   "searchDb",
-  "manageNotes",
+  "manageVault",
   "updateTask",
   "createDocument",
   "editDocument",

@@ -29,6 +29,9 @@ tsconfig.tsbuildinfo
 # VANDOR local file storage (used when no BLOB_READ_WRITE_TOKEN)
 /public/storage/
 
+# Encrypted vault blobs (local dev fallback)
+/data/vault/
+
 # YouTube session (jangan commit)
 /cookies/youtube.txt
 

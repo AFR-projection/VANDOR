@@ -25,6 +25,16 @@ import {
   getMediaDownloadProgressFromMessage,
   MediaDownloadProgressCard,
 } from "./media-download-progress";
+import {
+  getVaultDetailFromMessage,
+  getVaultListFromMessage,
+  getVaultOpenFromMessage,
+  getVaultUploadFromMessage,
+  VaultDetailCard,
+  VaultListCard,
+  VaultOpenCard,
+  VaultUploadSuccessCard,
+} from "./vault-cards";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageTechRail } from "./message-tech-rail";
@@ -91,6 +101,10 @@ const PurePreviewMessage = ({
   const mediaProgress = isAssistant
     ? getMediaDownloadProgressFromMessage(message)
     : null;
+  const vaultList = isAssistant ? getVaultListFromMessage(message) : null;
+  const vaultOpen = isAssistant ? getVaultOpenFromMessage(message) : null;
+  const vaultDetail = isAssistant ? getVaultDetailFromMessage(message) : null;
+  const vaultUpload = isAssistant ? getVaultUploadFromMessage(message) : null;
   const instantStatus = isAssistant
     ? message.parts.find(
         (p) =>
@@ -215,7 +229,11 @@ const PurePreviewMessage = ({
       type === "data-chat-title" ||
       type === "data-memory-saved" ||
       type === "data-memory-recall" ||
-      type === "data-turn-usage"
+      type === "data-turn-usage" ||
+      type === "data-vault-list" ||
+      type === "data-vault-open" ||
+      type === "data-vault-detail" ||
+      type === "data-vault-upload"
     ) {
       return null;
     }
@@ -677,7 +695,7 @@ const PurePreviewMessage = ({
       type === "tool-saveMemory" ||
       type === "tool-getMemory" ||
       type === "tool-searchDb" ||
-      type === "tool-manageNotes" ||
+      type === "tool-manageVault" ||
       type === "tool-updateTask" ||
       type === "tool-downloadMedia"
     ) {
@@ -686,7 +704,7 @@ const PurePreviewMessage = ({
         "tool-saveMemory": "Menyimpan memori",
         "tool-getMemory": "Mengambil memori",
         "tool-searchDb": "Mencari memori & data",
-        "tool-manageNotes": "Catatan pribadi",
+        "tool-manageVault": "Berangkas pribadi",
         "tool-updateTask": "Mengelola task",
         "tool-downloadMedia": "Unduh media",
       };
@@ -746,6 +764,10 @@ const PurePreviewMessage = ({
           progress={mediaProgress}
         />
       )}
+      {vaultList && <VaultListCard data={vaultList} />}
+      {vaultOpen && <VaultOpenCard data={vaultOpen} />}
+      {vaultDetail && <VaultDetailCard data={vaultDetail} />}
+      {vaultUpload && <VaultUploadSuccessCard data={vaultUpload} />}
       {isLoading && instantLabel && !showMediaProgressCard && (
         <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
           <span className="relative flex size-2">

@@ -6,6 +6,7 @@ import {
   FileVideo2Icon,
   FileIcon as GenericFileIcon,
 } from "lucide-react";
+import { resolveChatFileDisplayUrl } from "@/lib/files/chat-file-url";
 import type { Attachment } from "@/lib/types";
 import { Spinner } from "../ui/spinner";
 import { CrossSmallIcon } from "./icons";
@@ -53,6 +54,7 @@ export const PreviewAttachment = ({
   onRemove?: () => void;
 }) => {
   const { name, url, contentType } = attachment;
+  const displayUrl = resolveChatFileDisplayUrl(url);
   const mime = contentType ?? "";
   const isImage = mime.startsWith("image/");
 
@@ -69,7 +71,7 @@ export const PreviewAttachment = ({
         <img
           alt={name ?? "attachment"}
           className="size-full object-cover"
-          src={url}
+          src={displayUrl}
         />
       ) : (
         <div className="flex size-full flex-col items-center justify-center gap-1 px-1.5 text-muted-foreground">

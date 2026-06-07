@@ -15,7 +15,10 @@ export function assistantHasVisibleContent(message: ChatMessage): boolean {
     if (
       part.type === "data-web-sources" ||
       part.type === "data-rich-content" ||
-      part.type === "data-media-download-progress"
+      part.type === "data-media-download-progress" ||
+      part.type === "data-vault-list" ||
+      part.type === "data-vault-open" ||
+      part.type === "data-vault-detail"
     ) {
       return true;
     }

@@ -2,11 +2,11 @@
 
 import {
   ArrowLeftIcon,
-  BookMarkedIcon,
   BrainIcon,
   CircleHelpIcon,
   EyeIcon,
   EyeOffIcon,
+  FolderLockIcon,
   Loader2Icon,
   MessageCircleIcon,
   ServerIcon,
@@ -39,7 +39,7 @@ import { ActivityPanel } from "./activity-panel";
 import { HelpGuidePanel } from "./help-guide-panel";
 import { LoginHistoryPanel } from "./login-history-panel";
 import { ModelAiPanel } from "./model-ai-panel";
-import { NotesPanel } from "./notes-panel";
+import { VaultPanel } from "./vault-panel";
 import { SettingSlider } from "./setting-row";
 
 const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -78,7 +78,7 @@ type GeneralPayload = {
 const tabs = [
   { id: "persona", label: "Gaya bicara", icon: MessageCircleIcon },
   { id: "model", label: "Model & AI", icon: SparklesIcon },
-  { id: "notes", label: "Catatan", icon: BookMarkedIcon },
+  { id: "vault", label: "Berangkas", icon: FolderLockIcon },
   { id: "api", label: "API & integrasi", icon: ServerIcon },
   { id: "security", label: "Keamanan", icon: ShieldIcon },
   { id: "activity", label: "Log", icon: TerminalIcon },
@@ -641,7 +641,7 @@ export function GeneralSettingsPage() {
               </>
             )}
 
-            {tab === "notes" && <NotesPanel />}
+            {tab === "vault" && <VaultPanel />}
 
             {tab === "activity" && <ActivityPanel />}
 
