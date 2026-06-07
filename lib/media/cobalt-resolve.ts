@@ -6,7 +6,6 @@ import {
   isCobaltTunnelUrl,
   isOnCobaltHost,
   normalizeHttpUrl,
-  resolveCobaltApiBase,
   resolveCobaltDownloadUrl,
   type CobaltResponse,
 } from "@/lib/media/cobalt-shared";
@@ -24,16 +23,25 @@ export type CobaltResolvedLink = {
   filename?: string;
   status: string;
   fetchHeaders: Record<string, string>;
+  cobaltBase: string;
+};
+
+export type CobaltRequestOptions = {
+  base: string;
+  apiKey?: string;
+  label?: string;
 };
 
 export async function requestCobaltDownload(
   url: string,
   format: MediaDownloadFormat,
   platform: MediaPlatform,
-  onProgress: MediaDownloadProgressReporter | undefined
+  onProgress: MediaDownloadProgressReporter | undefined,
+  options: CobaltRequestOptions
 ): Promise<CobaltResolvedLink> {
-  const base = resolveCobaltApiBase();
-  const apiKey = process.env.COBALT_API_KEY?.trim();
+  const base = options.base.replace(/\/$/, "");
+  const apiKey = options.apiKey?.trim();
+  const label = options.label ?? "Cobalt";
 
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -55,6 +63,7 @@ export async function requestCobaltDownload(
   if (platform === "youtube") {
     body.youtubeVideoCodec = "h264";
     body.youtubeVideoContainer = "mp4";
+    body.videoQuality = "360";
   }
 
   reportProgress(
@@ -62,7 +71,7 @@ export async function requestCobaltDownload(
     baseProgress(platform, format, {
       status: "resolving",
       progress: 22,
-      stageLabel: "Cobalt: menyiapkan link unduhan…",
+      stageLabel: `${label}: menyiapkan unduhan…`,
     })
   );
 
@@ -74,40 +83,30 @@ export async function requestCobaltDownload(
       body: JSON.stringify(body),
     });
   } catch (err) {
-    const msg = toErrorMessage(err);
-    if (/failed to parse url/i.test(msg)) {
-      throw new Error(
-        `Tidak bisa menghubungi Cobalt — periksa COBALT_API_URL (https://…). Nilai: ${process.env.COBALT_API_URL?.trim() || "(kosong)"}`
-      );
-    }
-    throw err;
+    throw new Error(`${label}: ${toErrorMessage(err)}`);
   }
 
   let data: CobaltResponse;
   try {
     data = (await res.json()) as CobaltResponse;
   } catch {
-    throw new Error(
-      `Cobalt respons bukan JSON (HTTP ${res.status}). Pastikan COBALT_API_URL benar.`
-    );
+    throw new Error(`${label}: respons bukan JSON (HTTP ${res.status})`);
   }
 
   if (!res.ok || data.status === "error") {
-    throw new Error(formatCobaltApiError(data.error, res.status));
+    throw new Error(`${label}: ${formatCobaltApiError(data.error, res.status)}`);
   }
 
   if (data.status === "picker") {
-    throw new Error(
-      "Link punya beberapa pilihan media — buka di browser atau coba link lain."
-    );
+    throw new Error(`${label}: link punya banyak pilihan — coba link lain.`);
   }
 
   if (data.status === "local-processing") {
-    throw new Error("Cobalt butuh remux lokal — gunakan instance Cobalt Railway/VPS.");
+    throw new Error(`${label}: butuh remux lokal.`);
   }
 
   if (!data.url) {
-    throw new Error("Cobalt tidak mengembalikan URL unduhan.");
+    throw new Error(`${label}: tidak ada URL unduhan.`);
   }
 
   const downloadUrl = resolveCobaltDownloadUrl(base, data.url);
@@ -116,9 +115,7 @@ export async function requestCobaltDownload(
     data.status === "redirect" &&
     !isOnCobaltHost(base, downloadUrl)
   ) {
-    throw new Error(
-      "Cobalt redirect CDN — pakai alwaysProxy/tunnel (instance Cobalt sendiri)."
-    );
+    throw new Error(`${label}: redirect CDN — coba lagi atau ganti sumber.`);
   }
 
   const fetchHeaders = buildCobaltFetchHeaders({
@@ -137,6 +134,7 @@ export async function requestCobaltDownload(
     filename: data.filename,
     status: data.status,
     fetchHeaders,
+    cobaltBase: base,
   };
 }
 

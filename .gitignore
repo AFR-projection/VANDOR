@@ -29,6 +29,9 @@ tsconfig.tsbuildinfo
 # VANDOR local file storage (used when no BLOB_READ_WRITE_TOKEN)
 /public/storage/
 
+# YouTube session (jangan commit)
+/cookies/youtube.txt
+
 # Large duplicate media (use public/videos/ instead)
 VISUAL MEMORY.mp4
 m.id.includes*

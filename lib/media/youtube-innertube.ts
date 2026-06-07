@@ -7,6 +7,7 @@ import type {
   MediaDownloadProgressReporter,
 } from "@/lib/media/types";
 import { extractYoutubeVideoId } from "@/lib/media/youtube-id";
+import { resolveYoutubeCookieHeader } from "@/lib/media/youtube-cookie";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
 type YoutubeClient = "ANDROID_VR" | "IOS" | "WEB";
@@ -53,6 +54,21 @@ async function bufferFromStream(
   return Buffer.concat(chunks);
 }
 
+function readInnertubeSessionOptions(): {
+  cookie?: string;
+  visitor_data?: string;
+  po_token?: string;
+} {
+  const cookie = resolveYoutubeCookieHeader();
+  const visitor_data = process.env.YOUTUBE_VISITOR_DATA?.trim();
+  const po_token = process.env.YOUTUBE_PO_TOKEN?.trim();
+  return {
+    ...(cookie ? { cookie } : {}),
+    ...(visitor_data ? { visitor_data } : {}),
+    ...(po_token ? { po_token } : {}),
+  };
+}
+
 async function tryDownloadWithClient(
   videoId: string,
   format: MediaDownloadFormat,
@@ -63,6 +79,7 @@ async function tryDownloadWithClient(
   const innertube = await Innertube.create({
     client_type: clientType,
     retrieve_player: true,
+    ...readInnertubeSessionOptions(),
   });
 
   const info = await innertube.getBasicInfo(videoId);

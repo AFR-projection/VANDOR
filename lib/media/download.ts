@@ -13,6 +13,7 @@ import {
 import {
   isCobaltTunnelLink,
   requestCobaltDownload,
+  type CobaltRequestOptions,
 } from "@/lib/media/cobalt-resolve";
 import {
   baseProgress,
@@ -43,18 +44,23 @@ const MIN_BYTES = 1024;
 const YTDLP_TIMEOUT_MS = 120_000;
 const FETCH_TIMEOUT_MS = 120_000;
 
-function shouldUseYoutubeDirectLink(): boolean {
-  if (process.env.VANDOR_YT_BLOB === "1") {
-    return false;
+const PUBLIC_COBALT_BASE = "https://api.cobalt.tools";
+
+function listYoutubeCobaltSources(): CobaltRequestOptions[] {
+  const sources: CobaltRequestOptions[] = [];
+  const userBase = process.env.COBALT_API_URL?.trim();
+  if (userBase) {
+    sources.push({
+      base: normalizeHttpUrl(userBase, "COBALT_API_URL").replace(/\/$/, ""),
+      apiKey: process.env.COBALT_API_KEY?.trim(),
+      label: "Cobalt Railway",
+    });
   }
-  if (process.env.VANDOR_YT_DIRECT === "1") {
-    return true;
-  }
-  if (process.env.VANDOR_YT_DIRECT === "0") {
-    return false;
-  }
-  // Vercel IP diblokir YouTube — hanya link Cobalt yang andal di cloud.
-  return Boolean(process.env.VERCEL);
+  sources.push({
+    base: PUBLIC_COBALT_BASE,
+    label: "Cobalt publik",
+  });
+  return sources;
 }
 
 function assertNonEmptyDownload(buffer: Buffer, backend: string): void {
@@ -356,17 +362,28 @@ async function downloadWithCobalt(
   url: string,
   format: MediaDownloadFormat,
   onProgress: MediaDownloadProgressReporter | undefined,
-  platform: MediaPlatform
+  platform: MediaPlatform,
+  source?: CobaltRequestOptions
 ): Promise<{ buffer: Buffer; title: string; filename?: string }> {
-  const base = resolveCobaltApiBase();
+  const cobaltSource: CobaltRequestOptions = source ?? {
+    base: resolveCobaltApiBase(),
+    apiKey: process.env.COBALT_API_KEY?.trim(),
+    label: "Cobalt",
+  };
+
   const resolved = await requestCobaltDownload(
     url,
     format,
     platform,
-    onProgress
+    onProgress,
+    cobaltSource
   );
 
-  const buffer = isCobaltTunnelLink(base, resolved.downloadUrl, resolved.status)
+  const buffer = isCobaltTunnelLink(
+    resolved.cobaltBase,
+    resolved.downloadUrl,
+    resolved.status
+  )
     ? await fetchCobaltTunnelFile(
         resolved.downloadUrl,
         resolved.fetchHeaders,
@@ -387,56 +404,6 @@ async function downloadWithCobalt(
     title: resolved.title,
     filename: resolved.filename,
   };
-}
-
-async function tryYoutubeDirectLink(
-  url: string,
-  format: MediaDownloadFormat,
-  onProgress: MediaDownloadProgressReporter | undefined
-): Promise<MediaDownloadResult | null> {
-  if (!shouldUseYoutubeDirectLink() || !hasCobaltBackend()) {
-    return null;
-  }
-
-  try {
-    const resolved = await requestCobaltDownload(
-      url,
-      format,
-      "youtube",
-      onProgress
-    );
-    const filename = sanitizeFilename(
-      resolved.filename ?? resolved.title,
-      format
-    );
-
-    reportProgress(
-      onProgress,
-      baseProgress("youtube", format, {
-        status: "complete",
-        progress: 100,
-        stageLabel: "Link unduhan siap — buka di browser",
-        downloadUrl: resolved.downloadUrl,
-        title: resolved.title,
-      })
-    );
-
-    return {
-      ok: true,
-      url: resolved.downloadUrl,
-      filename,
-      title: resolved.title,
-      platform: "youtube",
-      format,
-      backend: "cobalt",
-      delivery: "direct",
-    };
-  } catch (err) {
-    if (process.env.VERCEL) {
-      throw err;
-    }
-    return null;
-  }
 }
 
 type YoutubeBackend = "ytdlp" | "innertube" | "cobalt" | "piped" | "invidious";
@@ -462,6 +429,21 @@ async function downloadYoutube(
     }
   }
 
+  for (const source of listYoutubeCobaltSources()) {
+    try {
+      const cobalt = await downloadWithCobalt(
+        url,
+        format,
+        onProgress,
+        "youtube",
+        source
+      );
+      return { ...cobalt, backend: "cobalt" };
+    } catch (err) {
+      errors.push(toErrorMessage(err));
+    }
+  }
+
   if (hasYtdlpApiBackend()) {
     try {
       const ytdlp = await downloadWithYtdlpApi(url, format, onProgress);
@@ -471,27 +453,15 @@ async function downloadYoutube(
     }
   }
 
-  if (hasCobaltBackend()) {
-    try {
-      const cobalt = await downloadWithCobalt(
-        url,
-        format,
-        onProgress,
-        "youtube"
-      );
-      return { ...cobalt, backend: "cobalt" };
-    } catch (err) {
-      errors.push(`Cobalt: ${toErrorMessage(err)}`);
-    }
-  }
-
   try {
     return await downloadYoutubeViaFallback(url, format, onProgress);
   } catch (err) {
     errors.push(`Fallback: ${toErrorMessage(err)}`);
   }
 
-  throw new Error(errors.join(". "));
+  throw new Error(
+    `${errors.join(". ")}. Coba lagi nanti atau gunakan /ytv dari PC (npm run dev).`
+  );
 }
 
 export async function downloadSocialMedia(
@@ -624,52 +594,6 @@ export async function downloadSocialMedia(
         }
       }
     } else if (platform === "youtube") {
-      if (process.env.VERCEL && process.env.VANDOR_YT_BLOB !== "1") {
-        if (!hasCobaltBackend()) {
-          const errMsg =
-            "YouTube di Vercel butuh COBALT_API_URL — tambahkan di Vercel → Project → Settings → Environment Variables (sama seperti .env.local), lalu redeploy.";
-          reportProgress(
-            onProgress,
-            baseProgress(platform, format, {
-              status: "error",
-              progress: 0,
-              stageLabel: "Env belum lengkap",
-              error: errMsg,
-            })
-          );
-          stopResolvePulse?.();
-          stopResolvePulse = null;
-          return { ok: false, platform, format, error: errMsg };
-        }
-
-        try {
-          const direct = await tryYoutubeDirectLink(
-            url,
-            format,
-            onProgress
-          );
-          if (direct?.ok) {
-            stopResolvePulse?.();
-            stopResolvePulse = null;
-            return direct;
-          }
-        } catch (directErr) {
-          const msg = toErrorMessage(directErr);
-          reportProgress(
-            onProgress,
-            baseProgress(platform, format, {
-              status: "error",
-              progress: 0,
-              stageLabel: "Gagal mengunduh",
-              error: msg,
-            })
-          );
-          stopResolvePulse?.();
-          stopResolvePulse = null;
-          return { ok: false, platform, format, error: msg };
-        }
-      }
-
       try {
         const yt = await downloadYoutube(url, format, onProgress);
         buffer = yt.buffer;
@@ -677,19 +601,6 @@ export async function downloadSocialMedia(
         suggestedName = yt.filename;
         backend = yt.backend;
       } catch (ytErr) {
-        if (!process.env.VERCEL) {
-          const direct = await tryYoutubeDirectLink(
-            url,
-            format,
-            onProgress
-          );
-          if (direct?.ok) {
-            stopResolvePulse?.();
-            stopResolvePulse = null;
-            return direct;
-          }
-        }
-
         const msg = toErrorMessage(ytErr);
         reportProgress(
           onProgress,
