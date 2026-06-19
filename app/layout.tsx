@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, JetBrains_Mono, Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -29,20 +29,29 @@ export const viewport = {
   interactiveWidget: "resizes-content",
 };
 
-const geist = Geist({
+const outfit = Outfit({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-geist",
+  variable: "--font-display",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
+const ibmPlex = IBM_Plex_Sans({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-geist-mono",
+  variable: "--font-body",
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+const jetBrains = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
+  weight: ["400", "500", "600"],
 });
 
 const LIGHT_THEME_COLOR = "hsl(0 0% 100%)";
-const DARK_THEME_COLOR = "hsl(240deg 10% 3.92%)";
+const DARK_THEME_COLOR = "#09090B";
 const THEME_COLOR_SCRIPT = `\
 (function() {
   var html = document.documentElement;
@@ -68,7 +77,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      className={`${geist.variable} ${geistMono.variable}`}
+      className={`${outfit.variable} ${ibmPlex.variable} ${jetBrains.variable}`}
       lang="en"
       suppressHydrationWarning
     >

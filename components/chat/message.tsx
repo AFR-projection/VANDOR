@@ -280,9 +280,9 @@ const PurePreviewMessage = ({
       return (
         <MessageContent
           className={cn(
-            "w-fit max-w-[min(92vw,56ch)] overflow-hidden break-words rounded-2xl rounded-br-lg border border-border/30 bg-gradient-to-br from-secondary to-muted px-3 py-2 text-[13px] leading-[1.65] shadow-[var(--shadow-card)] sm:max-w-[min(80%,56ch)] sm:px-3.5"
+            "w-fit max-w-[min(92vw,56ch)] overflow-hidden break-words rounded-2xl rounded-tr-sm border border-white/[0.06] bg-zinc-100 px-4 py-2.5 text-[14px] leading-[1.65] text-zinc-900 shadow-[0_1px_2px_rgba(0,0,0,0.06)] dark:border-white/[0.05] dark:bg-zinc-900 dark:text-zinc-100 sm:max-w-[min(80%,56ch)] sm:px-4"
           )}
-          data-testid="message-content"
+          data-testid="chat-message-user"
           key={key}
         >
           <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
@@ -900,18 +900,19 @@ export const ThinkingMessage = () => {
       data-role="assistant"
       data-testid="message-assistant-loading"
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-            <SparklesIcon size={13} />
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="relative flex size-7 shrink-0 items-center justify-center">
+          {/* Pulsing aura */}
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/15" />
+          <span className="relative inline-flex size-2 rounded-full bg-foreground/70 shadow-[0_0_12px_rgba(255,255,255,0.4)]" />
         </div>
 
-        <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
-          <Shimmer className="font-medium" duration={1}>
-            Thinking...
-          </Shimmer>
-        </div>
+        <Shimmer
+          className="font-display font-light text-[15px] tracking-tight text-foreground/70"
+          duration={1.4}
+        >
+          VANDOR sedang berpikir…
+        </Shimmer>
       </div>
     </div>
   );

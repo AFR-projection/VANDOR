@@ -84,7 +84,7 @@ function PureMessages({
   return (
     <div className="relative flex-1 bg-background">
       {messages.length === 0 && !isLoading && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 z-10 mx-auto flex max-w-3xl items-center justify-start pb-32 pl-2 sm:pl-4">
           <Greeting />
         </div>
       )}

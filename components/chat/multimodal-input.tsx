@@ -514,7 +514,12 @@ function PureMultimodalInput({
       </div>
 
       <PromptInput
-        className="[&>div]:rounded-2xl [&>div]:border [&>div]:border-border/30 [&>div]:bg-card/70 [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-300 [&>div]:focus-within:border-primary/25 [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
+        className={cn(
+          "[&>div]:rounded-3xl [&>div]:border [&>div]:border-white/[0.07] [&>div]:bg-zinc-100/95 [&>div]:backdrop-blur-2xl [&>div]:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.16)] [&>div]:transition-all [&>div]:duration-300 [&>div]:focus-within:border-foreground/20 [&>div]:focus-within:shadow-[0_8px_36px_-4px_rgba(0,0,0,0.24)]",
+          "dark:[&>div]:bg-zinc-950/80 dark:[&>div]:border-white/[0.08] dark:[&>div]:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.5)] dark:[&>div]:focus-within:border-white/15 dark:[&>div]:focus-within:shadow-[0_8px_42px_-4px_rgba(0,0,0,0.7)]",
+          vaultModeActive &&
+            "[&>div]:border-emerald-500/30 [&>div]:bg-emerald-950/40 [&>div]:focus-within:border-emerald-400/50 [&>div]:focus-within:shadow-[0_8px_32px_-4px_rgba(16,185,129,0.18)]"
+        )}
         onSubmit={async () => {
           const trySubmit = () => {
             if (status === "ready" || status === "error") {
