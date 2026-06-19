@@ -18,7 +18,13 @@ export function assistantHasVisibleContent(message: ChatMessage): boolean {
       part.type === "data-media-download-progress" ||
       part.type === "data-vault-list" ||
       part.type === "data-vault-open" ||
-      part.type === "data-vault-detail"
+      part.type === "data-vault-detail" ||
+      part.type === "data-vault-upload" ||
+      part.type === "data-vault-mode-enter" ||
+      part.type === "data-vault-mode-exit" ||
+      part.type === "data-vault-denied" ||
+      part.type === "data-vault-read" ||
+      part.type === "data-share-to-ai"
     ) {
       return true;
     }

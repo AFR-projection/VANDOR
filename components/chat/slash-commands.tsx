@@ -89,11 +89,12 @@ const SKILL_ICONS: Record<string, ReactNode> = {
   ytv: <VideoIcon className="size-3.5" />,
   yts: <MusicIcon className="size-3.5" />,
   ig: <DownloadIcon className="size-3.5" />,
+  v: <FolderLockIcon className="size-3.5" />,
   "v up": <FolderLockIcon className="size-3.5" />,
   "v list": <FolderLockIcon className="size-3.5" />,
   "v get": <FolderLockIcon className="size-3.5" />,
-  "v open": <FolderLockIcon className="size-3.5" />,
   "v del": <FolderLockIcon className="size-3.5" />,
+  "share-to-ai": <FolderLockIcon className="size-3.5" />,
 };
 
 const VAULT_COMMANDS: SlashCommand[] = VAULT_SLASH_SKILLS.map((skill) => ({

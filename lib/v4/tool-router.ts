@@ -10,8 +10,8 @@ const CORE: VandorChatToolName[] = ["getCurrentTime", "getLocation"];
 const BY_INTENT: Record<VandorIntent, VandorChatToolName[]> = {
   command: [],
   task: ["updateTask", "getCurrentTime"],
-  vault: ["manageVault"],
-  memory: ["saveMemory", "getMemory", "searchDb", "manageVault"],
+  vault: [],
+  memory: ["saveMemory", "getMemory", "searchDb"],
   weather: ["getLocation", "getWeather", "getCurrentTime"],
   time: ["getCurrentTime", "getLocation"],
   search: ["webSearch"],
@@ -57,7 +57,6 @@ export function selectActiveTools(input: {
     set.add("createPdf");
     set.add("createDocx");
     set.add("editImage");
-    set.add("manageVault");
   }
 
   if (input.webSearchPreloaded) {

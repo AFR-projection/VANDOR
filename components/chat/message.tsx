@@ -35,6 +35,18 @@ import {
   VaultOpenCard,
   VaultUploadSuccessCard,
 } from "./vault-cards";
+import {
+  getShareToAiFromMessage,
+  getVaultDeniedFromMessage,
+  getVaultModeEnterFromMessage,
+  getVaultModeExitFromMessage,
+  getVaultReadFromMessage,
+  ShareToAiCard,
+  VaultDeniedCard,
+  VaultModeEnterCard,
+  VaultModeExitCard,
+  VaultReadCard,
+} from "./vault-mode-cards";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageTechRail } from "./message-tech-rail";
@@ -105,6 +117,15 @@ const PurePreviewMessage = ({
   const vaultOpen = isAssistant ? getVaultOpenFromMessage(message) : null;
   const vaultDetail = isAssistant ? getVaultDetailFromMessage(message) : null;
   const vaultUpload = isAssistant ? getVaultUploadFromMessage(message) : null;
+  const vaultModeEnter = isAssistant
+    ? getVaultModeEnterFromMessage(message)
+    : null;
+  const vaultModeExit = isAssistant
+    ? getVaultModeExitFromMessage(message)
+    : null;
+  const vaultDenied = isAssistant ? getVaultDeniedFromMessage(message) : null;
+  const vaultRead = isAssistant ? getVaultReadFromMessage(message) : null;
+  const shareToAi = isAssistant ? getShareToAiFromMessage(message) : null;
   const instantStatus = isAssistant
     ? message.parts.find(
         (p) =>
@@ -233,7 +254,13 @@ const PurePreviewMessage = ({
       type === "data-vault-list" ||
       type === "data-vault-open" ||
       type === "data-vault-detail" ||
-      type === "data-vault-upload"
+      type === "data-vault-upload" ||
+      type === "data-vault-mode-enter" ||
+      type === "data-vault-mode-exit" ||
+      type === "data-vault-denied" ||
+      type === "data-vault-read" ||
+      type === "data-share-to-ai" ||
+      type === "data-vault-add-prompt"
     ) {
       return null;
     }
@@ -695,7 +722,6 @@ const PurePreviewMessage = ({
       type === "tool-saveMemory" ||
       type === "tool-getMemory" ||
       type === "tool-searchDb" ||
-      type === "tool-manageVault" ||
       type === "tool-updateTask" ||
       type === "tool-downloadMedia"
     ) {
@@ -704,7 +730,6 @@ const PurePreviewMessage = ({
         "tool-saveMemory": "Menyimpan memori",
         "tool-getMemory": "Mengambil memori",
         "tool-searchDb": "Mencari memori & data",
-        "tool-manageVault": "Berangkas pribadi",
         "tool-updateTask": "Mengelola task",
         "tool-downloadMedia": "Unduh media",
       };
@@ -768,6 +793,11 @@ const PurePreviewMessage = ({
       {vaultOpen && <VaultOpenCard data={vaultOpen} />}
       {vaultDetail && <VaultDetailCard data={vaultDetail} />}
       {vaultUpload && <VaultUploadSuccessCard data={vaultUpload} />}
+      {vaultModeEnter && <VaultModeEnterCard data={vaultModeEnter} />}
+      {vaultModeExit && <VaultModeExitCard data={vaultModeExit} />}
+      {vaultDenied && <VaultDeniedCard data={vaultDenied} />}
+      {vaultRead && <VaultReadCard data={vaultRead} />}
+      {shareToAi && <ShareToAiCard data={shareToAi} />}
       {isLoading && instantLabel && !showMediaProgressCard && (
         <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
           <span className="relative flex size-2">

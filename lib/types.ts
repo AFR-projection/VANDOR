@@ -22,11 +22,18 @@ import type { Suggestion } from "./db/schema";
 import type { MediaDownloadProgressData } from "./media/types";
 import type { MemorySavedNotice } from "./memory/notice";
 import type {
+  ShareToAiNotice,
+  VaultDeniedNotice,
   VaultDetailNotice,
   VaultListNotice,
   VaultOpenNotice,
+  VaultReadNotice,
   VaultUploadNotice,
 } from "./vault/notice";
+import type {
+  VaultModeExitNotice,
+  VaultModeNotice,
+} from "./vault/mode";
 import type { RichContent, WebSearchOutput } from "./search/types";
 import type { TurnUsageEstimate } from "./v4/turn-usage";
 import type { WeatherPanelPayload } from "./weather/fetch";
@@ -57,7 +64,6 @@ type AssistantTools = ReturnType<typeof makeAssistantTools>;
 type saveMemoryTool = InferUITool<AssistantTools["saveMemory"]>;
 type getMemoryTool = InferUITool<AssistantTools["getMemory"]>;
 type searchDbTool = InferUITool<AssistantTools["searchDb"]>;
-type manageVaultTool = InferUITool<AssistantTools["manageVault"]>;
 type updateTaskTool = InferUITool<AssistantTools["updateTask"]>;
 
 export type ChatTools = {
@@ -78,7 +84,6 @@ export type ChatTools = {
   saveMemory: saveMemoryTool;
   getMemory: getMemoryTool;
   searchDb: searchDbTool;
-  manageVault: manageVaultTool;
   updateTask: updateTaskTool;
 };
 
@@ -142,6 +147,12 @@ export type CustomUIDataTypes = {
   "vault-open": VaultOpenNotice;
   "vault-detail": VaultDetailNotice;
   "vault-upload": VaultUploadNotice;
+  "vault-mode-enter": VaultModeNotice;
+  "vault-mode-exit": VaultModeExitNotice;
+  "vault-denied": VaultDeniedNotice;
+  "vault-read": VaultReadNotice;
+  "share-to-ai": ShareToAiNotice;
+  "vault-add-prompt": { hint: string };
 };
 
 export type ChatMessage = UIMessage<

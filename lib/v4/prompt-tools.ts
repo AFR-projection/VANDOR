@@ -1,6 +1,5 @@
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
-import { VAULT_SKILL_SYSTEM_HINT } from "@/lib/chat/vault-slash";
 
 const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   getCurrentTime: "waktu/tanggal",
@@ -10,8 +9,7 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   webSearch: "data live (jika belum di konteks)",
   saveMemory: "simpan memori",
   getMemory: "ambil memori",
-  searchDb: "cari memori/berangkas/tasks",
-  manageVault: "berangkas file terenkripsi",
+  searchDb: "cari memori/tasks (TIDAK termasuk Vault)",
   updateTask: "task/todo",
   createDocument: "artifact teks/kode/sheet",
   editDocument: "edit artifact",
@@ -28,12 +26,21 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   downloadMedia: "unduh TT/YT/IG",
 };
 
+const VAULT_ISOLATION_HINT = `
+## Vault (terisolasi dari AI)
+- Kamu **TIDAK** punya akses ke Vault. Tidak ada tool \`manageVault\`, \`searchDb\` juga tidak return file Vault.
+- Jika user bertanya tentang isi Vault, jelaskan: gunakan \`/v\` untuk masuk Vault Mode (AI OFF, mode terisolasi), atau \`/share-to-ai <id>\` bila ingin AI membaca file tertentu dengan sadar.
+- Jangan mengarang nama file, isi, atau metadata Vault. Vault privat user.
+`.trim();
+
 export function buildActiveToolsPrompt(
   activeTools: VandorChatToolName[]
 ): string {
   if (activeTools.length === 0) {
     return `## Tools (VANDOR v4)
-No tools enabled for this turn — answer from context only. Do not invent tool names.`;
+No tools enabled for this turn — answer from context only. Do not invent tool names.
+
+${VAULT_ISOLATION_HINT}`;
   }
 
   const lines = activeTools.map(
@@ -44,18 +51,16 @@ No tools enabled for this turn — answer from context only. Do not invent tool 
     `## Tools aktif (VANDOR v4 — hanya ${activeTools.length} tool ini)
 Jangan panggil tool di luar daftar. UI menampilkan kartu/map/sumber — jangan ulang data panjang di chat.`,
     ...lines,
-    "- Berangkas/memori/task: jangan webSearch.",
+    "- Memori/task: jangan webSearch.",
     "- Web search sudah di konteks → jangan panggil webSearch lagi.",
     ...(activeTools.includes("webSearch")
       ? [
           "- Minta link/tautan/URL/playlist: WAJIB webSearch atau pakai konteks WEB SEARCH — jangan bilang tidak bisa akses internet.",
         ]
       : []),
+    VAULT_ISOLATION_HINT,
   ];
 
-  if (activeTools.includes("manageVault")) {
-    extras.push(VAULT_SKILL_SYSTEM_HINT);
-  }
   if (activeTools.includes("downloadMedia")) {
     extras.push(MEDIA_SLASH_HINT);
   }

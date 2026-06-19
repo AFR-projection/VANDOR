@@ -167,8 +167,8 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
                 <div className="flex shrink-0 gap-1 opacity-80 transition-opacity group-hover:opacity-100">
                   <button
                     className="rounded-lg p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
-                    onClick={() => copyText(`/v open ${file.id}`)}
-                    title="Salin /v open"
+                    onClick={() => copyText(`/share-to-ai ${file.id}`)}
+                    title="Salin /share-to-ai"
                     type="button"
                   >
                     <CopyIcon className="size-3.5" />
@@ -194,8 +194,8 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
       <div className="border-t border-border/30 bg-muted/15 px-4 py-2.5">
         <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <LockIcon className="size-3 shrink-0 text-emerald-600" />
-          Buka untuk AI: <span className="font-mono">/v open &lt;id&gt;</span> · Info:{" "}
-          <span className="font-mono">/v get &lt;nama&gt;</span>
+          Vault Mode: <span className="font-mono">/v</span> · Bagikan ke AI:{" "}
+          <span className="font-mono">/share-to-ai &lt;id&gt;</span>
         </p>
       </div>
     </motion.div>
@@ -275,11 +275,11 @@ export function VaultOpenCard({ data }: { data: VaultOpenNotice }) {
           </a>
           <button
             className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40"
-            onClick={() => copyText(`/v open ${file.id}`)}
+            onClick={() => copyText(`/share-to-ai ${file.id}`)}
             type="button"
           >
             <CopyIcon className="size-4" />
-            Salin perintah
+            Salin /share-to-ai
           </button>
         </div>
 
@@ -359,11 +359,11 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
         <div className="flex flex-wrap gap-2">
           <button
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
-            onClick={() => copyText(`/v open ${file.id}`)}
+            onClick={() => copyText(`/share-to-ai ${file.id}`)}
             type="button"
           >
             <CopyIcon className="size-4" />
-            Salin /v open
+            Salin /share-to-ai
           </button>
           <a
             className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40"
@@ -377,8 +377,8 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
 
         <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
           <LockIcon className="size-3 shrink-0 text-emerald-600" />
-          Lihat semua: <span className="font-mono">/v list</span> · Buka untuk AI:{" "}
-          <span className="font-mono">/v open &lt;id&gt;</span>
+          Lihat semua: <span className="font-mono">/v list</span> · Bagikan ke AI:{" "}
+          <span className="font-mono">/share-to-ai &lt;id&gt;</span>
         </p>
       </div>
     </motion.div>

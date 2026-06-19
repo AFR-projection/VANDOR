@@ -3,19 +3,34 @@ import "server-only";
 import type { RequestHints } from "@/lib/ai/prompts";
 import { parseMediaSlash } from "@/lib/chat/media-slash";
 import {
+  parseShareToAi,
   parseVaultDelete,
+  parseVaultEnter,
   parseVaultGet,
   parseVaultList,
+  parseVaultModeAdd,
+  parseVaultModeBareList,
+  parseVaultModeDelete,
+  parseVaultModeExit,
+  parseVaultModeRead,
+  parseVaultModeUpdate,
   parseVaultOpen,
   parseVaultUploaded,
 } from "@/lib/chat/vault-slash";
 import {
+  shareToAiDataPart,
+  vaultDeniedDataPart,
   vaultDetailDataPart,
   vaultListDataPart,
   vaultOpenDataPart,
+  vaultReadDataPart,
   vaultUploadDataPart,
   vaultUrls,
 } from "@/lib/vault/notice";
+import {
+  vaultModeEnterDataPart,
+  vaultModeExitDataPart,
+} from "@/lib/vault/mode";
 import {
   createTask,
   getChatSummary,
@@ -38,22 +53,93 @@ export type DirectCommand =
   | { kind: "memory_save"; content: string }
   | { kind: "cari"; query: string }
   | { kind: "ringkas"; chatId: string }
+  | { kind: "vault_enter" }
+  | { kind: "vault_exit" }
   | { kind: "vault_list" }
   | { kind: "vault_get"; query: string }
   | { kind: "vault_del"; target: string }
   | { kind: "vault_open"; fileId: string }
-  | { kind: "vault_uploaded"; fileId: string };
+  | { kind: "vault_uploaded"; fileId: string }
+  | { kind: "vault_read"; target: string }
+  | { kind: "vault_add" }
+  | { kind: "vault_update"; target: string; patch: string }
+  | { kind: "share_to_ai"; fileId: string }
+  | { kind: "vault_denied"; attempted: string };
+
+export type ParseDirectCommandOptions = {
+  /** True when chat is currently in Vault Mode. Affects parsing & isolation. */
+  vaultMode?: boolean;
+};
 
 export function parseDirectCommand(
   text: string,
   hints: RequestHints,
-  chatId?: string
+  chatId?: string,
+  options: ParseDirectCommandOptions = {}
 ): DirectCommand | null {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
+  const vaultMode = options.vaultMode === true;
+
+  // ── Vault Mode: ISOLATED — only vault commands allowed ─────────────
+  if (vaultMode) {
+    if (parseVaultModeExit(trimmed)) {
+      return { kind: "vault_exit" };
+    }
+    if (parseVaultEnter(trimmed)) {
+      // already in mode → just acknowledge enter (idempotent)
+      return { kind: "vault_enter" };
+    }
+    if (parseVaultModeBareList(trimmed) || parseVaultList(trimmed)) {
+      return { kind: "vault_list" };
+    }
+    const readTarget = parseVaultModeRead(trimmed);
+    if (readTarget) {
+      return { kind: "vault_read", target: readTarget };
+    }
+    if (parseVaultModeAdd(trimmed)) {
+      return { kind: "vault_add" };
+    }
+    const upd = parseVaultModeUpdate(trimmed);
+    if (upd) {
+      return { kind: "vault_update", target: upd.target, patch: upd.patch };
+    }
+    const delTarget =
+      parseVaultModeDelete(trimmed) ?? parseVaultDelete(trimmed);
+    if (delTarget) {
+      return { kind: "vault_del", target: delTarget };
+    }
+    const getQuery = parseVaultGet(trimmed);
+    if (getQuery) {
+      return { kind: "vault_get", query: getQuery };
+    }
+    // Vault upload via `/v up`
+    if (/^\/?v\s+up\s*$/i.test(trimmed)) {
+      return { kind: "vault_add" };
+    }
+    const uploaded = parseVaultUploaded(trimmed);
+    if (uploaded) {
+      return { kind: "vault_uploaded", fileId: uploaded.fileId };
+    }
+    // Anything else → REJECT (AI is OFF in vault mode)
+    return { kind: "vault_denied", attempted: trimmed.slice(0, 120) };
+  }
+
+  // ── Chat Mode: full router ─────────────────────────────────────────
 
   if (parseMediaSlash(trimmed)) {
     return { kind: "media" };
+  }
+
+  // Vault Mode entry
+  if (parseVaultEnter(trimmed)) {
+    return { kind: "vault_enter" };
+  }
+
+  // /share-to-ai <id> — explicit consent
+  const share = parseShareToAi(trimmed);
+  if (share) {
+    return { kind: "share_to_ai", fileId: share.fileId };
   }
 
   if (parseVaultList(trimmed)) {
@@ -62,7 +148,8 @@ export function parseDirectCommand(
 
   const vaultOpen = parseVaultOpen(trimmed);
   if (vaultOpen) {
-    return { kind: "vault_open", fileId: vaultOpen.fileId };
+    // Legacy `/v open <id>` is now an alias for /share-to-ai
+    return { kind: "share_to_ai", fileId: vaultOpen.fileId };
   }
 
   const vaultUploaded = parseVaultUploaded(trimmed);
@@ -196,6 +283,28 @@ function formatWeatherReply(
   return `Cuaca di **${name}** sekarang: ${parts.join(", ")}. Lihat panel cuaca di bawah.`;
 }
 
+/** Text-based MIME types whose decrypted bytes are safe to render as text. */
+const TEXT_LIKE_MIMES = new Set([
+  "text/plain",
+  "text/markdown",
+  "text/x-markdown",
+  "text/csv",
+  "application/json",
+  "application/xml",
+  "text/xml",
+  "text/html",
+  "text/css",
+  "text/javascript",
+  "application/javascript",
+  "application/x-yaml",
+  "text/yaml",
+]);
+
+function isTextLikeMime(mime: string): boolean {
+  if (TEXT_LIKE_MIMES.has(mime)) return true;
+  return mime.startsWith("text/");
+}
+
 export async function executeDirectCommand(
   cmd: DirectCommand,
   ctx: { userId: string; chatId: string }
@@ -303,6 +412,45 @@ export async function executeDirectCommand(
       };
     }
 
+    // ── Vault Mode lifecycle ─────────────────────────────────────────
+
+    case "vault_enter": {
+      return {
+        text: "",
+        instantLabel: "Vault Mode",
+        extraParts: [
+          vaultModeEnterDataPart({ enteredAt: new Date().toISOString() }),
+        ],
+      };
+    }
+
+    case "vault_exit": {
+      return {
+        text: "",
+        instantLabel: "Chat Mode",
+        extraParts: [
+          vaultModeExitDataPart({
+            exitedAt: new Date().toISOString(),
+            reason: "user",
+          }),
+        ],
+      };
+    }
+
+    case "vault_denied": {
+      return {
+        text: "",
+        instantLabel: "Vault Mode",
+        extraParts: [
+          vaultDeniedDataPart({
+            attempted: cmd.attempted,
+            reason:
+              "Vault Mode aktif — AI dimatikan. Hanya command Vault yang tersedia (`list`, `read <id>`, `add`, `update <id> ...`, `delete <id>`). Ketik `exit` untuk kembali ke Chat Mode.",
+          }),
+        ],
+      };
+    }
+
     case "vault_list": {
       const { listVaultFiles, countVaultFiles } = await import(
         "@/lib/vault/queries"
@@ -324,12 +472,14 @@ export async function executeDirectCommand(
       };
     }
 
-    case "vault_open": {
+    case "vault_open":
+    case "share_to_ai": {
+      const fileId = cmd.kind === "vault_open" ? cmd.fileId : cmd.fileId;
       const { getVaultFileById } = await import("@/lib/vault/queries");
       const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
       const row = await getVaultFileById({
         userId: ctx.userId,
-        fileId: cmd.fileId,
+        fileId,
       });
       if (!row) {
         return {
@@ -339,12 +489,30 @@ export async function executeDirectCommand(
       }
       const file = toVaultSnapshot(row);
       const urls = vaultUrls(file.id);
+      // share_to_ai uses a special warning card; legacy open path uses open card
+      const parts =
+        cmd.kind === "share_to_ai"
+          ? [
+              shareToAiDataPart({
+                file,
+                openUrl: urls.openUrl,
+                downloadUrl: urls.downloadUrl,
+              }),
+            ]
+          : [
+              vaultOpenDataPart({
+                file,
+                openUrl: urls.openUrl,
+                downloadUrl: urls.downloadUrl,
+              }),
+            ];
       return {
-        text: `**${file.name}** dibuka dari berangkas. File aktif untuk sesi chat ini.`,
+        text:
+          cmd.kind === "share_to_ai"
+            ? `⚠️ **${file.name}** dibagikan ke AI untuk sesi chat ini. Isi file akan masuk context model.`
+            : `**${file.name}** dibuka dari berangkas. File aktif untuk sesi chat ini.`,
         instantLabel: "Berangkas",
-        extraParts: [
-          vaultOpenDataPart({ file, openUrl: urls.openUrl, downloadUrl: urls.downloadUrl }),
-        ],
+        extraParts: parts,
       };
     }
 
@@ -378,7 +546,7 @@ export async function executeDirectCommand(
       });
       if (!row) {
         return {
-          text: `File berangkas tidak ditemukan untuk “${cmd.query}”.`,
+          text: `File berangkas tidak ditemukan untuk "${cmd.query}".`,
           instantLabel: "Berangkas",
         };
       }
@@ -397,6 +565,139 @@ export async function executeDirectCommand(
       };
     }
 
+    case "vault_read": {
+      const { resolveVaultFileTarget } = await import("@/lib/vault/queries");
+      const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
+      const row = await resolveVaultFileTarget({
+        userId: ctx.userId,
+        target: cmd.target,
+      });
+      if (!row) {
+        return {
+          text: `File berangkas tidak ditemukan untuk "${cmd.target}".`,
+          instantLabel: "Vault",
+        };
+      }
+      const file = toVaultSnapshot(row);
+      const urls = vaultUrls(file.id);
+
+      // For text-like files, decrypt and inline preview (Vault Mode only,
+      // direct backend → user → never touches LLM).
+      let textContent: string | undefined;
+      let textTruncated = false;
+      if (isTextLikeMime(file.mimeType) && file.size <= 32 * 1024) {
+        try {
+          const { decryptVaultFile } = await import("@/lib/vault/retrieve");
+          const decrypted = await decryptVaultFile({
+            userId: ctx.userId,
+            fileId: file.id,
+            audit: true,
+            auditDetail: { source: "vault-mode-read" },
+          });
+          if (decrypted) {
+            const raw = decrypted.data.toString("utf8");
+            const MAX = 16 * 1024;
+            if (raw.length > MAX) {
+              textContent = raw.slice(0, MAX);
+              textTruncated = true;
+            } else {
+              textContent = raw;
+            }
+          }
+        } catch {
+          // fall through: card without inline text
+        }
+      }
+
+      return {
+        text: `**${file.name}** — ${file.type} · ${(file.size / 1024).toFixed(1)} KB`,
+        instantLabel: "Vault",
+        extraParts: [
+          vaultReadDataPart({
+            file,
+            downloadUrl: urls.downloadUrl,
+            textContent,
+            textTruncated,
+          }),
+        ],
+      };
+    }
+
+    case "vault_add": {
+      // Signal to client to open upload UI.
+      return {
+        text: "Klik tombol upload yang muncul untuk pilih file Vault, atau gunakan `/v up`.",
+        instantLabel: "Vault Upload",
+        extraParts: [
+          {
+            type: "data-vault-add-prompt",
+            data: { hint: "open-upload-ui" },
+          },
+        ],
+      };
+    }
+
+    case "vault_update": {
+      const { resolveVaultFileTarget, updateVaultFileMeta } = await import(
+        "@/lib/vault/queries"
+      );
+      const row = await resolveVaultFileTarget({
+        userId: ctx.userId,
+        target: cmd.target,
+      });
+      if (!row) {
+        return {
+          text: `File vault tidak ditemukan untuk "${cmd.target}".`,
+          instantLabel: "Vault",
+        };
+      }
+
+      // Parse patch: "tags:work,private" / "summary: ..." / "name: ..."
+      const tagsMatch = cmd.patch.match(/tags?\s*[:=]\s*(.+)/i);
+      const summaryMatch = cmd.patch.match(/summary\s*[:=]\s*(.+)/i);
+      let tags: string[] | undefined;
+      let summary: string | undefined;
+      if (tagsMatch?.[1]) {
+        tags = tagsMatch[1]
+          .split(/[,;]+/)
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .slice(0, 20);
+      }
+      if (summaryMatch?.[1]) {
+        summary = summaryMatch[1].trim().slice(0, 500);
+      }
+      if (!tags && !summary) {
+        // Treat free-form text as summary by default
+        summary = cmd.patch.slice(0, 500);
+      }
+      const updated = await updateVaultFileMeta({
+        userId: ctx.userId,
+        fileId: row.id,
+        tags,
+        summary,
+      });
+      if (!updated) {
+        return {
+          text: `Gagal memperbarui **${row.fileName}**.`,
+          instantLabel: "Vault",
+        };
+      }
+      const snap = updated;
+      const urls = vaultUrls(snap.id);
+      return {
+        text: `Metadata **${snap.name}** diperbarui.`,
+        instantLabel: "Vault",
+        extraParts: [
+          vaultDetailDataPart({
+            file: snap,
+            openUrl: urls.openUrl,
+            downloadUrl: urls.downloadUrl,
+          }),
+        ],
+      };
+    }
+
     case "vault_del": {
       const { resolveVaultFileTarget, deleteVaultFile } = await import(
         "@/lib/vault/queries"
@@ -407,7 +708,7 @@ export async function executeDirectCommand(
       });
       if (!row) {
         return {
-          text: `File vault tidak ditemukan untuk “${cmd.target}”.`,
+          text: `File vault tidak ditemukan untuk "${cmd.target}".`,
           instantLabel: "Vault",
         };
       }
@@ -436,8 +737,8 @@ export async function executeDirectCommand(
       return {
         text:
           count > 0
-            ? `Ditemukan **${count} sumber** untuk “${cmd.query}”. Lihat kartu SUMBER di bawah — ringkas dari situ, tanpa mengulang link mentah.`
-            : `Tidak ada sumber untuk “${cmd.query}”. Coba kata kunci lain.`,
+            ? `Ditemukan **${count} sumber** untuk "${cmd.query}". Lihat kartu SUMBER di bawah — ringkas dari situ, tanpa mengulang link mentah.`
+            : `Tidak ada sumber untuk "${cmd.query}". Coba kata kunci lain.`,
         instantLabel: "Pencarian",
         extraParts,
       };

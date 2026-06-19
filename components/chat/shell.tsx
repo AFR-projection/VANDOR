@@ -35,6 +35,8 @@ import { Messages } from "./messages";
 import { MobileChatEffects } from "./mobile-chat-effects";
 import { MultimodalInput } from "./multimodal-input";
 import { SourcePanel } from "./source-panel";
+import { VaultModeBanner } from "./vault-mode-banner";
+import { isVaultModeActive } from "@/lib/vault/mode";
 
 export function ChatShell() {
   const {
@@ -83,6 +85,31 @@ export function ChatShell() {
   const stopRef = useRef(stop);
   stopRef.current = stop;
 
+  // Per-chat Vault Mode derived from message history
+  const vaultModeActive = isVaultModeActive(messages);
+  const vaultEnteredAt = (() => {
+    if (!vaultModeActive) return undefined;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.role !== "assistant") continue;
+      for (const part of msg.parts) {
+        if (part.type === "data-vault-mode-enter" && "data" in part) {
+          return (part.data as { enteredAt?: string }).enteredAt;
+        }
+      }
+    }
+    return undefined;
+  })();
+
+  const handleExitVault = () => {
+    if (typeof sendMessage === "function") {
+      void sendMessage({
+        role: "user",
+        parts: [{ type: "text", text: "exit" }],
+      });
+    }
+  };
+
   const prevChatIdRef = useRef(chatId);
   useEffect(() => {
     if (prevChatIdRef.current !== chatId) {
@@ -108,7 +135,17 @@ export function ChatShell() {
         >
           <ChatHeader />
 
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background max-md:rounded-none md:rounded-tl-[12px] md:border-t md:border-l md:border-border/40">
+          {vaultModeActive && (
+            <VaultModeBanner
+              enteredAt={vaultEnteredAt}
+              onExit={handleExitVault}
+            />
+          )}
+
+          <div className={cn(
+            "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background max-md:rounded-none md:rounded-tl-[12px] md:border-t md:border-l md:border-border/40",
+            vaultModeActive && "ring-1 ring-emerald-500/20"
+          )}>
             <Messages
               addToolApprovalResponse={addToolApprovalResponse}
               chatId={chatId}

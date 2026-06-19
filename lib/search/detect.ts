@@ -15,9 +15,9 @@ const SKIP_PATTERNS = [
 /** Berangkas, memori, task, kredensial pribadi — tidak butuh web. */
 const LOCAL_TASK_PATTERNS = [
   /\b(berangkas|vault)\b/i,
-  /^\/?v\s+(up|list|get|open|del|uploaded)\b/i,
+  /^\/?v(\s|$)/i,
+  /^\/?(?:share-to-ai|ai-read|share2ai)\s+/i,
   /\b(simpan|upload|unggah)\s+(ke\s+)?(berangkas|vault)\b/i,
-  /\bmanageVault\b/i,
   /\b(ingat|jangan lupa|remember)\s+(ini|ini ya|ya)?\b/i,
   /\b(updateTask|buat task|todo)\b/i,
   /\b(username|user\s?name|password|pin|rekening|no\.?\s*rek|transfer ke|biaya transfer)\b/i,

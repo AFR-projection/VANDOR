@@ -25,7 +25,12 @@ import { OpenRouterModelPicker } from "@/components/chat/openrouter-model-picker
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ModelCapabilities } from "@/lib/ai/models";
 import { isBareMediaSlash, parseMediaSlash } from "@/lib/chat/media-slash";
-import { isBareVaultUp } from "@/lib/chat/vault-slash";
+import {
+  isBareVaultUp,
+  parseVaultEnter,
+  parseVaultModeAdd,
+} from "@/lib/chat/vault-slash";
+import { isVaultModeActive } from "@/lib/vault/mode";
 import { resolveChatFileDisplayUrl } from "@/lib/files/chat-file-url";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -211,6 +216,26 @@ function PureMultimodalInput({
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
+
+  // Per-chat Vault Mode (derived from messages)
+  const vaultModeActive = isVaultModeActive(messages as UIMessage[]);
+
+  // Auto-trigger vault upload UI when backend signals it
+  useEffect(() => {
+    if (!messages.length) return;
+    const last = messages[messages.length - 1];
+    if (last.role !== "assistant") return;
+    const hasAddPrompt = last.parts?.some(
+      (p: { type?: string }) => p.type === "data-vault-add-prompt"
+    );
+    if (hasAddPrompt) {
+      // Trigger upload picker once
+      const timer = setTimeout(() => {
+        vaultFileInputRef.current?.click();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages]);
 
   const submitForm = useCallback(() => {
     window.history.pushState(
@@ -498,6 +523,21 @@ function PureMultimodalInput({
             }
           };
 
+          // In Vault Mode, `add` / `upload` opens file picker locally
+          // (backend will also signal data-vault-add-prompt as a fallback).
+          if (vaultModeActive && parseVaultModeAdd(input)) {
+            setInput("");
+            vaultFileInputRef.current?.click();
+            return;
+          }
+
+          // `/v` (bare) — let it go through as normal text, backend handles
+          // the enter-vault-mode side effect.
+          if (parseVaultEnter(input)) {
+            trySubmit();
+            return;
+          }
+
           if (input.startsWith("/")) {
             const trimmed = input.slice(1).trim();
             const firstToken = trimmed.split(/\s+/)[0]?.toLowerCase() ?? "";
@@ -581,7 +621,11 @@ function PureMultimodalInput({
           </div>
         )}
         <PromptInputTextarea
-          className="min-h-[3.25rem] text-base leading-relaxed px-3 pt-3 pb-1 placeholder:text-muted-foreground/35 md:min-h-24 md:px-4 md:pt-3.5 md:text-[13px]"
+          className={cn(
+            "min-h-[3.25rem] text-base leading-relaxed px-3 pt-3 pb-1 placeholder:text-muted-foreground/35 md:min-h-24 md:px-4 md:pt-3.5 md:text-[13px]",
+            vaultModeActive &&
+              "font-mono text-emerald-200 placeholder:text-emerald-500/40 caret-emerald-400"
+          )}
           data-testid="multimodal-input"
           onChange={handleInput}
           onKeyDown={(e) => {
@@ -618,7 +662,11 @@ function PureMultimodalInput({
             }
           }}
           placeholder={
-            editingMessage ? "Edit your message..." : "Ask anything..."
+            editingMessage
+              ? "Edit your message..."
+              : vaultModeActive
+                ? "vault@vandor:~ $ list | read <id> | add | exit"
+                : "Ask anything..."
           }
           ref={textareaRef}
           value={input}

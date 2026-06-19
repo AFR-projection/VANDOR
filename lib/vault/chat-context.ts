@@ -1,4 +1,4 @@
-import type { VaultOpenNotice } from "./notice";
+import type { ShareToAiNotice, VaultOpenNotice } from "./notice";
 
 type MessageLike = {
   role: string;
@@ -13,7 +13,16 @@ function userText(message: MessageLike): string {
     .trim();
 }
 
-/** Latest vault file opened in this chat (for AI vision on follow-up messages). */
+/**
+ * Latest vault file explicitly shared to AI via `/share-to-ai <id>`.
+ *
+ * Vault Mode commands (read/list/add/etc.) NEVER expose files to AI.
+ * Only when user runs `/share-to-ai` (with warning UI) does the file
+ * become available as an attachment for the next turn.
+ *
+ * Returns the most recent share-to-ai event in this chat that has not
+ * been invalidated by a fresh user message asking for a different file.
+ */
 export function getActiveVaultOpen(
   messages: MessageLike[]
 ): VaultOpenNotice | null {
@@ -21,13 +30,22 @@ export function getActiveVaultOpen(
   for (const msg of messages) {
     if (msg.role === "user") {
       const text = userText(msg);
-      if (/^\/?v\s+open\s+/i.test(text)) {
+      // New share-to-ai or open command resets the active file (will be
+      // set again by the matching assistant message below).
+      if (/^\/?(?:share-to-ai|ai-read|share2ai|v\s+open)\s+/i.test(text)) {
         active = null;
       }
     }
     if (msg.role === "assistant") {
       for (const part of msg.parts) {
-        if (part.type === "data-vault-open" && part.data) {
+        if (part.type === "data-share-to-ai" && part.data) {
+          const shared = part.data as ShareToAiNotice;
+          active = {
+            file: shared.file,
+            openUrl: shared.openUrl,
+            downloadUrl: shared.downloadUrl,
+          };
+        } else if (part.type === "data-vault-open" && part.data) {
           active = part.data as VaultOpenNotice;
         }
       }

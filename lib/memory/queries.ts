@@ -322,20 +322,13 @@ export async function searchAllUserData({
   limit?: number;
 }): Promise<{
   memories: MemoryRecord[];
-  vaultFiles: Array<{
-    id: string;
-    name: string;
-    type: string;
-    summary: string | null;
-    tags: string[];
-  }>;
   tasks: Array<{ id: string; title: string; status: string }>;
 }> {
-  const [memories, vaultResult, tasks] = await Promise.all([
+  // ISOLATION: Vault files are intentionally EXCLUDED from this search.
+  // Vault must never be reachable by AI tools — only via direct backend
+  // commands in Vault Mode or explicit `/share-to-ai <id>`.
+  const [memories, tasks] = await Promise.all([
     searchMemories({ userId, query, limit, minSimilarity: 0.55 }),
-    import("@/lib/vault/queries").then((m) =>
-      m.searchVaultFiles({ userId, query, limit })
-    ),
     import("./assistant-db").then((m) => m.listTasks(userId, limit)),
   ]);
 
@@ -344,13 +337,6 @@ export async function searchAllUserData({
 
   return {
     memories,
-    vaultFiles: vaultResult.files.map((f) => ({
-      id: f.id,
-      name: f.name,
-      type: f.type,
-      summary: f.summary,
-      tags: f.tags,
-    })),
     tasks: filteredTasks.slice(0, limit),
   };
 }

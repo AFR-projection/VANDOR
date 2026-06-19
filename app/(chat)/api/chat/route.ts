@@ -320,9 +320,15 @@ export async function POST(request: Request) {
       });
     }
 
+    // Vault Mode (per-chat): derive from message history before parsing.
+    const { isVaultModeActive } = await import("@/lib/vault/mode");
+    const vaultModeActive = isVaultModeActive(uiMessages);
+
     const directCmd =
       !isToolApprovalFlow && lastUserText.trim()
-        ? parseDirectCommand(lastUserText, requestHints, id)
+        ? parseDirectCommand(lastUserText, requestHints, id, {
+            vaultMode: vaultModeActive,
+          })
         : null;
 
     if (directCmd && directCmd.kind !== "media") {
@@ -335,6 +341,25 @@ export async function POST(request: Request) {
         instant: { label: executed.instantLabel, phase: "start" },
         text: executed.text,
         extraParts: executed.extraParts,
+        consumeSseStream,
+      });
+    }
+
+    // HARD ISOLATION: in Vault Mode, NO LLM calls, NO memory, NO retrieval.
+    // Even if directCmd is null (e.g. user typed random text), reject it.
+    if (vaultModeActive && !isToolApprovalFlow) {
+      const { vaultDeniedDataPart } = await import("@/lib/vault/notice");
+      return createFastTextStreamResponse({
+        chatId: id,
+        instant: { label: "Vault Mode", phase: "start" },
+        text: "",
+        extraParts: [
+          vaultDeniedDataPart({
+            attempted: lastUserText.slice(0, 120),
+            reason:
+              "Vault Mode aktif — AI dimatikan. Hanya command Vault yang tersedia (`list`, `read <id>`, `add`, `update <id> ...`, `delete <id>`). Ketik `exit` untuk kembali ke Chat Mode.",
+          }),
+        ],
         consumeSseStream,
       });
     }
@@ -361,9 +386,10 @@ export async function POST(request: Request) {
 
     const { getActiveVaultOpen } = await import("@/lib/vault/chat-context");
     const activeVault = getActiveVaultOpen(uiMessages);
-    const isVaultSlash = /^\/?v\s+(list|get|del|up|open)\b/i.test(
-      lastUserText.trim()
-    );
+    const isVaultSlash =
+      /^\/?v\s+(list|get|del|up|open|uploaded)\b/i.test(lastUserText.trim()) ||
+      /^\/?(?:share-to-ai|ai-read|share2ai)\s+/i.test(lastUserText.trim()) ||
+      vaultModeActive;
     if (
       attachedFiles.length === 0 &&
       activeVault &&

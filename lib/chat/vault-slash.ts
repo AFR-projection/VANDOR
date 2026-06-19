@@ -1,6 +1,21 @@
 /**
  * Vault slash commands — terpisah dari upload chat biasa.
- * /v up | /v list | /v get | /v open | /v del
+ *
+ * Chat Mode (default):
+ *   /v             → masuk Vault Mode
+ *   /v list        → daftar file
+ *   /v get <q>     → info metadata
+ *   /v del <q>     → hapus file
+ *   /v up          → trigger upload UI
+ *   /share-to-ai <id> → bagikan isi file ke AI (chat mode only, dengan warning)
+ *
+ * Vault Mode (di dalam mode terisolasi, tanpa prefix `/v`):
+ *   list           → daftar file
+ *   read <q>       → tampilkan metadata (+ isi text bila possible)
+ *   add            → trigger upload UI
+ *   update <id> ...→ update metadata
+ *   delete <q>     → hapus file
+ *   exit | /chat   → keluar Vault Mode
  */
 
 export type VaultSlashOpen = {
@@ -12,6 +27,13 @@ const UUID_RE =
 
 export function isVaultFileId(value: string): boolean {
   return UUID_RE.test(value.trim());
+}
+
+// ── Chat Mode parsers (existing API) ─────────────────────────────────
+
+/** Entry to Vault Mode: bare `/v` (or `/vault`). */
+export function parseVaultEnter(text: string): boolean {
+  return /^\/?(?:v|vault)\s*$/i.test(text.trim());
 }
 
 export function parseVaultOpen(text: string): VaultSlashOpen | null {
@@ -52,6 +74,65 @@ export function parseVaultDelete(text: string): string | null {
   return target && target.length >= 1 ? target : null;
 }
 
+/** `/share-to-ai <id>` — explicit consent to leak vault file to AI. */
+export function parseShareToAi(text: string): VaultSlashOpen | null {
+  const match = text
+    .trim()
+    .match(/^\/?(?:share-to-ai|ai-read|share2ai)\s+(\S+)/i);
+  const id = match?.[1]?.trim();
+  if (!id || !isVaultFileId(id)) {
+    return null;
+  }
+  return { fileId: id };
+}
+
+// ── Vault Mode parsers (bare commands, only valid IN vault mode) ─────
+
+export function parseVaultModeExit(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return (
+    t === "exit" || t === "/exit" || t === "/chat" || t === "quit" || t === "/q"
+  );
+}
+
+export function parseVaultModeBareList(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t === "list" || t === "ls" || t === "/list" || t === "/ls";
+}
+
+export function parseVaultModeRead(text: string): string | null {
+  const match = text.trim().match(/^\/?(?:read|cat|show|get)\s+(.+)/is);
+  const target = match?.[1]?.trim();
+  return target && target.length >= 1 ? target : null;
+}
+
+export function parseVaultModeAdd(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return (
+    t === "add" || t === "upload" || t === "/add" || t === "/upload" || t === "up"
+  );
+}
+
+export function parseVaultModeDelete(text: string): string | null {
+  const match = text.trim().match(/^\/?(?:delete|del|rm|remove)\s+(.+)/is);
+  const target = match?.[1]?.trim();
+  return target && target.length >= 1 ? target : null;
+}
+
+export type VaultModeUpdate = {
+  target: string;
+  /** Free-form patch text: "tags:work,private" or "summary: My CV". */
+  patch: string;
+};
+
+export function parseVaultModeUpdate(text: string): VaultModeUpdate | null {
+  const match = text.trim().match(/^\/?(?:update|edit|tag)\s+(\S+)\s+(.+)/is);
+  const target = match?.[1]?.trim();
+  const patch = match?.[2]?.trim();
+  if (!target || !patch) return null;
+  return { target, patch };
+}
+
 export type VaultSlashSkill = {
   name: string;
   description: string;
@@ -62,6 +143,12 @@ export type VaultSlashSkill = {
 };
 
 export const VAULT_SLASH_SKILLS: VaultSlashSkill[] = [
+  {
+    name: "v",
+    description: "Masuk Vault Mode (AI OFF, mode terisolasi)",
+    kind: "send",
+    sendText: "/v",
+  },
   {
     name: "v up",
     description: "Upload file ke Vault terenkripsi (R2)",
@@ -81,24 +168,15 @@ export const VAULT_SLASH_SKILLS: VaultSlashSkill[] = [
     insertText: "/v get ",
   },
   {
-    name: "v open",
-    description: "Buka file Vault untuk AI — hanya sesi chat ini",
-    kind: "insert",
-    insertText: "/v open ",
-  },
-  {
     name: "v del",
     description: "Hapus file dari Vault",
     kind: "insert",
     insertText: "/v del ",
   },
+  {
+    name: "share-to-ai",
+    description: "⚠️ Bagikan isi file Vault ke AI (sadar consent)",
+    kind: "insert",
+    insertText: "/share-to-ai ",
+  },
 ];
-
-export const VAULT_SKILL_SYSTEM_HINT = `
-## Personal Vault (/v up, /v list, /v get, /v open, /v del)
-- Vault **terpisah** dari lampiran chat biasa. Upload chat (📎) **bukan** Vault.
-- \`manageVault\` — hanya metadata (id, name, type, summary, tags). **Jangan** baca isi file Vault kecuali user pakai \`/v open <id>\` di chat aktif.
-- Simpan ke Vault: user pakai \`/v up\` lalu pilih file, atau minta user upload lewat command tersebut.
-- Cari file: \`manageVault\` action search/list, atau user ketik \`/v list\` / \`/v get <nama>\`.
-- Buka untuk AI: hanya setelah \`/v open <id>\` — file didekripsi untuk percakapan ini saja.
-`.trim();

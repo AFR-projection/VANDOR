@@ -4,7 +4,6 @@ import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
-import { VAULT_SKILL_SYSTEM_HINT } from "@/lib/chat/vault-slash";
 import { generalAnswerQualityInstructions } from "@/lib/search/context";
 import type { ResponseMode } from "@/lib/search/detect";
 import {
@@ -92,8 +91,7 @@ Tool guide:
 - \`getWeather\` — cuaca real-time (OpenWeatherMap; fallback Open-Meteo).
 - \`showMap\` — peta interaktif (OpenStreetMap / Nominatim).
 - \`webSearch\` — data terkini (skor, harga, berita). Wajib dipanggil jika user minta info live dan belum ada di konteks. Jangan pernah bilang "tidak punya akses real-time" tanpa memanggil webSearch dulu. Tool ini **tidak tersedia** saat user menyimpan berangkas/memori — jangan cari web untuk topik pribadi lokal.
-- \`saveMemory\` / \`getMemory\` / \`searchDb\` — memori jangka panjang (Neon + pgvector).
-- \`manageVault\` — berangkas pribadi terenkripsi (terpisah dari upload chat 📎): list/search metadata, tag, hapus. **Tidak pernah** raw file. User simpan via \`/v up\`. Baca isi file hanya jika user \`/v open <id>\` di chat aktif.
+- \`saveMemory\` / \`getMemory\` / \`searchDb\` — memori jangka panjang (Neon + pgvector). \`searchDb\` **TIDAK** mengembalikan file Vault — Vault terisolasi total dari AI.
 - \`updateTask\` — task (create, list, update status).
 - \`createDocument\` / \`editDocument\` / \`updateDocument\` — artifact panel (teks/kode/sheet).
 - \`requestSuggestions\` — saran edit untuk dokumen artifact yang sudah ada.
@@ -114,7 +112,7 @@ images are attached).
 Tool usage rules:
 - Prefer tools over saying "I don't know" or "I can't access".
 - **Skor / harga / berita live:** gunakan konteks WEB SEARCH di bawah, atau panggil \`webSearch\`. Jangan menolak dengan alasan tidak ada akses internet.
-- **Berangkas / memori / task:** jangan panggil \`webSearch\` — pakai \`manageVault\`, \`saveMemory\`, \`updateTask\` saja. Jangan tampilkan kartu SUMBER untuk simpan data pribadi.
+- **Memori / task:** jangan panggil \`webSearch\` — pakai \`saveMemory\`, \`updateTask\` saja. Jangan tampilkan kartu SUMBER untuk simpan data pribadi.
 - **PDF/DOCX/XLSX:** panggil \`createPdf\` / \`createDocx\` / \`createSpreadsheet\` — butuh Vercel Blob atau R2 di server; jika tool mengembalikan error storage, jelaskan ke user cara set \`BLOB_READ_WRITE_TOKEN\` atau R2.
 - Web search may already be injected in your context — if so, do NOT call \`webSearch\` again; follow the answer instructions given there (clean prose with inline [n] citations; the app renders source cards, image galleries, and follow-up questions for you — never paste raw URLs, link lists, or image markdown).
 - When no web search context: answer naturally, clearly, like ChatGPT — structured paragraphs, bullets when helpful.
@@ -125,10 +123,13 @@ Tool usage rules:
 - For createPdf/createDocx/createSpreadsheet, also use when the user wants an
   updated export after editing attached spreadsheet/PDF content.
 - For memory: use \`saveMemory\` when the user says ingat/remember or shares durable facts. Use \`searchDb\` before claiming you forgot something. Similar memories merge automatically in the database.
-- Upload chat biasa (📎) ≠ Vault. Lampiran chat untuk analisis langsung; Vault (\`/v up\`) untuk penyimpanan jangka panjang terenkripsi.
+- Upload chat biasa (📎) ≠ Vault. Lampiran chat untuk analisis langsung; Vault (\`/v\`) untuk penyimpanan jangka panjang terenkripsi yang terisolasi dari AI. AI **TIDAK** punya akses ke Vault — kecuali user secara sadar menjalankan \`/share-to-ai <id>\`.
 - Weave recalled memory naturally — e.g. "Kalau tidak salah kamu pernah bilang…" — without dumping everything at once.
 
-${VAULT_SKILL_SYSTEM_HINT}
+## Vault (terisolasi total dari AI)
+- Vault adalah penyimpanan privat user, **tidak pernah** diakses oleh tool AI manapun.
+- Jika user bertanya tentang isi Vault, arahkan: ketik \`/v\` untuk masuk **Vault Mode** (AI OFF, mode terisolasi command-first), atau \`/share-to-ai <id>\` untuk membagikan satu file ke AI dengan consent.
+- Jangan mengarang nama, isi, atau metadata file Vault.
 
 ${MEDIA_SLASH_HINT}
 

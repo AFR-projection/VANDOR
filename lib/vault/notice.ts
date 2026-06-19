@@ -21,6 +21,25 @@ export type VaultUploadNotice = {
   file: VaultFileSnapshot;
 };
 
+export type VaultReadNotice = {
+  file: VaultFileSnapshot;
+  downloadUrl: string;
+  /** Inline text content (only when file is text-based and < 32KB). */
+  textContent?: string;
+  textTruncated?: boolean;
+};
+
+export type VaultDeniedNotice = {
+  attempted: string;
+  reason: string;
+};
+
+export type ShareToAiNotice = {
+  file: VaultFileSnapshot;
+  openUrl: string;
+  downloadUrl: string;
+};
+
 export function vaultListDataPart(data: VaultListNotice): {
   type: "data-vault-list";
   data: VaultListNotice;
@@ -47,6 +66,27 @@ export function vaultUploadDataPart(data: VaultUploadNotice): {
   data: VaultUploadNotice;
 } {
   return { type: "data-vault-upload", data };
+}
+
+export function vaultReadDataPart(data: VaultReadNotice): {
+  type: "data-vault-read";
+  data: VaultReadNotice;
+} {
+  return { type: "data-vault-read", data };
+}
+
+export function vaultDeniedDataPart(data: VaultDeniedNotice): {
+  type: "data-vault-denied";
+  data: VaultDeniedNotice;
+} {
+  return { type: "data-vault-denied", data };
+}
+
+export function shareToAiDataPart(data: ShareToAiNotice): {
+  type: "data-share-to-ai";
+  data: ShareToAiNotice;
+} {
+  return { type: "data-share-to-ai", data };
 }
 
 export function vaultUrls(fileId: string): {
