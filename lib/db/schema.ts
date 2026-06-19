@@ -36,9 +36,13 @@ export const chat = pgTable("Chat", {
   visibility: varchar("visibility", { enum: ["public", "private"] })
     .notNull()
     .default("private"),
+  mode: varchar("mode", { enum: ["chat", "vault", "vault-locked"] })
+    .notNull()
+    .default("chat"),
 });
 
 export type Chat = InferSelectModel<typeof chat>;
+export type ChatMode = "chat" | "vault" | "vault-locked";
 
 export const message = pgTable("Message_v2", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),

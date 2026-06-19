@@ -320,9 +320,19 @@ export async function POST(request: Request) {
       });
     }
 
-    // Vault Mode (per-chat): derive from message history before parsing.
-    const { isVaultModeActive } = await import("@/lib/vault/mode");
-    const vaultModeActive = isVaultModeActive(uiMessages);
+    // Vault Session enforcement (DB-level, not message-derived):
+    // - chat.mode === "vault"        → isolated session, AI disabled, only vault commands
+    // - chat.mode === "vault-locked" → terminated session, reject all writes
+    const chatMode = chat?.mode ?? "chat";
+
+    if (chatMode === "vault-locked") {
+      return new ChatbotError(
+        "forbidden:chat",
+        "Vault session ini sudah dikunci permanen. Mulai sesi baru atau gunakan `/v` di chat lain."
+      ).toResponse();
+    }
+
+    const vaultModeActive = chatMode === "vault";
 
     const directCmd =
       !isToolApprovalFlow && lastUserText.trim()
@@ -330,6 +340,60 @@ export async function POST(request: Request) {
             vaultMode: vaultModeActive,
           })
         : null;
+
+    // Special handling for vault_enter when NOT in vault chat:
+    // → create new isolated vault chat and tell client to redirect.
+    if (directCmd?.kind === "vault_enter" && !vaultModeActive) {
+      const { startVaultSession } = await import("@/lib/vault/session");
+      const result = await startVaultSession(session.user.id);
+      return createFastTextStreamResponse({
+        chatId: id,
+        instant: { label: "Vault Mode", phase: "start" },
+        text: "",
+        extraParts: [
+          {
+            type: "data-vault-session-redirect",
+            data: {
+              chatId: result.chatId,
+              redirectTo: result.redirectTo,
+              reason: "enter",
+            },
+          },
+        ],
+        consumeSseStream,
+      });
+    }
+
+    // Special handling for vault_exit while IN vault chat:
+    // → lock current chat, tell client to redirect to a fresh new chat.
+    if (directCmd?.kind === "vault_exit" && vaultModeActive) {
+      const { updateChatMode } = await import("@/lib/db/queries");
+      await updateChatMode({ chatId: id, mode: "vault-locked" });
+      const newChatId = generateUUID();
+      return createFastTextStreamResponse({
+        chatId: id,
+        instant: { label: "Chat Mode", phase: "start" },
+        text: "",
+        extraParts: [
+          {
+            type: "data-vault-mode-exit",
+            data: {
+              exitedAt: new Date().toISOString(),
+              reason: "user",
+            },
+          },
+          {
+            type: "data-vault-session-redirect",
+            data: {
+              chatId: newChatId,
+              redirectTo: `/chat/${newChatId}`,
+              reason: "exit",
+            },
+          },
+        ],
+        consumeSseStream,
+      });
+    }
 
     if (directCmd && directCmd.kind !== "media") {
       const executed = await executeDirectCommand(directCmd, {
@@ -345,7 +409,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // HARD ISOLATION: in Vault Mode, NO LLM calls, NO memory, NO retrieval.
+    // HARD ISOLATION: in Vault session, NO LLM calls, NO memory, NO retrieval.
     // Even if directCmd is null (e.g. user typed random text), reject it.
     if (vaultModeActive && !isToolApprovalFlow) {
       const { vaultDeniedDataPart } = await import("@/lib/vault/notice");
@@ -357,7 +421,7 @@ export async function POST(request: Request) {
           vaultDeniedDataPart({
             attempted: lastUserText.slice(0, 120),
             reason:
-              "Vault Mode aktif — AI dimatikan. Hanya command Vault yang tersedia (`list`, `read <id>`, `add`, `update <id> ...`, `delete <id>`). Ketik `exit` untuk kembali ke Chat Mode.",
+              "Vault Session aktif — AI dimatikan. Hanya command Vault yang tersedia (`list`, `read <id>`, `add`, `update <id> ...`, `delete <id>`). Ketik `exit` untuk mengakhiri sesi & mulai chat baru.",
           }),
         ],
         consumeSseStream,

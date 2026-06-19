@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     return Response.json({
       messages: [],
       visibility: "private",
+      mode: "chat",
       userId: null,
       isReadonly: false,
     });
@@ -32,11 +33,15 @@ export async function GET(request: Request) {
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
 
-  const isReadonly = !session?.user || session.user.id !== chat.userId;
+  const isReadonly =
+    !session?.user ||
+    session.user.id !== chat.userId ||
+    chat.mode === "vault-locked";
 
   return Response.json({
     messages: convertToUIMessages(messages),
     visibility: chat.visibility,
+    mode: chat.mode,
     userId: chat.userId,
     isReadonly,
   });

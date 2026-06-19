@@ -153,6 +153,11 @@ export type CustomUIDataTypes = {
   "vault-read": VaultReadNotice;
   "share-to-ai": ShareToAiNotice;
   "vault-add-prompt": { hint: string };
+  "vault-session-redirect": {
+    chatId: string;
+    redirectTo: string;
+    reason: "enter" | "exit";
+  };
 };
 
 export type ChatMessage = UIMessage<

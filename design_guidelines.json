@@ -1,0 +1,78 @@
+{
+  "theme": "dark",
+  "archetype": "5 (Luxury) mixed with 4 (Swiss & High-Contrast)",
+  "typography": {
+    "fonts": {
+      "heading": "Outfit, sans-serif",
+      "body": "'IBM Plex Sans', sans-serif",
+      "mono": "'JetBrains Mono', monospace"
+    },
+    "hierarchy": {
+      "h1": "text-4xl tracking-tighter font-light text-zinc-100",
+      "h2": "text-2xl tracking-tight font-medium text-zinc-100",
+      "h3": "text-lg tracking-tight font-medium text-zinc-200",
+      "body": "text-base leading-relaxed text-zinc-300",
+      "small": "text-sm tracking-wide text-zinc-500",
+      "overline": "text-xs uppercase tracking-[0.2em] font-medium text-zinc-500"
+    }
+  },
+  "colors": {
+    "background": {
+      "main": "#09090B",
+      "panel": "#111113",
+      "glass": "rgba(9, 9, 11, 0.7)"
+    },
+    "border": {
+      "subtle": "rgba(255, 255, 255, 0.06)",
+      "focus": "rgba(255, 255, 255, 0.2)"
+    },
+    "text": {
+      "primary": "#FAFAFA",
+      "secondary": "#A1A1AA",
+      "muted": "#71717A"
+    },
+    "accent": {
+      "primary": "#FFFFFF",
+      "primary_text": "#000000",
+      "vault_green_bg": "#052E16",
+      "vault_green_text": "#34D399",
+      "vault_green_border": "rgba(52, 211, 153, 0.2)",
+      "warning_amber_bg": "#451A03",
+      "warning_amber_text": "#FBBF24",
+      "warning_amber_border": "rgba(251, 191, 36, 0.2)"
+    }
+  },
+  "spacing": {
+    "container_padding": "px-4 md:px-8",
+    "chat_max_width": "max-w-3xl mx-auto",
+    "chat_expanded_max_width": "max-w-4xl mx-auto",
+    "section_gap": "gap-8"
+  },
+  "surfaces": {
+    "input_bar": "bg-zinc-950/80 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)] rounded-2xl",
+    "user_message": "bg-zinc-900 border border-white/5 rounded-2xl rounded-tr-sm px-5 py-3",
+    "tool_card": "bg-zinc-900/50 border border-white/5 rounded-xl p-4 hover:bg-zinc-900 transition-colors shadow-sm",
+    "artifact_panel": "bg-zinc-950 border-l border-white/10 shadow-2xl",
+    "sidebar": "bg-zinc-950 border-r border-white/5"
+  },
+  "motion": {
+    "spring": { "type": "spring", "stiffness": 300, "damping": 30 },
+    "fade_up": { "initial": { "opacity": 0, "y": 10 }, "animate": { "opacity": 1, "y": 0 } },
+    "message_enter": { "initial": { "opacity": 0, "scale": 0.98, "y": 10 }, "animate": { "opacity": 1, "scale": 1, "y": 0 } }
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "style": "Use 'Duotone' or 'Regular' weight for a premium, intricate tech feel.",
+    "installation": "yarn add @phosphor-icons/react"
+  },
+  "instructions_to_main_agent": [
+    "DO NOT use Inter or Roboto. Setup Outfit, IBM Plex Sans, and JetBrains Mono in the CSS/Tailwind config.",
+    "Implement the floating multimodal input bar using glassmorphism (Crystal Glass rule). It must be fixed at the bottom, centered with max-w-3xl.",
+    "Message list must have generous spacing (gap-6 or gap-8).",
+    "Assistant messages MUST NOT be in bubbles. Render markdown cleanly with full-bleed typography and distinct syntax highlighting for code blocks.",
+    "User messages should use the 'user_message' surface.",
+    "Add 'data-testid' to ALL interactive elements (e.g., data-testid='chat-input', data-testid='send-button', data-testid='sidebar-new-chat').",
+    "Vault Mode and Warning cards must strictly use the predefined accent colors (vault_green and warning_amber).",
+    "Use Framer Motion for smooth entrances (messages, tool cards, artifact panel slide-in)."
+  ]
+}

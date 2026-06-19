@@ -260,7 +260,8 @@ const PurePreviewMessage = ({
       type === "data-vault-denied" ||
       type === "data-vault-read" ||
       type === "data-share-to-ai" ||
-      type === "data-vault-add-prompt"
+      type === "data-vault-add-prompt" ||
+      type === "data-vault-session-redirect"
     ) {
       return null;
     }

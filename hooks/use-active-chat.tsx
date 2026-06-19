@@ -45,6 +45,7 @@ type ActiveChatContextValue = {
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   visibilityType: VisibilityType;
+  chatMode: "chat" | "vault" | "vault-locked";
   isReadonly: boolean;
   isLoading: boolean;
   votes: Vote[] | undefined;
@@ -102,6 +103,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const visibility: VisibilityType = isNewChat
     ? "private"
     : (chatData?.visibility ?? "private");
+  const chatMode: "chat" | "vault" | "vault-locked" = isNewChat
+    ? "chat"
+    : (chatData?.mode ?? "chat");
 
   const {
     messages,
@@ -303,6 +307,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       input,
       setInput,
       visibilityType: visibility,
+      chatMode,
       isReadonly,
       isLoading: !isNewChat && isLoading,
       votes,
@@ -322,6 +327,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       addToolApprovalResponse,
       input,
       visibility,
+      chatMode,
       isReadonly,
       isNewChat,
       isLoading,

@@ -25,6 +25,7 @@ import {
 import { useVisualViewportInset } from "@/hooks/use-visual-viewport-inset";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
 import { CommandPalette } from "./command-palette";
@@ -36,7 +37,6 @@ import { MobileChatEffects } from "./mobile-chat-effects";
 import { MultimodalInput } from "./multimodal-input";
 import { SourcePanel } from "./source-panel";
 import { VaultModeBanner } from "./vault-mode-banner";
-import { isVaultModeActive } from "@/lib/vault/mode";
 
 export function ChatShell() {
   const {
@@ -51,6 +51,7 @@ export function ChatShell() {
     input,
     setInput,
     visibilityType,
+    chatMode,
     isReadonly,
     isLoading,
     votes,
@@ -59,6 +60,7 @@ export function ChatShell() {
     showCreditCardAlert,
     setShowCreditCardAlert,
   } = useActiveChat();
+  const router = useRouter();
 
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(
     null
@@ -85,8 +87,9 @@ export function ChatShell() {
   const stopRef = useRef(stop);
   stopRef.current = stop;
 
-  // Per-chat Vault Mode derived from message history
-  const vaultModeActive = isVaultModeActive(messages);
+  // Vault Session is now DB-backed (per-chat, server-authoritative).
+  // chatMode comes from chat row in DB, NOT from message history.
+  const vaultModeActive = chatMode === "vault";
   const vaultEnteredAt = (() => {
     if (!vaultModeActive) return undefined;
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -109,6 +112,32 @@ export function ChatShell() {
       });
     }
   };
+
+  // Listen for vault session redirects (enter → new vault chat; exit → fresh chat).
+  useEffect(() => {
+    if (!messages.length) return;
+    const last = messages[messages.length - 1];
+    if (last.role !== "assistant") return;
+    for (const part of last.parts) {
+      if (part.type === "data-vault-session-redirect" && "data" in part) {
+        const data = part.data as {
+          chatId?: string;
+          redirectTo?: string;
+          reason?: string;
+        };
+        if (data.redirectTo) {
+          // Use Next router for proper navigation
+          router.push(
+            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${data.redirectTo}`
+          );
+        } else if (data.reason === "exit") {
+          // Fallback: navigate to root for fresh chat
+          router.push(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`);
+        }
+        break;
+      }
+    }
+  }, [messages, router]);
 
   const prevChatIdRef = useRef(chatId);
   useEffect(() => {
@@ -179,6 +208,7 @@ export function ChatShell() {
                 <MultimodalInput
                   attachments={attachments}
                   chatId={chatId}
+                  chatMode={chatMode}
                   editingMessage={editingMessage}
                   input={input}
                   isLoading={isLoading}

@@ -30,7 +30,6 @@ import {
   parseVaultEnter,
   parseVaultModeAdd,
 } from "@/lib/chat/vault-slash";
-import { isVaultModeActive } from "@/lib/vault/mode";
 import { resolveChatFileDisplayUrl } from "@/lib/files/chat-file-url";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -55,6 +54,7 @@ import { VoiceInputButton } from "./voice-input-button";
 
 function PureMultimodalInput({
   chatId,
+  chatMode,
   input,
   setInput,
   status,
@@ -73,6 +73,7 @@ function PureMultimodalInput({
   isLoading,
 }: {
   chatId: string;
+  chatMode: "chat" | "vault" | "vault-locked";
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   status: UseChatHelpers<ChatMessage>["status"];
@@ -217,8 +218,8 @@ function PureMultimodalInput({
   const [slashQuery, setSlashQuery] = useState("");
   const [slashIndex, setSlashIndex] = useState(0);
 
-  // Per-chat Vault Mode (derived from messages)
-  const vaultModeActive = isVaultModeActive(messages as UIMessage[]);
+  // Per-chat Vault Mode comes from chat row in DB (via props)
+  const vaultModeActive = chatMode === "vault";
 
   // Auto-trigger vault upload UI when backend signals it
   useEffect(() => {
@@ -531,8 +532,37 @@ function PureMultimodalInput({
             return;
           }
 
-          // `/v` (bare) — let it go through as normal text, backend handles
-          // the enter-vault-mode side effect.
+          // `/v` (bare) → create NEW isolated Vault Session and redirect.
+          // We call the session start endpoint directly instead of routing
+          // through chat — this guarantees the vault chat is born clean,
+          // with NO inherited history from the current chat.
+          if (parseVaultEnter(input) && !vaultModeActive) {
+            setInput("");
+            try {
+              const res = await fetch(
+                `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vault/session/start`,
+                { method: "POST" }
+              );
+              if (res.ok) {
+                const data = (await res.json()) as {
+                  redirectTo?: string;
+                  chatId?: string;
+                };
+                if (data.redirectTo) {
+                  router.push(
+                    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${data.redirectTo}`
+                  );
+                  return;
+                }
+              }
+              toast.error("Gagal memulai Vault Session — coba lagi.");
+            } catch {
+              toast.error("Gagal memulai Vault Session — koneksi bermasalah.");
+            }
+            return;
+          }
+
+          // If already in vault, `/v` is idempotent — let backend ack
           if (parseVaultEnter(input)) {
             trySubmit();
             return;
