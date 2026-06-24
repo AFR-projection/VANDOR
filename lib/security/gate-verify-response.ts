@@ -16,10 +16,12 @@ export async function buildGateLoginSuccessResponse(
 ): Promise<NextResponse> {
   const response = NextResponse.redirect(target);
   const secure = !isDevelopmentEnvironment;
+  // Strict for VANDOR's own gate/device cookies — stronger CSRF protection
+  // for the vault gate. NextAuth cookies below stay Lax on purpose.
   const cookieOpts = {
     httpOnly: true,
     secure,
-    sameSite: "lax" as const,
+    sameSite: "strict" as const,
     path: "/",
   };
 
