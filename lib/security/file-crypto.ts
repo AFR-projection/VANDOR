@@ -1,13 +1,12 @@
 import "server-only";
 
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  randomBytes,
-} from "node:crypto";
+import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:crypto";
 
 const ALGO = "aes-256-gcm";
+// Domain label distinct from secret encryption so a file key compromise
+// cannot reveal stored secrets, and vice-versa.
+const HKDF_INFO = "vandor:file:v2";
+const HKDF_SALT = "vandor-vault-hkdf";
 
 export type EncryptedPayload = {
   ciphertext: Buffer;
@@ -20,7 +19,14 @@ function encryptionKey(): Buffer {
   if (!secret) {
     throw new Error("AUTH_SECRET required for file encryption");
   }
-  return createHash("sha256").update(secret).digest();
+  const derived = hkdfSync(
+    "sha256",
+    Buffer.from(secret),
+    Buffer.from(HKDF_SALT),
+    Buffer.from(HKDF_INFO),
+    32
+  );
+  return Buffer.from(derived);
 }
 
 /** AES-256-GCM encrypt a file buffer before R2 upload. */
