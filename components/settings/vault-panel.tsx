@@ -110,6 +110,7 @@ export function VaultPanel() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [editName, setEditName] = useState("");
   const [editSummary, setEditSummary] = useState("");
   const [editTags, setEditTags] = useState("");
   const [savingMeta, setSavingMeta] = useState(false);
@@ -128,6 +129,7 @@ export function VaultPanel() {
 
   const selectFile = useCallback((file: VaultFileSnapshot) => {
     setSelectedId(file.id);
+    setEditName(file.name);
     setEditSummary(file.summary ?? "");
     setEditTags(file.tags.join(", "));
   }, []);
@@ -178,6 +180,7 @@ export function VaultPanel() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          fileName: editName.trim() || undefined,
           summary: editSummary.trim() || undefined,
           tags: editTags
             .split(",")
@@ -194,7 +197,7 @@ export function VaultPanel() {
     } finally {
       setSavingMeta(false);
     }
-  }, [selected, editSummary, editTags, mutate]);
+  }, [selected, editName, editSummary, editTags, mutate]);
 
   const deleteFile = useCallback(async () => {
     if (!selected) return;
@@ -407,6 +410,12 @@ export function VaultPanel() {
               </div>
 
               <div className="space-y-2 rounded-lg border border-border/30 bg-background/40 p-3">
+                <Label className="text-xs">Nama file</Label>
+                <Input
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Nama file di berangkas"
+                  value={editName}
+                />
                 <Label className="text-xs">Ringkasan (aman untuk AI)</Label>
                 <Textarea
                   className="min-h-[4rem] text-sm"
