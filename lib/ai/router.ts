@@ -5,13 +5,49 @@ import { detectWebSearchNeed } from "@/lib/search/detect";
 export type TaskIntent = "simple" | "reasoning" | "coding" | "research";
 
 const CODING_RE =
-  /\b(code|coding|function|class|bug|error|typescript|javascript|python|react|next\.?js|sql|api|refactor|debug|implement|script)\b/i;
+  /\b(code|coding|function|class|bug|error|typescript|javascript|python|react|next\.?js|sql|api|refactor|debug|implement|script|compile|stack trace|exception|null pointer|segfault)\b/i;
+
+// Strong structural signals that the message is a coding task even without
+// keywords: fenced code blocks, HTML/JSX tags, or file paths/extensions.
+const CODE_BLOCK_RE = /```|~~~/;
+const CODE_TAG_RE = /<\/?[a-z][\w-]*(\s[^>]*)?>/i;
+const FILE_PATH_RE =
+  /\b[\w./-]+\.(ts|tsx|js|jsx|py|go|rs|java|rb|php|c|cpp|cs|sql|sh|json|ya?ml|css|html?)\b/i;
 
 const REASONING_RE =
-  /\b(why|explain|analyze|analysis|compare|plan|strategy|think|reason|pros|cons|evaluate|breakdown|step by step|langkah)\b/i;
+  /\b(why|explain|analyze|analysis|compare|plan|strategy|think|reason|pros|cons|evaluate|breakdown|step by step|langkah|kenapa|mengapa|jelaskan|bandingkan|analisa|analisis)\b/i;
+
+// Short comparative/analytical questions like "A atau B, kenapa?" that the
+// length heuristic alone would misclassify as simple.
+const COMPARATIVE_RE =
+  /\b(atau|vs\.?|versus|or)\b/i;
+
+// Multi-step math expressions deserve a stronger reasoning model.
+const MATH_RE =
+  /\d\s*[+\-*/×÷^%]\s*\d.*[+\-*/×÷^%]|\b(integral|turunan|derivative|persamaan|equation|faktorkan|factorize|solve for|akar kuadrat|logaritma)\b/i;
 
 const SIMPLE_RE =
   /^(hi|halo|hello|thanks|terima kasih|ok|oke|sip|yes|no|ya|tidak)[!.?\s]*$/i;
+
+function looksLikeCode(text: string): boolean {
+  return (
+    CODE_BLOCK_RE.test(text) ||
+    CODE_TAG_RE.test(text) ||
+    FILE_PATH_RE.test(text) ||
+    CODING_RE.test(text)
+  );
+}
+
+function looksLikeReasoning(text: string): boolean {
+  if (REASONING_RE.test(text) || MATH_RE.test(text)) {
+    return true;
+  }
+  // "A atau B?" style comparisons are analytical even when short.
+  if (COMPARATIVE_RE.test(text) && text.includes("?")) {
+    return true;
+  }
+  return text.length > 200 || (text.includes("?") && text.length > 60);
+}
 
 export function classifyTaskIntent(
   userText: string,
@@ -25,13 +61,10 @@ export function classifyTaskIntent(
   if (text.length < 40 && SIMPLE_RE.test(text)) {
     return "simple";
   }
-  if (CODING_RE.test(text)) {
+  if (looksLikeCode(text)) {
     return "coding";
   }
-  if (REASONING_RE.test(text) || text.length > 200) {
-    return "reasoning";
-  }
-  if (text.includes("?") && text.length > 60) {
+  if (looksLikeReasoning(text)) {
     return "reasoning";
   }
   return "simple";
