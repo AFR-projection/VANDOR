@@ -283,11 +283,13 @@ export async function searchVaultFiles({
 export async function updateVaultFileMeta({
   userId,
   fileId,
+  fileName,
   summary,
   tags,
 }: {
   userId: string;
   fileId: string;
+  fileName?: string;
   summary?: string;
   tags?: string[];
 }): Promise<VaultFileSnapshot | null> {
@@ -296,6 +298,9 @@ export async function updateVaultFileMeta({
     return null;
   }
 
+  const trimmedName = fileName?.trim();
+  const nextFileName =
+    trimmedName && trimmedName.length > 0 ? trimmedName : existing.fileName;
   const nextSummary = summary?.trim() ?? existing.summary;
   const nextTags = tags ?? (existing.tags as string[] | null) ?? [];
 
@@ -303,7 +308,7 @@ export async function updateVaultFileMeta({
     const embedOpts = await getEmbeddingOptionsForUser(userId);
     const vector = await embedText(
       indexableText({
-        fileName: existing.fileName,
+        fileName: nextFileName,
         summary: nextSummary,
         tags: nextTags,
         extractedText: existing.extractedText,
@@ -318,6 +323,7 @@ export async function updateVaultFileMeta({
     await client`
       UPDATE "VaultFile"
       SET
+        "fileName" = ${nextFileName},
         summary = ${nextSummary},
         tags = ${JSON.stringify(nextTags)}::json,
         embedding = ${vectorSql}::vector,

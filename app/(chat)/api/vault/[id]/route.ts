@@ -10,6 +10,7 @@ import {
 import { toVaultSnapshot } from "@/lib/vault/snapshot";
 
 const patchSchema = z.object({
+  fileName: z.string().min(1).max(255).optional(),
   summary: z.string().max(500).optional(),
   tags: z.array(z.string().max(64)).max(20).optional(),
 });
@@ -74,6 +75,7 @@ export async function PATCH(
   const file = await updateVaultFileMeta({
     userId: session.user.id,
     fileId: id,
+    fileName: parsed.data.fileName,
     summary: parsed.data.summary,
     tags: parsed.data.tags,
   });
