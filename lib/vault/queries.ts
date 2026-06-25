@@ -110,6 +110,11 @@ export async function listVaultFiles({
         )!
       );
     }
+    if (tag?.trim()) {
+      conditions.push(
+        sql`${vaultFile.tags}::text ILIKE ${`%${tag.trim()}%`}`
+      );
+    }
 
     const rows = await db
       .select({
@@ -129,19 +134,10 @@ export async function listVaultFiles({
       .limit(limit)
       .offset(offset);
 
-    const filtered = tag
-      ? rows.filter((row) => {
-          const tags = Array.isArray(row.tags) ? (row.tags as string[]) : [];
-          return tags.some((t) =>
-            t.toLowerCase().includes(tag.toLowerCase())
-          );
-        })
-      : rows;
-
-    return filtered.map((row) => toVaultSnapshot(row));
+    return rows.map((row) => toVaultSnapshot(row));
   } catch (error) {
     console.error("listVaultFiles failed:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -283,11 +279,13 @@ export async function searchVaultFiles({
 export async function updateVaultFileMeta({
   userId,
   fileId,
+  name,
   summary,
   tags,
 }: {
   userId: string;
   fileId: string;
+  name?: string;
   summary?: string;
   tags?: string[];
 }): Promise<VaultFileSnapshot | null> {
@@ -296,6 +294,7 @@ export async function updateVaultFileMeta({
     return null;
   }
 
+  const nextName = name?.trim() || existing.fileName;
   const nextSummary = summary?.trim() ?? existing.summary;
   const nextTags = tags ?? (existing.tags as string[] | null) ?? [];
 
@@ -303,7 +302,7 @@ export async function updateVaultFileMeta({
     const embedOpts = await getEmbeddingOptionsForUser(userId);
     const vector = await embedText(
       indexableText({
-        fileName: existing.fileName,
+        fileName: nextName,
         summary: nextSummary,
         tags: nextTags,
         extractedText: existing.extractedText,
@@ -318,6 +317,7 @@ export async function updateVaultFileMeta({
     await client`
       UPDATE "VaultFile"
       SET
+        "fileName" = ${nextName},
         summary = ${nextSummary},
         tags = ${JSON.stringify(nextTags)}::json,
         embedding = ${vectorSql}::vector,

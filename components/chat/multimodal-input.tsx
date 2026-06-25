@@ -48,7 +48,6 @@ import {
   SlashCommandMenu,
   slashCommands,
 } from "./slash-commands";
-import { SuggestedActions } from "./suggested-actions";
 import type { VisibilityType } from "./visibility-selector";
 import { VoiceInputButton } from "./voice-input-button";
 
@@ -470,18 +469,6 @@ function PureMultimodalInput({
         </div>
       )}
 
-      {!isMobile &&
-        !editingMessage &&
-        !isLoading &&
-        messages.length === 0 &&
-        attachments.length === 0 &&
-        uploadQueue.length === 0 && (
-          <SuggestedActions
-            chatId={chatId}
-            selectedVisibilityType={selectedVisibilityType}
-            sendMessage={sendMessage}
-          />
-        )}
 
       <input
         accept="image/*,video/*,audio/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/*,application/json,application/zip,application/x-zip-compressed,application/x-7z-compressed,application/x-rar-compressed,application/x-tar,application/gzip,.txt,.md,.csv,.json,.yaml,.yml,.toml,.ini,.log,.sql,.html,.css,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cpp,.cs,.php,.sh"

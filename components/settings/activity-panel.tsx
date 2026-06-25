@@ -11,7 +11,8 @@ import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { apiBasePath } from "@/lib/app-url";
+const base = apiBasePath;
 
 type LogLevel = "info" | "warn" | "error" | "success";
 

@@ -305,6 +305,10 @@ function isTextLikeMime(mime: string): boolean {
   return mime.startsWith("text/");
 }
 
+function isVaultCommand(cmd: DirectCommand): boolean {
+  return cmd.kind.startsWith("vault_");
+}
+
 export async function executeDirectCommand(
   cmd: DirectCommand,
   ctx: { userId: string; chatId: string }
@@ -313,6 +317,13 @@ export async function executeDirectCommand(
   instantLabel: string;
   extraParts?: Array<{ type: string; data: unknown }>;
 }> {
+  const vaultUserId = isVaultCommand(cmd)
+    ? await (async () => {
+        const { resolveVaultUserId } = await import("@/lib/vault/vault-scope");
+        return resolveVaultUserId(ctx.userId);
+      })()
+    : ctx.userId;
+
   switch (cmd.kind) {
     case "media":
       return { text: "", instantLabel: "Unduh media" };
@@ -456,8 +467,8 @@ export async function executeDirectCommand(
         "@/lib/vault/queries"
       );
       const [files, total] = await Promise.all([
-        listVaultFiles({ userId: ctx.userId, limit: 30 }),
-        countVaultFiles(ctx.userId),
+        listVaultFiles({ userId: vaultUserId, limit: 30 }),
+        countVaultFiles(vaultUserId),
       ]);
       if (files.length === 0) {
         return {
@@ -478,7 +489,7 @@ export async function executeDirectCommand(
       const { getVaultFileById } = await import("@/lib/vault/queries");
       const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
       const row = await getVaultFileById({
-        userId: ctx.userId,
+        userId: vaultUserId,
         fileId,
       });
       if (!row) {
@@ -520,7 +531,7 @@ export async function executeDirectCommand(
       const { getVaultFileById } = await import("@/lib/vault/queries");
       const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
       const row = await getVaultFileById({
-        userId: ctx.userId,
+        userId: vaultUserId,
         fileId: cmd.fileId,
       });
       if (!row) {
@@ -541,7 +552,7 @@ export async function executeDirectCommand(
       const { resolveVaultFileTarget } = await import("@/lib/vault/queries");
       const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
       const row = await resolveVaultFileTarget({
-        userId: ctx.userId,
+        userId: vaultUserId,
         target: cmd.query,
       });
       if (!row) {
@@ -569,7 +580,7 @@ export async function executeDirectCommand(
       const { resolveVaultFileTarget } = await import("@/lib/vault/queries");
       const { toVaultSnapshot } = await import("@/lib/vault/snapshot");
       const row = await resolveVaultFileTarget({
-        userId: ctx.userId,
+        userId: vaultUserId,
         target: cmd.target,
       });
       if (!row) {
@@ -589,7 +600,7 @@ export async function executeDirectCommand(
         try {
           const { decryptVaultFile } = await import("@/lib/vault/retrieve");
           const decrypted = await decryptVaultFile({
-            userId: ctx.userId,
+            userId: vaultUserId,
             fileId: file.id,
             audit: true,
             auditDetail: { source: "vault-mode-read" },
@@ -615,6 +626,7 @@ export async function executeDirectCommand(
         extraParts: [
           vaultReadDataPart({
             file,
+            openUrl: urls.openUrl,
             downloadUrl: urls.downloadUrl,
             textContent,
             textTruncated,
@@ -642,7 +654,7 @@ export async function executeDirectCommand(
         "@/lib/vault/queries"
       );
       const row = await resolveVaultFileTarget({
-        userId: ctx.userId,
+        userId: vaultUserId,
         target: cmd.target,
       });
       if (!row) {
@@ -672,7 +684,7 @@ export async function executeDirectCommand(
         summary = cmd.patch.slice(0, 500);
       }
       const updated = await updateVaultFileMeta({
-        userId: ctx.userId,
+        userId: vaultUserId,
         fileId: row.id,
         tags,
         summary,
@@ -703,7 +715,7 @@ export async function executeDirectCommand(
         "@/lib/vault/queries"
       );
       const row = await resolveVaultFileTarget({
-        userId: ctx.userId,
+        userId: vaultUserId,
         target: cmd.target,
       });
       if (!row) {
@@ -713,7 +725,7 @@ export async function executeDirectCommand(
         };
       }
       const removed = await deleteVaultFile({
-        userId: ctx.userId,
+        userId: vaultUserId,
         fileId: row.id,
       });
       return {

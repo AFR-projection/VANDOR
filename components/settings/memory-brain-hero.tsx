@@ -4,7 +4,8 @@ import { BrainIcon, SparklesIcon } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { apiBasePath } from "@/lib/app-url";
+const base = apiBasePath;
 
 type MemoryBrainHeroProps = {
   memoryEnabled: boolean;

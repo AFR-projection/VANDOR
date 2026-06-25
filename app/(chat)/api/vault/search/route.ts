@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { searchVaultFiles } from "@/lib/vault/queries";
+import { requireVaultSession } from "@/lib/vault/route-auth";
 
 const schema = z.object({
   query: z.string().min(2).max(500),
@@ -22,9 +22,9 @@ export async function POST(request: Request) {
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   let json: unknown;
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
 
   const result = await searchVaultFiles({
-    userId: session.user.id,
+    userId: vaultAuth.vaultUserId,
     query: parsed.data.query,
     limit: parsed.data.limit ?? 10,
     fileType: parsed.data.fileType as Parameters<

@@ -10,7 +10,12 @@ import {
   isGateConfigured,
 } from "./lib/security/gate-edge";
 
-const PUBLIC_PATHS = ["/gate", "/api/gate", "/api/auth"];
+const PUBLIC_PATHS = [
+  "/gate",
+  "/api/gate",
+  "/api/auth",
+  "/api/whatsapp/ingest",
+];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

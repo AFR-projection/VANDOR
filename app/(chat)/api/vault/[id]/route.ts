@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import {
@@ -7,9 +6,10 @@ import {
   getVaultFileById,
   updateVaultFileMeta,
 } from "@/lib/vault/queries";
+import { requireVaultSession } from "@/lib/vault/route-auth";
 import { toVaultSnapshot } from "@/lib/vault/snapshot";
-
 const patchSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
   summary: z.string().max(500).optional(),
   tags: z.array(z.string().max(64)).max(20).optional(),
 });
@@ -29,13 +29,16 @@ export async function GET(
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   const { id } = await params;
-  const file = await getVaultFileById({ userId: session.user.id, fileId: id });
+  const file = await getVaultFileById({
+    userId: vaultAuth.vaultUserId,
+    fileId: id,
+  });
   if (!file) {
     return Response.json({ error: "File not found" }, { status: 404 });
   }
@@ -53,9 +56,9 @@ export async function PATCH(
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   const { id } = await params;
@@ -72,8 +75,9 @@ export async function PATCH(
   }
 
   const file = await updateVaultFileMeta({
-    userId: session.user.id,
+    userId: vaultAuth.vaultUserId,
     fileId: id,
+    name: parsed.data.name,
     summary: parsed.data.summary,
     tags: parsed.data.tags,
   });
@@ -92,14 +96,14 @@ export async function DELETE(
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   const { id } = await params;
   const removed = await deleteVaultFile({
-    userId: session.user.id,
+    userId: vaultAuth.vaultUserId,
     fileId: id,
     ip: clientIp(request),
   });

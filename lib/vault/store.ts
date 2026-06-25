@@ -102,6 +102,12 @@ export async function storeVaultFile(
   });
 
   if (!id) {
+    try {
+      const { deleteEncryptedBlob } = await import("./storage");
+      await deleteEncryptedBlob(r2Key, storageBackend);
+    } catch (error) {
+      console.error("Vault blob rollback failed:", error);
+    }
     return { ok: false, error: "Failed to save vault metadata" };
   }
 

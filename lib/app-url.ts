@@ -12,3 +12,8 @@ export function resolveAppUrl(raw?: string | null): string {
 export function getAppUrl(): string {
   return resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 }
+
+/** Returns the base path prefix (e.g. "" or "/app") for client-side API calls. */
+export function apiBasePath(): string {
+  return process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+}

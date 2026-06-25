@@ -1,9 +1,9 @@
-import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
+import { requireVaultUnlock } from "@/lib/security/vault-unlock";
 import { getVaultFileById } from "@/lib/vault/queries";
 import { decryptVaultFile } from "@/lib/vault/retrieve";
-
+import { requireVaultSession } from "@/lib/vault/route-auth";
 function clientIp(request: Request): string | undefined {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -23,14 +23,17 @@ export async function GET(
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultDenied = await requireVaultUnlock(request);
+  if (vaultDenied) return vaultDenied;
+
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   const { id } = await params;
   const record = await getVaultFileById({
-    userId: session.user.id,
+    userId: vaultAuth.vaultUserId,
     fileId: id,
   });
   if (!record) {
@@ -38,8 +41,7 @@ export async function GET(
   }
 
   const file = await decryptVaultFile({
-    userId: session.user.id,
-    fileId: id,
+    userId: vaultAuth.vaultUserId,    fileId: id,
     ip: clientIp(request),
     auditDetail: { purpose: "chat_open" },
   });

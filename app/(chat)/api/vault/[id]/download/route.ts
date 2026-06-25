@@ -1,8 +1,8 @@
-import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
+import { requireVaultUnlock } from "@/lib/security/vault-unlock";
 import { downloadVaultFile } from "@/lib/vault/retrieve";
-
+import { requireVaultSession } from "@/lib/vault/route-auth";
 function clientIp(request: Request): string | undefined {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -18,15 +18,17 @@ export async function GET(
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultDenied = await requireVaultUnlock(request);
+  if (vaultDenied) return vaultDenied;
+
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   const { id } = await params;
   const file = await downloadVaultFile({
-    userId: session.user.id,
-    fileId: id,
+    userId: vaultAuth.vaultUserId,    fileId: id,
     ip: clientIp(request),
   });
 
@@ -38,7 +40,7 @@ export async function GET(
     headers: {
       "Content-Type": file.mimeType,
       "Content-Length": String(file.data.byteLength),
-      "Content-Disposition": `inline; filename="${encodeURIComponent(file.fileName)}"`,
+      "Content-Disposition": `attachment; filename="${encodeURIComponent(file.fileName)}"`,
       "Cache-Control": "private, no-store",
     },
   });

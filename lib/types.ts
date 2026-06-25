@@ -1,3 +1,4 @@
+import type { AgentActivityUpdate } from "./agent-activity/types";
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/components/chat/artifact";
@@ -158,6 +159,7 @@ export type CustomUIDataTypes = {
     redirectTo: string;
     reason: "enter" | "exit";
   };
+  "agent-activity": AgentActivityUpdate;
 };
 
 export type ChatMessage = UIMessage<

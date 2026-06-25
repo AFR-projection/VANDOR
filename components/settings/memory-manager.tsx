@@ -40,7 +40,8 @@ type MemoryStats = {
   byCategory: Record<MemoryCategory, number>;
 };
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { apiBasePath } from "@/lib/app-url";
+const base = apiBasePath;
 
 async function fetchMemories(filter: string): Promise<MemoryItem[]> {
   const params = new URLSearchParams({ limit: "200" });

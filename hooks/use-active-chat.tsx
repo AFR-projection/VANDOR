@@ -89,13 +89,38 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
   const [input, setInput] = useState("");
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
 
-  const { data: chatData, isLoading } = useSWR(
-    isNewChat
-      ? null
-      : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
-    fetcher,
-    { revalidateOnFocus: false }
-  );
+  const messagesKey = isNewChat
+    ? null
+    : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`;
+
+  const { data: chatData, isLoading } = useSWR(messagesKey, fetcher, {
+    revalidateOnFocus: false,
+  });
+
+  // For WhatsApp-originated chats, subscribe to SSE so messages update live
+  // whenever the bot receives and replies to a WA message.
+  const isWhatsAppChat =
+    !isNewChat &&
+    typeof chatData?.title === "string" &&
+    chatData.title.startsWith("WhatsApp");
+
+  useEffect(() => {
+    if (!isWhatsAppChat || !chatId || !messagesKey) return;
+
+    const es = new EventSource(
+      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/whatsapp/live?chatId=${chatId}`
+    );
+
+    es.onmessage = () => {
+      void mutate(messagesKey);
+    };
+
+    es.onerror = () => {
+      es.close();
+    };
+
+    return () => es.close();
+  }, [isWhatsAppChat, chatId, messagesKey, mutate]);
 
   const initialMessages: ChatMessage[] = isNewChat
     ? []

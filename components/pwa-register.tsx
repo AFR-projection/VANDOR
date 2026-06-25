@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { apiBasePath } from "@/lib/app-url";
+const base = apiBasePath;
 
 export function PwaRegister() {
   useEffect(() => {

@@ -3,14 +3,16 @@ import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { listRecentVaultAudit } from "@/lib/vault/audit";
 import { countVaultFiles, listVaultFiles } from "@/lib/vault/queries";
+import { requireVaultSession } from "@/lib/vault/route-auth";
+import { getVaultStorageStatus } from "@/lib/vault/storage-status";
 
 export async function GET(request: Request) {
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   const { searchParams } = new URL(request.url);
@@ -20,24 +22,20 @@ export async function GET(request: Request) {
 
   const [files, total, audit] = await Promise.all([
     listVaultFiles({
-      userId: session.user.id,
+      userId: vaultAuth.vaultUserId,
       limit,
       search,
       fileType: fileType as Parameters<typeof listVaultFiles>[0]["fileType"],
     }),
-    countVaultFiles(session.user.id),
-    listRecentVaultAudit({ userId: session.user.id, limit: 12 }),
+    countVaultFiles(vaultAuth.vaultUserId),
+    listRecentVaultAudit({ userId: vaultAuth.vaultUserId, limit: 12 }),
   ]);
 
   return Response.json({
     files,
     total,
+    filteredCount: files.length,
     audit,
-    security: {
-      encrypted: true,
-      algorithm: "AES-256-GCM",
-      storage: "Cloudflare R2",
-      metadata: "Neon PostgreSQL + pgvector",
-    },
+    security: getVaultStorageStatus(),
   });
 }

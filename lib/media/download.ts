@@ -741,6 +741,7 @@ export async function downloadSocialMedia(
         progress: 100,
         stageLabel: "Selesai — file siap diunduh",
         downloadUrl: uploaded.url,
+        filename,
         title,
         bytesReceived: uploaded.sizeBytes,
       })

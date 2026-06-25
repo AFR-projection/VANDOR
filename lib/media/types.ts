@@ -20,6 +20,7 @@ export type MediaDownloadProgressData = {
   bytesReceived?: number;
   bytesTotal?: number;
   downloadUrl?: string;
+  filename?: string;
   title?: string;
   error?: string;
 };

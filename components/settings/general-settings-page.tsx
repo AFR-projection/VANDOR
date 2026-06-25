@@ -11,8 +11,10 @@ import {
   MessageCircleIcon,
   ServerIcon,
   ShieldIcon,
+  SmartphoneIcon,
   SparklesIcon,
   TerminalIcon,
+  WrenchIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useState } from "react";
@@ -36,13 +38,16 @@ import type {
 import { cn } from "@/lib/utils";
 import { APP_NAME, APP_VERSION } from "@/lib/version";
 import { ActivityPanel } from "./activity-panel";
+import { AgentSkillsPanel } from "./agent-skills-panel";
 import { HelpGuidePanel } from "./help-guide-panel";
 import { LoginHistoryPanel } from "./login-history-panel";
 import { ModelAiPanel } from "./model-ai-panel";
 import { VaultPanel } from "./vault-panel";
+import { WhatsappPanel } from "./whatsapp-panel";
 import { SettingSlider } from "./setting-row";
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { apiBasePath } from "@/lib/app-url";
+const base = apiBasePath;
 
 type SecretSource = "database" | "env" | "none";
 
@@ -78,7 +83,9 @@ type GeneralPayload = {
 const tabs = [
   { id: "persona", label: "Gaya bicara", icon: MessageCircleIcon },
   { id: "model", label: "Model & AI", icon: SparklesIcon },
+  { id: "skills", label: "Agent Skills", icon: WrenchIcon },
   { id: "vault", label: "Berangkas", icon: FolderLockIcon },
+  { id: "whatsapp", label: "WhatsApp", icon: SmartphoneIcon },
   { id: "api", label: "API & integrasi", icon: ServerIcon },
   { id: "security", label: "Keamanan", icon: ShieldIcon },
   { id: "activity", label: "Log", icon: TerminalIcon },
@@ -522,6 +529,8 @@ export function GeneralSettingsPage() {
               />
             )}
 
+            {tab === "skills" && <AgentSkillsPanel />}
+
             {tab === "api" && (
               <>
                 <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-muted-foreground">
@@ -642,6 +651,8 @@ export function GeneralSettingsPage() {
             )}
 
             {tab === "vault" && <VaultPanel />}
+
+            {tab === "whatsapp" && <WhatsappPanel />}
 
             {tab === "activity" && <ActivityPanel />}
 

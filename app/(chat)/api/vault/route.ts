@@ -1,15 +1,15 @@
-import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { countVaultFiles, listVaultFiles } from "@/lib/vault/queries";
+import { requireVaultSession } from "@/lib/vault/route-auth";
 
 export async function GET(request: Request) {
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return new ChatbotError("unauthorized:chat").toResponse();
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   const { searchParams } = new URL(request.url);
@@ -20,13 +20,13 @@ export async function GET(request: Request) {
 
   const [files, total] = await Promise.all([
     listVaultFiles({
-      userId: session.user.id,
+      userId: vaultAuth.vaultUserId,
       limit,
       offset,
       fileType: fileType as Parameters<typeof listVaultFiles>[0]["fileType"],
       tag,
     }),
-    countVaultFiles(session.user.id),
+    countVaultFiles(vaultAuth.vaultUserId),
   ]);
 
   return Response.json({ files, total });

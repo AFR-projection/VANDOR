@@ -1,15 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { suggestions } from "@/lib/constants";
 import { SparklesIcon } from "./icons";
 
 export function Preview() {
   const router = useRouter();
 
-  const handleAction = (query?: string) => {
-    const url = query ? `/?query=${encodeURIComponent(query)}` : "/";
-    router.push(url);
+  const handleStart = () => {
+    router.push("/");
   };
 
   return (
@@ -23,29 +21,29 @@ export function Preview() {
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-8 px-8">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold tracking-tight">
-            VANDOR siap membantu, Boss.
+      <div className="relative flex flex-1 flex-col items-center justify-center gap-6 px-8">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-1/4 left-1/2 size-48 -translate-x-1/2 rounded-full opacity-50 blur-[80px]"
+          style={{ background: "var(--vandor-accent-glow)" }}
+        />
+        <div className="relative text-center">
+          <h2 className="font-display text-2xl font-light tracking-tight">
+            <span className="text-muted-foreground/50">VANDOR siap,</span>{" "}
+            <span className="text-foreground">Boss.</span>
           </h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Asisten pribadi dengan memori jangka panjang. Pilih model dari UI.
+          <p className="mt-2 text-sm text-muted-foreground/70">
+            Asisten pribadi dengan memori jangka panjang.
           </p>
         </div>
-
-        <div className="grid w-full max-w-md grid-cols-2 gap-2">
-          {suggestions.map((suggestion) => (
-            <button
-              className="rounded-xl border border-border/30 bg-card/20 px-3 py-2.5 text-left text-[11px] leading-relaxed text-muted-foreground/70 transition-all duration-200 hover:border-border/60 hover:bg-card/40 hover:text-muted-foreground"
-              key={suggestion}
-              onClick={() => handleAction(suggestion)}
-              type="button"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
+        <button
+          className="rounded-full border border-border/40 bg-card/30 px-5 py-2 text-[12px] text-muted-foreground transition-all hover:border-border/70 hover:bg-card/50 hover:text-foreground"
+          onClick={handleStart}
+          type="button"
+        >
+          Mulai percakapan
+        </button>
       </div>
     </div>
   );
-}
+};

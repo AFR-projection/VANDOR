@@ -4,7 +4,8 @@ import {
   tierCookieValue,
 } from "@/lib/ai/model-tiers";
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { apiBasePath } from "@/lib/app-url";
+const base = apiBasePath;
 
 export function setChatModelCookie(mode: string) {
   document.cookie = `chat-model=${encodeURIComponent(mode)}; path=/; max-age=31536000; SameSite=Lax`;

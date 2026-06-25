@@ -493,6 +493,33 @@ textarea:focus-visible {
   background-size: 200% 100%;
 }
 
+@keyframes progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+
+@utility progress-sweep {
+  animation: progress-sweep 1.5s var(--ease-smooth) infinite;
+}
+
+@keyframes agent-rail-flow {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% -200%;
+  }
+}
+
+@utility agent-rail-flow {
+  animation: agent-rail-flow 1.6s linear infinite;
+  background-size: 100% 200%;
+}
+
 @utility dot-pulse {
   animation: dot-pulse 1.4s ease-in-out infinite;
 }

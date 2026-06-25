@@ -85,3 +85,9 @@ export function getTextFromMessage(message: ChatMessage | UIMessage): string {
     .map((part) => (part as { type: 'text'; text: string}).text)
     .join('');
 }
+
+export function formatBytes(n: number): string {
+  if (n < 1_024) return `${n} B`;
+  if (n < 1_024 * 1_024) return `${(n / 1_024).toFixed(1)} KB`;
+  return `${(n / (1_024 * 1_024)).toFixed(1)} MB`;
+}

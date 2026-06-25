@@ -17,7 +17,7 @@ import {
   VideoIcon,
   ZapIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatBytes } from "@/lib/media/progress";
 import {
   MEDIA_DOWNLOAD_STEPS,
@@ -27,6 +27,7 @@ import {
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toErrorMessage } from "@/lib/utils/error-message";
+import { triggerMediaDownload } from "@/components/security/pin-confirm-dialog";
 
 export function getMediaDownloadProgressFromMessage(
   message: ChatMessage
@@ -212,6 +213,17 @@ export function MediaDownloadProgressCard({
     progress,
     isActive
   );
+
+  const filename =
+    progress.filename ??
+    (progress.title
+      ? `${progress.title}.${progress.format === "audio" ? "mp3" : "mp4"}`
+      : `vandor-${progress.platform ?? "media"}.${progress.format === "audio" ? "mp3" : "mp4"}`);
+
+  const handleDownload = useCallback(() => {
+    if (!progress.downloadUrl) return;
+    void triggerMediaDownload(progress.downloadUrl, filename);
+  }, [progress.downloadUrl, filename]);
 
   return (
     <motion.div
@@ -489,14 +501,13 @@ export function MediaDownloadProgressCard({
         )}
 
         {isComplete && progress.downloadUrl && (
-          <motion.a
+          <motion.button
             animate={{ opacity: 1, y: 0 }}
             className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
-            href={progress.downloadUrl}
             initial={{ opacity: 0, y: 6 }}
-            rel="noopener noreferrer"
-            target="_blank"
+            onClick={handleDownload}
             transition={{ delay: 0.15, type: "spring", stiffness: 200 }}
+            type="button"
           >
             <span
               aria-hidden
@@ -506,8 +517,8 @@ export function MediaDownloadProgressCard({
               }}
             />
             <DownloadIcon className="size-4" />
-            Unduh file
-          </motion.a>
+            Unduh ke perangkat
+          </motion.button>
         )}
 
         {isComplete && (

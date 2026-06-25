@@ -20,7 +20,8 @@ import { MemoryManager } from "./memory-manager";
 import { SettingSlider, SettingToggle } from "./setting-row";
 import { TokenUsagePanel } from "./token-usage-panel";
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+import { apiBasePath } from "@/lib/app-url";
+const base = apiBasePath;
 
 type SettingsPayload = {
   settings: UserSettings;

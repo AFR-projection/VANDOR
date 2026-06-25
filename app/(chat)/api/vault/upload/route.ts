@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/app/(auth)/auth";
+import { ChatbotError } from "@/lib/errors";
 import { classify, isMimeAllowed, MAX_UPLOAD_BYTES } from "@/lib/files/mime";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { storeVaultFile } from "@/lib/vault/store";
+import { requireVaultSession } from "@/lib/vault/route-auth";
 
 export const maxDuration = 60;
 
@@ -19,9 +20,9 @@ export async function POST(request: Request) {
   const denied = await requireClientAccess(request);
   if (denied) return denied;
 
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const vaultAuth = await requireVaultSession();
+  if (vaultAuth instanceof ChatbotError) {
+    return vaultAuth.toResponse();
   }
 
   if (request.body === null) {
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
         : undefined;
 
     const stored = await storeVaultFile({
-      userId: session.user.id,
+      userId: vaultAuth.vaultUserId,
       fileName: safeName,
       mimeType: mime,
       fileType: kind,

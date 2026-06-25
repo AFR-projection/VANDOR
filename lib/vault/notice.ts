@@ -23,6 +23,7 @@ export type VaultUploadNotice = {
 
 export type VaultReadNotice = {
   file: VaultFileSnapshot;
+  openUrl: string;
   downloadUrl: string;
   /** Inline text content (only when file is text-based and < 32KB). */
   textContent?: string;

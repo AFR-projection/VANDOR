@@ -22,15 +22,23 @@ import type {
   VaultUploadNotice,
 } from "@/lib/vault/notice";
 import type { ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
+import { apiBasePath } from "@/lib/app-url";
+import { VaultDownloadButton } from "@/components/chat/vault-download-button";
+import { VaultMediaPreview } from "@/components/chat/vault-media-preview";
 
-const base = () => process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
+const typeColors: Record<string, string> = {
+  image: "text-pink-400 bg-pink-500/10",
+  video: "text-violet-400 bg-violet-500/10",
+  audio: "text-blue-400 bg-blue-500/10",
+  pdf: "text-red-400 bg-red-500/10",
+  docx: "text-blue-500 bg-blue-600/10",
+  xlsx: "text-green-500 bg-green-600/10",
+  text: "text-slate-400 bg-slate-500/10",
+  code: "text-amber-400 bg-amber-500/10",
+  json: "text-yellow-400 bg-yellow-500/10",
+  other: "text-gray-400 bg-gray-500/10",
+};
 
 function typeIcon(type: string) {
   if (type === "image") return FileImageIcon;
@@ -88,83 +96,87 @@ export function getVaultUploadFromMessage(
   return null;
 }
 
-function VaultHeader({
-  title,
-  subtitle,
-  count,
-}: {
-  title: string;
-  subtitle: string;
-  count?: number;
-}) {
-  return (
-    <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 py-3.5">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/5"
-        style={{ animation: "vandor-download-aurora 4s ease-in-out infinite" }}
-      />
-      <div className="relative flex items-center gap-3 text-white">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-black/25 ring-1 ring-white/25 backdrop-blur-sm">
-          <FolderLockIcon className="size-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold tracking-tight">{title}</p>
-          <p className="text-xs text-white/85">{subtitle}</p>
-        </div>
-        {count != null && (
-          <div className="rounded-xl bg-black/25 px-3 py-1.5 text-right ring-1 ring-white/20">
-            <p className="text-lg font-bold tabular-nums leading-none">{count}</p>
-            <p className="text-[9px] uppercase tracking-wider opacity-80">file</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+// ── Vault List Card ───────────────────────────────────────────────
 
 export function VaultListCard({ data }: { data: VaultListNotice }) {
   return (
     <motion.div
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      className="w-full max-w-lg overflow-hidden rounded-2xl border border-border/40 bg-card/95 shadow-2xl shadow-emerald-500/10 backdrop-blur-xl"
+      className="w-full max-w-lg overflow-hidden rounded-2xl border border-border/35 bg-card/95 shadow-xl shadow-emerald-500/8 backdrop-blur-xl"
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
-      <VaultHeader
-        count={data.total}
-        subtitle="Terenkripsi AES-256-GCM · metadata saja"
-        title="Berangkas pribadi"
-      />
-      <div className="space-y-2 p-3">
+      {/* Header */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 py-3.5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/5"
+          style={{ animation: "vandor-download-aurora 4s ease-in-out infinite" }}
+        />
+        <div className="relative flex items-center gap-3 text-white">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-black/20 ring-1 ring-white/20">
+            <FolderLockIcon className="size-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Berangkas Pribadi</p>
+            <p className="text-[11px] text-white/70">
+              Terenkripsi AES-256-GCM
+            </p>
+          </div>
+          {data.total > 0 && (
+            <div className="rounded-xl bg-black/20 px-3 py-2 text-right ring-1 ring-white/15">
+              <p className="text-xl font-bold tabular-nums leading-none">
+                {data.total}
+              </p>
+              <p className="text-[9px] uppercase tracking-wide opacity-70">
+                file
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* File list */}
+      <div className="space-y-1.5 p-3">
         {data.files.length === 0 ? (
-          <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-            Berangkas kosong. Upload dengan <span className="font-mono">/v up</span>.
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Berangkas kosong. Upload dengan{" "}
+            <span className="font-mono text-foreground/70">/v up</span>.
           </p>
         ) : (
           data.files.map((file, index) => {
             const Icon = typeIcon(file.type);
+            const colorClass =
+              typeColors[file.type] ?? "text-gray-400 bg-gray-500/10";
             return (
               <motion.div
                 animate={{ opacity: 1, x: 0 }}
-                className="group flex items-center gap-3 rounded-xl border border-border/35 bg-muted/20 px-3 py-2.5 transition-colors hover:bg-muted/40"
-                initial={{ opacity: 0, x: -8 }}
+                className="group flex items-center gap-3 rounded-xl border border-border/30 bg-muted/15 px-3 py-2.5 transition-colors hover:bg-muted/30"
+                initial={{ opacity: 0, x: -6 }}
                 key={file.id}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: index * 0.04 }}
               >
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500/15 to-cyan-500/15 ring-1 ring-emerald-500/20">
-                  <Icon className="size-4 text-emerald-600 dark:text-emerald-400" />
+                <div
+                  className={cn(
+                    "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                    colorClass
+                  )}
+                >
+                  <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{file.name}</p>
                   <p className="text-[11px] text-muted-foreground">
                     {file.type} · {formatBytes(file.size)}
                     {file.tags.length > 0 && (
-                      <span> · {file.tags.slice(0, 2).join(", ")}</span>
+                      <span className="opacity-60">
+                        {" "}
+                        · {file.tags.slice(0, 2).join(", ")}
+                      </span>
                     )}
                   </p>
                 </div>
-                <div className="flex shrink-0 gap-1 opacity-80 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
                     className="rounded-lg p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
                     onClick={() => copyText(`/share-to-ai ${file.id}`)}
@@ -173,91 +185,75 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
                   >
                     <CopyIcon className="size-3.5" />
                   </button>
-                  <a
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
-                    href={
+                  <VaultDownloadButton
+                    filename={file.name}
+                    iconOnly
+                    url={
                       file.id
-                        ? `${base()}/api/vault/${file.id}/download`
+                        ? `${apiBasePath()}/api/vault/${file.id}/download`
                         : "#"
                     }
-                    rel="noopener"
-                    title="Unduh"
-                  >
-                    <DownloadIcon className="size-3.5" />
-                  </a>
+                  />
                 </div>
               </motion.div>
             );
           })
         )}
       </div>
-      <div className="border-t border-border/30 bg-muted/15 px-4 py-2.5">
-        <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <LockIcon className="size-3 shrink-0 text-emerald-600" />
-          Vault Mode: <span className="font-mono">/v</span> · Bagikan ke AI:{" "}
-          <span className="font-mono">/share-to-ai &lt;id&gt;</span>
+
+      {/* Footer hint */}
+      <div className="border-t border-border/25 bg-muted/10 px-4 py-2.5">
+        <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
+          <LockIcon className="size-3 shrink-0 text-emerald-500/70" />
+          Vault:{" "}
+          <span className="font-mono text-foreground/50">/v</span>
+          {" · "}
+          Bagikan:{" "}
+          <span className="font-mono text-foreground/50">
+            /share-to-ai &lt;id&gt;
+          </span>
         </p>
       </div>
     </motion.div>
   );
 }
 
+// ── Vault Open Card ───────────────────────────────────────────────
+
 export function VaultOpenCard({ data }: { data: VaultOpenNotice }) {
   const { file, openUrl, downloadUrl } = data;
-  const isImage = file.mimeType.startsWith("image/");
-  const isVideo = file.mimeType.startsWith("video/");
-  const isAudio = file.mimeType.startsWith("audio/");
-  const Icon = typeIcon(file.type);
 
   return (
     <motion.div
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      className="w-full max-w-lg overflow-hidden rounded-2xl border border-border/40 bg-card/95 shadow-2xl shadow-teal-500/15 backdrop-blur-xl"
+      className="w-full max-w-lg overflow-hidden rounded-2xl border border-border/35 bg-card/95 shadow-xl shadow-teal-500/8 backdrop-blur-xl"
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
-      <VaultHeader
-        subtitle="Didekripsi untuk sesi chat ini · aman"
-        title="File berangkas dibuka"
-      />
-      <div className="space-y-3 p-4">
-        {isImage && (
-          <div className="overflow-hidden rounded-xl border border-border/40 bg-muted/30">
-            <img
-              alt={file.name}
-              className="max-h-72 w-full object-contain"
-              src={openUrl}
-            />
+      <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 py-3.5">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/5"
+          style={{ animation: "vandor-download-aurora 4s ease-in-out infinite" }}
+        />
+        <div className="relative flex items-center gap-3 text-white">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-black/20 ring-1 ring-white/20">
+            <FolderLockIcon className="size-5" />
           </div>
-        )}
-        {isVideo && (
-          <video
-            className="max-h-72 w-full rounded-xl border border-border/40 bg-black"
-            controls
-            src={openUrl}
-          >
-            <track kind="captions" />
-          </video>
-        )}
-        {isAudio && (
-          <audio className="w-full" controls src={openUrl}>
-            <track kind="captions" />
-          </audio>
-        )}
-        {!isImage && !isVideo && !isAudio && (
-          <div className="flex items-center gap-3 rounded-xl border border-dashed border-border/50 bg-muted/20 px-4 py-8">
-            <Icon className="size-10 text-muted-foreground/50" />
-            <div>
-              <p className="text-sm font-medium">{file.name}</p>
-              <p className="text-xs text-muted-foreground">
-                Pratinjau tidak tersedia — unduh untuk membuka
-              </p>
-            </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">File Berangkas Dibuka</p>
+            <p className="text-[11px] text-white/70">
+              Didekripsi untuk sesi chat ini
+            </p>
           </div>
-        )}
+        </div>
+      </div>
 
-        <div className="rounded-xl border border-border/35 bg-muted/20 px-3 py-2.5">
-          <p className="text-sm font-medium">{file.name}</p>
+      <div className="space-y-3 p-4">
+        <VaultMediaPreview file={file} openUrl={openUrl} />
+
+        <div className="rounded-xl border border-border/30 bg-muted/15 px-3 py-2.5">
+          <p className="truncate text-sm font-medium">{file.name}</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
             {file.type} · {formatBytes(file.size)}
             {file.summary ? ` · ${file.summary}` : ""}
@@ -265,16 +261,15 @@ export function VaultOpenCard({ data }: { data: VaultOpenNotice }) {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <a
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
-            href={downloadUrl}
-            rel="noopener"
-          >
-            <DownloadIcon className="size-4" />
-            Unduh
-          </a>
+          <VaultDownloadButton
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-lg"
+            filename={file.name}
+            label="Unduh"
+            url={downloadUrl}
+            variant="default"
+          />
           <button
-            className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40"
+            className="inline-flex items-center gap-2 rounded-xl border border-border/40 px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/30"
             onClick={() => copyText(`/share-to-ai ${file.id}`)}
             type="button"
           >
@@ -283,27 +278,31 @@ export function VaultOpenCard({ data }: { data: VaultOpenNotice }) {
           </button>
         </div>
 
-        <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
           <SparklesIcon className="size-3 text-primary" />
-          Minta analisis di pesan berikutnya — AI akan memakai file ini di sesi ini.
+          Minta analisis di pesan berikutnya.
         </p>
       </div>
     </motion.div>
   );
 }
 
+// ── Vault Upload Success Card ─────────────────────────────────────
+
 export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
   const { file } = data;
   const Icon = typeIcon(file.type);
-  const downloadUrl = `${base()}/api/vault/${file.id}/download`;
+  const downloadUrl = `${apiBasePath()}/api/vault/${file.id}/download`;
+  const colorClass = typeColors[file.type] ?? "text-gray-400 bg-gray-500/10";
 
   return (
     <motion.div
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      className="w-full max-w-lg overflow-hidden rounded-2xl border border-emerald-500/25 bg-card/95 shadow-2xl shadow-emerald-500/15 backdrop-blur-xl"
+      className="w-full max-w-md overflow-hidden rounded-2xl border border-emerald-500/20 bg-card/95 shadow-xl shadow-emerald-500/10 backdrop-blur-xl"
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
+      {/* Header */}
       <div className="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 px-4 py-3.5">
         <div
           aria-hidden
@@ -311,25 +310,29 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
           style={{ animation: "vandor-download-aurora 4s ease-in-out infinite" }}
         />
         <div className="relative flex items-center gap-3 text-white">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-black/25 ring-1 ring-white/25 backdrop-blur-sm">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-black/20 ring-1 ring-white/20">
             <CheckCircle2Icon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold tracking-tight">
-              Upload berangkas berhasil
-            </p>
-            <p className="text-xs text-white/85">
-              Terenkripsi AES-256-GCM · disimpan aman di R2
+            <p className="text-sm font-semibold">Upload Berhasil</p>
+            <p className="text-[11px] text-white/70">
+              Terenkripsi AES-256-GCM · disimpan aman
             </p>
           </div>
-          <ShieldCheckIcon className="size-6 shrink-0 opacity-90" />
+          <ShieldCheckIcon className="size-5 shrink-0 opacity-80" />
         </div>
       </div>
 
       <div className="space-y-3 p-4">
-        <div className="flex items-start gap-3 rounded-xl border border-border/35 bg-muted/20 px-3 py-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
-            <Icon className="size-5 text-emerald-600" />
+        {/* File info */}
+        <div className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/15 px-3 py-3">
+          <div
+            className={cn(
+              "flex size-11 shrink-0 items-center justify-center rounded-xl",
+              colorClass
+            )}
+          >
+            <Icon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{file.name}</p>
@@ -337,7 +340,7 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
               {file.type} · {formatBytes(file.size)}
             </p>
             {file.summary && (
-              <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/70">
                 {file.summary}
               </p>
             )}
@@ -365,45 +368,61 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
             <CopyIcon className="size-4" />
             Salin /share-to-ai
           </button>
-          <a
-            className="inline-flex items-center gap-2 rounded-xl border border-border/50 px-3 py-2.5 text-sm text-muted-foreground hover:bg-muted/40"
-            href={downloadUrl}
-            rel="noopener"
-          >
-            <DownloadIcon className="size-4" />
-            Unduh
-          </a>
+          <VaultDownloadButton
+            filename={file.name}
+            label="Unduh"
+            url={downloadUrl}
+            variant="outline"
+          />
         </div>
 
-        <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-          <LockIcon className="size-3 shrink-0 text-emerald-600" />
-          Lihat semua: <span className="font-mono">/v list</span> · Bagikan ke AI:{" "}
-          <span className="font-mono">/share-to-ai &lt;id&gt;</span>
+        <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
+          <LockIcon className="size-3 shrink-0 text-emerald-500/60" />
+          Lihat:{" "}
+          <span className="font-mono text-foreground/40">/v list</span>
+          {" · Bagikan: "}
+          <span className="font-mono text-foreground/40">
+            /share-to-ai &lt;id&gt;
+          </span>
         </p>
       </div>
     </motion.div>
   );
 }
 
+// ── Vault Detail Card ─────────────────────────────────────────────
+
 export function VaultDetailCard({ data }: { data: VaultDetailNotice }) {
   const Icon = typeIcon(data.file.type);
+  const colorClass =
+    typeColors[data.file.type] ?? "text-gray-400 bg-gray-500/10";
+
   return (
     <motion.div
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "w-full max-w-md overflow-hidden rounded-2xl border border-border/40 bg-card/95 shadow-xl"
-      )}
+      className="w-full max-w-sm overflow-hidden rounded-2xl border border-border/35 bg-card/95 shadow-lg"
       initial={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.3 }}
     >
       <div className="flex items-start gap-3 p-4">
-        <div className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10">
-          <Icon className="size-5 text-emerald-600" />
+        <div
+          className={cn(
+            "flex size-12 shrink-0 items-center justify-center rounded-xl",
+            colorClass
+          )}
+        >
+          <Icon className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold">{data.file.name}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="truncate font-semibold">{data.file.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {data.file.type} · {formatBytes(data.file.size)}
           </p>
+          {data.file.summary && (
+            <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground/70">
+              {data.file.summary}
+            </p>
+          )}
           {data.file.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {data.file.tags.map((tag) => (

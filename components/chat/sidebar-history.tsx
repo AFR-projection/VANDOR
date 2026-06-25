@@ -4,7 +4,7 @@ import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import useSWRInfinite from "swr/infinite";
 import {
@@ -118,6 +118,22 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Subscribe to WhatsApp live updates so new WA chats appear in sidebar
+  // without a manual refresh.
+  useEffect(() => {
+    if (!user) return;
+    const es = new EventSource(
+      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/whatsapp/live?chatId=*`
+    );
+    es.onmessage = () => {
+      void mutate();
+    };
+    es.onerror = () => {
+      es.close();
+    };
+    return () => es.close();
+  }, [user, mutate]);
 
   const hasReachedEnd = paginatedChatHistories
     ? paginatedChatHistories.some((page) => page.hasMore === false)

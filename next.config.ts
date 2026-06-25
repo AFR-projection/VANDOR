@@ -63,6 +63,9 @@ const nextConfig: NextConfig = {
     "jsdom",
     "@mozilla/readability",
     "youtubei.js",
+    "@whiskeysockets/baileys",
+    "pino",
+    "qrcode",
   ],
   experimental: {
     prefetchInlining: true,

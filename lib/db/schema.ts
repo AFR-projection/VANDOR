@@ -8,6 +8,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -190,6 +191,69 @@ export const userSecrets = pgTable("UserSecrets", {
 });
 
 export type UserSecretsRow = InferSelectModel<typeof userSecrets>;
+
+/**
+ * One-time verification codes generated in the web UI.
+ * A WhatsApp user sends this code → bot validates → phone is registered as owner.
+ */
+export const whatsappVerifCode = pgTable("WhatsappVerifCode", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 16 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  usedByPhone: varchar("usedByPhone", { length: 32 }),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type WhatsappVerifCode = InferSelectModel<typeof whatsappVerifCode>;
+
+/**
+ * Verified WhatsApp owner numbers — persisted per user.
+ * Multiple numbers can be registered (e.g. personal + work SIM).
+ */
+export const whatsappOwner = pgTable(
+  "WhatsappOwner",
+  {
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    phone: varchar("phone", { length: 32 }).notNull(),
+    label: text("label"),
+    verifiedAt: timestamp("verifiedAt").notNull().defaultNow(),
+    revokedAt: timestamp("revokedAt"),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.phone] }),
+  })
+);
+
+export type WhatsappOwner = InferSelectModel<typeof whatsappOwner>;
+
+/**
+ * Audit log for WhatsApp verification events.
+ */
+export const whatsappVerifLog = pgTable("WhatsappVerifLog", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId").references(() => user.id, { onDelete: "set null" }),
+  phone: varchar("phone", { length: 32 }),
+  event: varchar("event", {
+    enum: [
+      "code_generated",
+      "code_used",
+      "code_invalid",
+      "code_expired",
+      "owner_added",
+      "owner_revoked",
+    ],
+  }).notNull(),
+  meta: json("meta"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type WhatsappVerifLog = InferSelectModel<typeof whatsappVerifLog>;
 
 export const gateLockout = pgTable("GateLockout", {
   ip: text("ip").primaryKey().notNull(),
@@ -443,3 +507,132 @@ export const vaultAuditLog = pgTable("VaultAuditLog", {
 });
 
 export type VaultAuditLog = InferSelectModel<typeof vaultAuditLog>;
+
+export const agentSkillCategories = [
+  "api",
+  "knowledge_base",
+  "web_search",
+  "database",
+  "workflow",
+  "integration",
+  "builtin",
+] as const;
+
+export type AgentSkillCategory = (typeof agentSkillCategories)[number];
+
+export const agentSkillTypes = [
+  "http_api",
+  "knowledge_base",
+  "web_search",
+  "database",
+  "workflow",
+  "parlay_calculator",
+] as const;
+
+export type AgentSkillType = (typeof agentSkillTypes)[number];
+
+export const agentSkill = pgTable(
+  "AgentSkill",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    slug: varchar("slug", { length: 64 }).notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+    category: varchar("category", { length: 32 })
+      .notNull()
+      .default("api"),
+    skillType: varchar("skillType", { length: 32 })
+      .notNull()
+      .default("http_api"),
+    config: json("config").notNull().default({}),
+    isActive: boolean("isActive").notNull().default(true),
+    isBuiltin: boolean("isBuiltin").notNull().default(false),
+    rateLimitPerHour: integer("rateLimitPerHour").notNull().default(120),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  },
+  (table) => ({
+    userSlugIdx: uniqueIndex("AgentSkill_userId_slug_idx").on(
+      table.userId,
+      table.slug
+    ),
+  })
+);
+
+export type AgentSkill = InferSelectModel<typeof agentSkill>;
+
+export const agentSkillApiKey = pgTable("AgentSkillApiKey", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 128 }).notNull(),
+  keyEnc: text("keyEnc").notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type AgentSkillApiKey = InferSelectModel<typeof agentSkillApiKey>;
+
+export const agentSkillLog = pgTable("AgentSkillLog", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  chatId: uuid("chatId").references(() => chat.id, { onDelete: "set null" }),
+  skillId: uuid("skillId").references(() => agentSkill.id, {
+    onDelete: "set null",
+  }),
+  skillSlug: varchar("skillSlug", { length: 64 }).notNull(),
+  skillName: text("skillName").notNull(),
+  request: json("request"),
+  response: json("response"),
+  executionTimeMs: integer("executionTimeMs"),
+  status: varchar("status", { length: 16 }).notNull().default("ok"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type AgentSkillLog = InferSelectModel<typeof agentSkillLog>;
+
+export const knowledgeBaseDocument = pgTable("KnowledgeBaseDocument", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  skillId: uuid("skillId").references(() => agentSkill.id, {
+    onDelete: "set null",
+  }),
+  fileName: text("fileName").notNull(),
+  mimeType: varchar("mimeType", { length: 128 }).notNull(),
+  fileSize: integer("fileSize").notNull().default(0),
+  extractedText: text("extractedText"),
+  status: varchar("status", { length: 16 }).notNull().default("pending"),
+  chunkCount: integer("chunkCount").notNull().default(0),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type KnowledgeBaseDocument = InferSelectModel<
+  typeof knowledgeBaseDocument
+>;
+
+export const knowledgeBaseChunk = pgTable("KnowledgeBaseChunk", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  documentId: uuid("documentId")
+    .notNull()
+    .references(() => knowledgeBaseDocument.id, { onDelete: "cascade" }),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  chunkIndex: integer("chunkIndex").notNull(),
+  content: text("content").notNull(),
+  embedding: text("embedding"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type KnowledgeBaseChunk = InferSelectModel<typeof knowledgeBaseChunk>;

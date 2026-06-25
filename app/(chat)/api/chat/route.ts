@@ -91,6 +91,16 @@ import { memorySavedDataPart } from "@/lib/memory/notice";
 import { isExplicitRememberRequest } from "@/lib/memory/remember";
 import { maybeSummarizeChat } from "@/lib/memory/summarize";
 import { captureVisualMemories } from "@/lib/memory/visual-memory";
+import {
+  agentDone,
+  agentEvent,
+  agentProgress,
+  agentStatus,
+  agentStepComplete,
+  agentStepStart,
+  agentTrace,
+} from "@/lib/agent-activity/emit";
+import { toolActivityLabel } from "@/lib/agent-activity/labels";
 import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
 import { recordActivityLog, recordToolEvent } from "@/lib/observability/record";
 import { checkIpRateLimit } from "@/lib/ratelimit";
@@ -133,6 +143,13 @@ import {
 import { selectActiveTools } from "@/lib/v4/tool-router";
 import { trimUiMessagesForModel } from "@/lib/v4/trim-messages";
 import { estimateTurnUsage } from "@/lib/v4/turn-usage";
+import {
+  buildSkillPromptLines,
+  buildSkillTools,
+} from "@/lib/agent-skills/build-tools";
+import { listActiveAgentSkills } from "@/lib/agent-skills/queries";
+import { ensureBuiltinSkills } from "@/lib/agent-skills/seed";
+import { toSkillToolName } from "@/lib/agent-skills/types";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
@@ -804,6 +821,22 @@ export async function POST(request: Request) {
           },
         });
 
+        agentStepStart(dataStream, "understand", "Memahami permintaan");
+        agentStatus(dataStream, "Memproses permintaan");
+        agentProgress(dataStream, 8);
+
+        if (memoryContext.length > 0) {
+          agentStepComplete(dataStream, "understand");
+          agentStepStart(dataStream, "memory", "Mengambil konteks memori");
+          agentEvent(
+            dataStream,
+            `Memuat ${memoryContext.length} karakter memori`,
+            "info"
+          );
+          agentStepComplete(dataStream, "memory");
+          agentProgress(dataStream, 18);
+        }
+
         let webSearchContextBlock = "";
         let webSearchRetryHint = "";
         let relatedPromise: Promise<string[]> | null = null;
@@ -819,6 +852,17 @@ export async function POST(request: Request) {
               type: "data-search-status",
               data: { status: "searching", query: detection.query },
             });
+            agentStepStart(dataStream, "web-search", "Mencari sumber");
+            agentStatus(dataStream, "Mencari sumber");
+            agentTrace(dataStream, "Mencari sumber relevan");
+            if (detection.query) {
+              agentEvent(
+                dataStream,
+                `Query: ${detection.query.slice(0, 80)}`,
+                "info"
+              );
+            }
+            agentProgress(dataStream, 28);
 
             const searchResult = await runWebSearch(detection.query, {
               userId: session.user.id,
@@ -835,6 +879,16 @@ export async function POST(request: Request) {
                 type: "data-web-sources",
                 data: searchResult,
               });
+              agentStepComplete(dataStream, "web-search");
+              agentStepStart(dataStream, "read-sources", "Membaca sumber");
+              agentEvent(
+                dataStream,
+                `Menemukan ${searchResult.sources.length} sumber`,
+                "success"
+              );
+              agentStepComplete(dataStream, "read-sources");
+              agentTrace(dataStream, "Membandingkan informasi");
+              agentProgress(dataStream, 45);
 
               if (allowRichUI) {
                 const rich = buildRichContent(searchResult, contentIntents);
@@ -974,6 +1028,17 @@ export async function POST(request: Request) {
             phase: "start",
           },
         });
+        agentStepComplete(dataStream, "understand");
+        agentStatus(
+          dataStream,
+          instantLabels[v4Intent.intent] ?? "Memproses permintaan"
+        );
+        agentStepStart(
+          dataStream,
+          "prepare",
+          instantLabels[v4Intent.intent] ?? "Memproses permintaan"
+        );
+        agentProgress(dataStream, 52);
 
         let activeTools = selectActiveTools({
           intent: v4Intent.intent,
@@ -987,6 +1052,34 @@ export async function POST(request: Request) {
         if (webSearchToolOff) {
           activeTools = activeTools.filter((t) => t !== "webSearch");
         }
+
+        let activeSkills: Awaited<ReturnType<typeof listActiveAgentSkills>> =
+          [];
+        let skillToolNames: ReturnType<typeof toSkillToolName>[] = [];
+        let skillToolsBlock = "";
+        let skillTools: ReturnType<typeof buildSkillTools> = {};
+
+        if (supportsTools) {
+          try {
+            await ensureBuiltinSkills(session.user.id);
+            activeSkills = await listActiveAgentSkills(session.user.id);
+            skillToolNames = activeSkills.map((s) => toSkillToolName(s.slug));
+            skillToolsBlock =
+              activeSkills.length > 0
+                ? `\n\n## Custom Agent Skills\n${buildSkillPromptLines(activeSkills).join("\n")}\nPilih skill yang paling relevan. Isi parameter otomatis dari konteks user.`
+                : "";
+            skillTools = buildSkillTools(activeSkills, {
+              userId: session.user.id,
+              chatId: id,
+            });
+          } catch {
+            // Skills DB belum siap — chat tetap jalan tanpa custom tools
+          }
+        }
+
+        const allActiveTools = supportsTools
+          ? ([...activeTools, ...skillToolNames] as typeof activeTools)
+          : activeTools;
 
         const synthesisModelId =
           webSearchContextBlock.length > 0
@@ -1028,7 +1121,8 @@ export async function POST(request: Request) {
                 persona: userSettings.persona,
                 activeTools,
               }) +
-              `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${activeTools.length}.` +
+              skillToolsBlock +
+              `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${allActiveTools.length}.` +
               (freeModeActive
                 ? `\n\n=== TIER GRATIS ===\nVANDOR mencoba ${freeAttemptChain?.length ?? 15} model :free bergantian (Llama 3.3, GPT-OSS, Nemotron, Kimi, dll.) sampai ada respons.${
                     freeHeavyReason
@@ -1044,7 +1138,7 @@ export async function POST(request: Request) {
             temperature: webSearchContextBlock.length > 0 ? 0.4 : undefined,
             stopWhen: stepCountIs(V4_MAX_AGENT_STEPS),
             experimental_activeTools:
-              isReasoningModel && !supportsTools ? [] : activeTools,
+              isReasoningModel && !supportsTools ? [] : allActiveTools,
             tools: {
               getCurrentTime,
               getLocation: makeGetLocation(ipGeo),
@@ -1053,6 +1147,7 @@ export async function POST(request: Request) {
               webSearch: makeWebSearch(session.user.id),
               downloadMedia: makeDownloadMediaTool(),
               ...assistantTools,
+              ...skillTools,
               createDocument: createDocument({
                 session,
                 dataStream,
@@ -1087,6 +1182,42 @@ export async function POST(request: Request) {
               isEnabled: isProductionEnvironment,
               functionId: "stream-text",
             },
+            onStepFinish: ({ toolCalls, toolResults }) => {
+              for (const call of toolCalls) {
+                const name = call.toolName;
+                agentStepStart(
+                  dataStream,
+                  call.toolCallId,
+                  toolActivityLabel(name)
+                );
+                agentStatus(dataStream, toolActivityLabel(name));
+                agentEvent(dataStream, `${toolActivityLabel(name)}…`, "info");
+              }
+              for (const result of toolResults) {
+                agentStepComplete(dataStream, result.toolCallId);
+                if (result.toolName === "webSearch") {
+                  const output = result.output as
+                    | { sources?: unknown[] }
+                    | undefined;
+                  const count = output?.sources?.length ?? 0;
+                  if (count > 0) {
+                    agentEvent(
+                      dataStream,
+                      `Menemukan ${count} sumber`,
+                      "success"
+                    );
+                  }
+                } else {
+                  agentEvent(
+                    dataStream,
+                    `${toolActivityLabel(result.toolName)} selesai`,
+                    "success"
+                  );
+                }
+              }
+              agentTrace(dataStream, "Menyusun jawaban");
+              agentProgress(dataStream, 72);
+            },
           });
 
         const usedFallback =
@@ -1095,6 +1226,12 @@ export async function POST(request: Request) {
         dataStream.merge(
           stream.toUIMessageStream({ sendReasoning: isReasoningModel })
         );
+
+        agentStepComplete(dataStream, "prepare");
+        agentStepStart(dataStream, "generate", "Menyusun jawaban");
+        agentStatus(dataStream, "Menyusun jawaban");
+        agentTrace(dataStream, "Menyusun jawaban");
+        agentProgress(dataStream, 88);
 
         dataStream.write({
           type: "data-model-meta",
@@ -1172,6 +1309,9 @@ export async function POST(request: Request) {
             /* non-fatal */
           }
         }
+
+        agentStepComplete(dataStream, "generate");
+        agentDone(dataStream);
       },
       generateId: generateUUID,
       onFinish: async ({ messages: finishedMessages }) => {

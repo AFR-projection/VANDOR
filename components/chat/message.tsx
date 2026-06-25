@@ -6,8 +6,11 @@ import type { MemorySavedNotice } from "@/lib/memory/notice";
 import type { ChatMessage, ModelMeta } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
 import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
+import {
+  messageHasParlayCsCard,
+  shouldSuppressAssistantTextForParlay,
+} from "@/lib/chat/parlay-message";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
-import { Shimmer } from "../ai-elements/shimmer";
 import {
   Tool,
   ToolContent,
@@ -15,6 +18,7 @@ import {
   ToolInput,
   ToolOutput,
 } from "../ai-elements/tool";
+import { AgentActivityPanel } from "./agent-activity-panel";
 import { AssistantAnswer } from "./assistant-answer";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
@@ -50,6 +54,7 @@ import {
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { MessageTechRail } from "./message-tech-rail";
+import { ParlayCsCard } from "./parlay-cs-card";
 import { PreviewAttachment } from "./preview-attachment";
 import { RichContentBlocks } from "./rich/rich-content";
 import { SourcesSkeleton } from "./rich/skeletons";
@@ -172,9 +177,9 @@ const PurePreviewMessage = ({
     ? (message.parts.find((p) => p.type === "data-memory-recall" && "data" in p)
         ?.data as { active: boolean; charCount: number } | undefined)
     : undefined;
-  const hasAnswerText = message.parts.some(
-    (p) => p.type === "text" && Boolean(p.text?.trim())
-  );
+  const hasAnswerText =
+    message.parts.some((p) => p.type === "text" && Boolean(p.text?.trim())) ||
+    (isAssistant && messageHasParlayCsCard(message));
   const isWebSearching =
     isAssistant &&
     isLoading &&
@@ -245,7 +250,7 @@ const PurePreviewMessage = ({
       type === "data-rich-content" ||
       type === "data-search-status" ||
       type === "data-media-download-progress" ||
-      type === "data-instant-status" ||
+      type === "data-agent-activity" ||
       type === "data-model-meta" ||
       type === "data-chat-title" ||
       type === "data-memory-saved" ||
@@ -267,6 +272,9 @@ const PurePreviewMessage = ({
     }
 
     if (type === "text") {
+      if (shouldSuppressAssistantTextForParlay(message, type)) {
+        return null;
+      }
       if (message.role === "assistant") {
         return (
           <AssistantAnswer
@@ -719,6 +727,83 @@ const PurePreviewMessage = ({
       );
     }
 
+    if ((type as string) === "tool-skill_cs_mix_parlay") {
+      const parlayPart = part as {
+        toolCallId: string;
+        state:
+          | "input-streaming"
+          | "input-available"
+          | "approval-requested"
+          | "approval-responded"
+          | "output-available"
+          | "output-error"
+          | "output-denied";
+        input?: unknown;
+        output?: {
+          ok?: boolean;
+          error?: string;
+          data?: {
+            memberMessage?: string;
+            ticketId?: string | null;
+            actualOddsDisplay?: number;
+            returnFormatted?: string;
+          };
+        };
+        errorText?: string;
+      };
+      const { toolCallId, state } = parlayPart;
+      const output = parlayPart.output;
+
+      if (state === "output-available" && output?.ok && output.data?.memberMessage) {
+        return (
+          <ParlayCsCard
+            actualOdds={output.data.actualOddsDisplay}
+            key={toolCallId}
+            returnFormatted={output.data.returnFormatted}
+            text={output.data.memberMessage}
+            ticketId={output.data.ticketId}
+          />
+        );
+      }
+
+      if (state === "output-available" && output && !output.ok) {
+        return (
+          <div
+            className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+            key={toolCallId}
+          >
+            {output.error ?? "Perhitungan parlay gagal"}
+          </div>
+        );
+      }
+
+      return (
+        <Tool
+          className="w-[min(100%,560px)]"
+          defaultOpen={false}
+          key={toolCallId}
+        >
+          <ToolHeader
+            state={state}
+            title="Menghitung Mix Parlay"
+            type={"tool-skill_cs_mix_parlay" as `tool-${string}`}
+          />
+          <ToolContent>
+            {(state === "input-available" ||
+              state === "approval-requested") && (
+              <ToolInput input={parlayPart.input} />
+            )}
+            {state === "output-error" && (
+              <ToolOutput
+                errorText={parlayPart.errorText}
+                output={undefined}
+              />
+            )}
+          </ToolContent>
+        </Tool>
+      );
+    }
+
     if (
       type === "tool-saveMemory" ||
       type === "tool-getMemory" ||
@@ -775,12 +860,13 @@ const PurePreviewMessage = ({
     />
   );
 
+  const showAgentActivity =
+    isAssistant &&
+    (isLoading || isThinking) &&
+    !showMediaProgressCard;
+
   const content = isThinking ? (
-    <div className="flex h-[calc(13px*1.65)] items-center text-[13px] leading-[1.65]">
-      <Shimmer className="font-medium" duration={1}>
-        Thinking...
-      </Shimmer>
-    </div>
+    <AgentActivityPanel isLoading message={message} />
   ) : (
     <>
       {attachments}
@@ -799,7 +885,10 @@ const PurePreviewMessage = ({
       {vaultDenied && <VaultDeniedCard data={vaultDenied} />}
       {vaultRead && <VaultReadCard data={vaultRead} />}
       {shareToAi && <ShareToAiCard data={shareToAi} />}
-      {isLoading && instantLabel && !showMediaProgressCard && (
+      {showAgentActivity && !isThinking && (
+        <AgentActivityPanel isLoading={isLoading} message={message} />
+      )}
+      {isLoading && instantLabel && !showMediaProgressCard && !showAgentActivity && (
         <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
           <span className="relative flex size-2">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/50 opacity-75" />
@@ -808,7 +897,7 @@ const PurePreviewMessage = ({
           {instantLabel}…
         </div>
       )}
-      {isWebSearching && (
+      {isWebSearching && !showAgentActivity && (
         <>
           <WebSearchIndicator query={searchStatus?.query} />
           <SourcesSkeleton />
@@ -900,20 +989,7 @@ export const ThinkingMessage = () => {
       data-role="assistant"
       data-testid="message-assistant-loading"
     >
-      <div className="flex items-center gap-3">
-        <div className="relative flex size-7 shrink-0 items-center justify-center">
-          {/* Pulsing aura */}
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/15" />
-          <span className="relative inline-flex size-2 rounded-full bg-foreground/70 shadow-[0_0_12px_rgba(255,255,255,0.4)]" />
-        </div>
-
-        <Shimmer
-          className="font-display font-light text-[15px] tracking-tight text-foreground/70"
-          duration={1.4}
-        >
-          VANDOR sedang berpikir…
-        </Shimmer>
-      </div>
+      <AgentActivityPanel isLoading />
     </div>
   );
 };
