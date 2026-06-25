@@ -10,7 +10,10 @@ function isParlayCsToolPart(part: ChatMessage["parts"][number]): boolean {
 }
 
 export function messageHasParlayCsCard(message: ChatMessage): boolean {
-  return message.parts.some((part) => {
+  return message.parts.filter(Boolean).some((part) => {
+    if (!part || typeof part !== "object") {
+      return false;
+    }
     if (!isParlayCsToolPart(part)) {
       return false;
     }

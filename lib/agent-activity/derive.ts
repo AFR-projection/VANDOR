@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@/lib/types";
+import { sanitizeChatMessageParts } from "@/lib/utils";
 import {
   INTENT_LIVE_STATUS,
   toolActivityLabel,
@@ -184,9 +185,12 @@ export function deriveAgentActivityFromMessage(
 
   upsertStep(stepsMap, "understand", "Memahami permintaan", "running");
 
-  const parts = message?.parts ?? [];
+  const parts = sanitizeChatMessageParts(message?.parts);
 
   for (const part of parts) {
+    if (!part?.type) {
+      continue;
+    }
     const type = part.type;
     const at =
       "data" in part &&

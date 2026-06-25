@@ -6,9 +6,8 @@ const sections = [
   {
     title: "Slash skills di chat",
     items: [
-      "/v up — upload file ke berangkas terenkripsi",
-      "/v list — daftar file berangkas",
-      "/v open <id> — buka file untuk AI di chat ini",
+      "/v — masuk Vault Mode (list, upload, read di dalam mode)",
+      "/share-to-ai <id> — bagikan satu file berangkas ke AI (consent)",
       "/cari — pencarian web",
       "/cuaca · /waktu — info lokal",
       "/ingat — simpan ke memori jangka panjang",

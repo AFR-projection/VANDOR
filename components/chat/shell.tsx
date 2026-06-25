@@ -95,7 +95,10 @@ export function ChatShell() {
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       if (msg.role !== "assistant") continue;
-      for (const part of msg.parts) {
+      for (const part of msg.parts ?? []) {
+        if (!part || typeof part !== "object" || !("type" in part)) {
+          continue;
+        }
         if (part.type === "data-vault-mode-enter" && "data" in part) {
           return (part.data as { enteredAt?: string }).enteredAt;
         }
@@ -118,7 +121,10 @@ export function ChatShell() {
     if (!messages.length) return;
     const last = messages[messages.length - 1];
     if (last.role !== "assistant") return;
-    for (const part of last.parts) {
+    for (const part of last.parts ?? []) {
+      if (!part || typeof part !== "object" || !("type" in part)) {
+        continue;
+      }
       if (part.type === "data-vault-session-redirect" && "data" in part) {
         const data = part.data as {
           chatId?: string;

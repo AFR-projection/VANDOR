@@ -2,6 +2,7 @@ import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
+import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 import { type UserSettings, userSettingsSchema } from "@/lib/settings/types";
 
 export async function GET(request: Request) {
@@ -13,7 +14,8 @@ export async function GET(request: Request) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const settings = await getUserSettings(session.user.id);
+  const settingsUserId = await resolveSettingsUserId(session.user.id);
+  const settings = await getUserSettings(settingsUserId);
   const env = {
     embeddingModel:
       process.env.MEMORY_EMBEDDING_MODEL ?? "openai/text-embedding-3-small",
@@ -44,33 +46,38 @@ export async function PATCH(request: Request) {
     return new ChatbotError("bad_request:api").toResponse();
   }
 
+  const settingsUserId = await resolveSettingsUserId(session.user.id);
   const patch = body as Partial<UserSettings>;
-  const current = await getUserSettings(session.user.id);
+  const current = await getUserSettings(settingsUserId);
 
   const merged: UserSettings = {
     ...current,
-    memory: {
-      ...current.memory,
-      ...patch.memory,
-      enabledCategories: {
-        ...current.memory.enabledCategories,
-        ...patch.memory?.enabledCategories,
-      },
-    },
-    visualMemory: {
-      ...current.visualMemory,
-      ...patch.visualMemory,
-    },
-    advanced: {
-      ...current.advanced,
-      ...patch.advanced,
-    },
-    persona: { ...current.persona, ...patch.persona },
-    integrations: { ...current.integrations, ...patch.integrations },
+    memory: patch.memory
+      ? {
+          ...current.memory,
+          ...patch.memory,
+          enabledCategories: {
+            ...current.memory.enabledCategories,
+            ...patch.memory.enabledCategories,
+          },
+        }
+      : current.memory,
+    visualMemory: patch.visualMemory
+      ? { ...current.visualMemory, ...patch.visualMemory }
+      : current.visualMemory,
+    advanced: patch.advanced
+      ? { ...current.advanced, ...patch.advanced }
+      : current.advanced,
+    persona: patch.persona
+      ? { ...current.persona, ...patch.persona }
+      : current.persona,
+    integrations: patch.integrations
+      ? { ...current.integrations, ...patch.integrations }
+      : current.integrations,
   };
 
   const validated = userSettingsSchema.parse(merged);
-  const saved = await updateUserSettings(session.user.id, validated);
+  const saved = await updateUserSettings(settingsUserId, validated);
 
   return Response.json({ settings: saved });
 }

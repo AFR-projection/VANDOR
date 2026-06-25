@@ -2,20 +2,17 @@
  * Vault slash commands — terpisah dari upload chat biasa.
  *
  * Chat Mode (default):
- *   /v             → masuk Vault Mode
- *   /v list        → daftar file
- *   /v get <q>     → info metadata
- *   /v del <q>     → hapus file
- *   /v up          → trigger upload UI
- *   /share-to-ai <id> → bagikan isi file ke AI (chat mode only, dengan warning)
+ *   /v                  → masuk Vault Mode (session terisolasi)
+ *   /share-to-ai <id>   → bagikan isi file ke AI (dengan consent)
  *
  * Vault Mode (di dalam mode terisolasi, tanpa prefix `/v`):
- *   list           → daftar file
- *   read <q>       → tampilkan metadata (+ isi text bila possible)
- *   add            → trigger upload UI
- *   update <id> ...→ update metadata
- *   delete <q>     → hapus file
- *   exit | /chat   → keluar Vault Mode
+ *   list                → daftar file
+ *   read <nama|id>      → tampilkan metadata (+ isi text bila possible)
+ *   add                 → upload file baru
+ *   #T <isi>            → simpan catatan teks langsung (tanpa upload file)
+ *   update <id> ...     → update metadata
+ *   delete <nama|id>    → hapus file
+ *   exit | /chat        → keluar Vault Mode
  */
 
 export type VaultSlashOpen = {
@@ -100,6 +97,203 @@ export function parseVaultModeBareList(text: string): boolean {
   return t === "list" || t === "ls" || t === "/list" || t === "/ls";
 }
 
+const LIST_FILTER_ALIASES: Record<string, string> = {
+  image: "image",
+  foto: "image",
+  gambar: "image",
+  photo: "image",
+  video: "video",
+  audio: "audio",
+  pdf: "pdf",
+  doc: "docx",
+  docx: "docx",
+  text: "text",
+  txt: "text",
+  pinned: "pinned",
+  pin: "pinned",
+  favorit: "pinned",
+};
+
+export type VaultListQuery = {
+  fileType?: string;
+  pinnedOnly?: boolean;
+  folder?: string;
+  sortBy?: "default" | "recent";
+  filterLabel?: string;
+  limit?: number;
+};
+
+export function parseVaultModeListQuery(text: string): VaultListQuery | null {
+  const raw = text.trim();
+  const lower = raw.toLowerCase();
+  if (parseVaultModeBareList(raw)) {
+    return { sortBy: "default", filterLabel: "Semua file" };
+  }
+  const folderMatch = lower.match(/^\/?(?:list|ls)\s+folder:(\S+)/);
+  const folderName = folderMatch?.[1];
+  if (folderName) {
+    return { folder: folderName, filterLabel: `Folder: ${folderName}` };
+  }
+  const match = lower.match(/^\/?(?:list|ls)\s+(\S+)/);
+  const token = match?.[1];
+  if (!token) {
+    return null;
+  }
+  const mapped = LIST_FILTER_ALIASES[token];
+  if (mapped === "pinned") {
+    return { pinnedOnly: true, filterLabel: "Favorit" };
+  }
+  if (mapped) {
+    return { fileType: mapped, filterLabel: token };
+  }
+  return null;
+}
+
+export function parseVaultModeRecent(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t === "recent" || t === "/recent" || t === "terbaru";
+}
+
+export function parseVaultModeStats(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t === "stats" || t === "/stats" || t === "stat" || t === "info";
+}
+
+export type VaultPinAction = {
+  target: string;
+  pinned: boolean;
+};
+
+export function parseVaultModePin(text: string): VaultPinAction | null {
+  const pinMatch = text.trim().match(/^\/?(?:pin|favorit)\s+(.+)/is);
+  if (pinMatch?.[1]?.trim()) {
+    return { target: pinMatch[1].trim(), pinned: true };
+  }
+  const unpinMatch = text.trim().match(/^\/?(?:unpin|unfavorit)\s+(.+)/is);
+  if (unpinMatch?.[1]?.trim()) {
+    return { target: unpinMatch[1].trim(), pinned: false };
+  }
+  return null;
+}
+
+export type VaultRenameAction = {
+  target: string;
+  name: string;
+};
+
+export function parseVaultModeRename(text: string): VaultRenameAction | null {
+  const match = text.trim().match(/^\/?rename\s+(\S+)\s+(.+)/is);
+  const target = match?.[1]?.trim();
+  const name = match?.[2]?.trim();
+  if (!target || !name) {
+    return null;
+  }
+  return { target, name: name.slice(0, 255) };
+}
+
+export function parseVaultModeSearch(text: string): string | null {
+  const match = text.trim().match(/^\/?(?:search|cari)\s+(.+)/is);
+  const query = match?.[1]?.trim();
+  return query && query.length >= 2 ? query : null;
+}
+
+export function parseVaultModeBulkTag(text: string): {
+  tag: string;
+  targets: string[];
+} | null {
+  const match = text.trim().match(/^\/?bulk\s+tag\s+(\S+)\s+(.+)/is);
+  const tag = match?.[1]?.trim();
+  const rest = match?.[2]?.trim();
+  if (!tag || !rest) {
+    return null;
+  }
+  const targets = rest.split(/\s+/).filter(Boolean);
+  if (targets.length === 0) {
+    return null;
+  }
+  return { tag: tag.slice(0, 64), targets };
+}
+
+export type VaultBulkDeleteFilter = {
+  tag?: string;
+  fileType?: string;
+};
+
+export function parseVaultModeBulkDelete(
+  text: string
+): VaultBulkDeleteFilter | null {
+  const match = text.trim().match(/^\/?bulk\s+delete\s+(tag|type):(\S+)/is);
+  const kind = match?.[1]?.toLowerCase();
+  const value = match?.[2]?.trim();
+  if (!kind || !value) {
+    return null;
+  }
+  if (kind === "tag") {
+    return { tag: value.slice(0, 64) };
+  }
+  return { fileType: value };
+}
+
+export function parseVaultModeTrash(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t === "trash" || t === "/trash" || t === "sampah";
+}
+
+export function parseVaultModeRestore(text: string): string | null {
+  const match = text.trim().match(/^\/?restore\s+(.+)/is);
+  const target = match?.[1]?.trim();
+  return target && target.length >= 1 ? target : null;
+}
+
+export function parseVaultModePurgeTrash(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return (
+    t === "purge trash" ||
+    t === "empty trash" ||
+    t === "kosongkan sampah" ||
+    t === "purge"
+  );
+}
+
+export type VaultMoveFolder = {
+  target: string;
+  folder: string;
+};
+
+export function parseVaultModeMoveFolder(text: string): VaultMoveFolder | null {
+  const match = text.trim().match(/^\/?move\s+(\S+)\s+(.+)/is);
+  const target = match?.[1]?.trim();
+  let folder = match?.[2]?.trim();
+  if (!target || !folder) {
+    return null;
+  }
+  folder = folder.replace(/^folder:/i, "").trim();
+  if (!folder) {
+    return null;
+  }
+  return { target, folder: folder.slice(0, 64) };
+}
+
+export function parseVaultModeFolders(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t === "folders" || t === "/folders" || t === "folder list";
+}
+
+export function parseVaultModeInfo(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return (
+    t === "i" ||
+    t === "/i" ||
+    t === "info" ||
+    t === "help" ||
+    t === "/help" ||
+    t === "?" ||
+    t === "menu" ||
+    t === "fitur" ||
+    t === "bantuan"
+  );
+}
+
 export function parseVaultModeRead(text: string): string | null {
   const match = text.trim().match(/^\/?(?:read|cat|show|get)\s+(.+)/is);
   const target = match?.[1]?.trim();
@@ -111,6 +305,16 @@ export function parseVaultModeAdd(text: string): boolean {
   return (
     t === "add" || t === "upload" || t === "/add" || t === "/upload" || t === "up"
   );
+}
+
+/** `#T isi catatan` — simpan teks langsung ke berangkas tanpa upload file. */
+export function parseVaultModeTextNote(text: string): string | null {
+  const trimmed = text.trim();
+  if (!/^#T\b/is.test(trimmed)) {
+    return null;
+  }
+  const match = trimmed.match(/^#T\s*:?\s*(.*)/is);
+  return match?.[1]?.trim() ?? "";
 }
 
 export function parseVaultModeDelete(text: string): string | null {
@@ -145,33 +349,9 @@ export type VaultSlashSkill = {
 export const VAULT_SLASH_SKILLS: VaultSlashSkill[] = [
   {
     name: "v",
-    description: "Masuk Vault Mode (AI OFF, mode terisolasi)",
+    description: "Masuk Vault Mode (AI OFF — list, upload, read di dalam mode)",
     kind: "send",
     sendText: "/v",
-  },
-  {
-    name: "v up",
-    description: "Upload file ke Vault terenkripsi (R2)",
-    kind: "ui",
-    action: "vault_upload",
-  },
-  {
-    name: "v list",
-    description: "Daftar file di Vault (metadata saja)",
-    kind: "send",
-    sendText: "/v list",
-  },
-  {
-    name: "v get",
-    description: "Info metadata file Vault (nama, tipe, tag)",
-    kind: "insert",
-    insertText: "/v get ",
-  },
-  {
-    name: "v del",
-    description: "Hapus file dari Vault",
-    kind: "insert",
-    insertText: "/v del ",
   },
   {
     name: "share-to-ai",
@@ -180,3 +360,13 @@ export const VAULT_SLASH_SKILLS: VaultSlashSkill[] = [
     insertText: "/share-to-ai ",
   },
 ];
+
+/** Perintah lama di Chat Mode — arahkan user ke Vault Mode. */
+export function isLegacyVaultChatCommand(text: string): boolean {
+  return (
+    isBareVaultUp(text) ||
+    parseVaultList(text) ||
+    parseVaultGet(text) !== null ||
+    parseVaultDelete(text) !== null
+  );
+}

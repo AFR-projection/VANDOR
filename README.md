@@ -1,8 +1,8 @@
-# VANDOR v3.2 — Personal AI Assistant
+# VANDOR v3.3 — Personal AI Assistant
 
 Lihat [CHANGELOG.md](./CHANGELOG.md) untuk riwayat rilis.
 
-VANDOR adalah asisten pribadi (gaya Jarvis) berbasis **Next.js 16**, **OpenRouter**, **Neon Postgres** + **pgvector**, dan **AI SDK**. Satu pemilik, login PIN numpad, memori jangka panjang, dan pengaturan dari UI.
+VANDOR adalah asisten pribadi (gaya Jarvis) berbasis **Next.js 16**, **OpenRouter**, **Neon Postgres** + **pgvector**, dan **AI SDK**. Satu pemilik, login PIN numpad, memori jangka panjang, berangkas terenkripsi, WhatsApp bridge, dan pengaturan dari UI.
 
 ## Fitur utama
 
@@ -10,18 +10,80 @@ VANDOR adalah asisten pribadi (gaya Jarvis) berbasis **Next.js 16**, **OpenRoute
 |-------|-----------|
 | **Chat multi-model** | OpenRouter — model gratis (`:free`) hingga flagship, pilih di UI |
 | **Keamanan** | Login PIN 4 digit (numpad), **satu perangkat aktif**, riwayat login di pengaturan |
-| **Memory v1** | Embedding + pgvector, ekstraksi otomatis, visual memory |
+| **Memory v2** | Embedding + pgvector, ekstraksi otomatis, visual memory, kelola dari UI |
+| **Agent Skills** | Skill/tool modular dari UI — HTTP API, knowledge base, web search, database, workflow, kalkulator parlay |
+| **CS Mix Parlay** | Upload screenshot tiket → hitung actual odds (W/WH/LH/D) → kartu balasan CS **salin sekali klik** |
+| **Berangkas (Vault)** | File terenkripsi di Cloudflare R2, PIN unlock, mode vault di chat |
+| **WhatsApp** | Chat dengan VANDOR lewat WhatsApp (bridge terpisah, owner-only) |
 | **Rich answers** | Web search (Tavily / fallback), kartu sumber, galeri, peta |
 | **Pengaturan UI** | Gaya bicara AI, API keys terenkripsi, PIN, model embedding — tanpa edit `.env` untuk API |
-| **Pengaturan Memori** | Retrieval, kategori, kelola memori, hero visual neural core |
 | **Artifacts** | Dokumen/kode/sheet di panel samping + export PDF/DOCX/XLSX |
+
+## Agent Skills
+
+Skill modular yang bisa diaktifkan/nonaktifkan dari **Pengaturan → Agent Skills**. Setiap skill diekspos ke model sebagai tool dinamis (`skill_<slug>`) saat chat.
+
+| Tipe skill | Fungsi |
+|------------|--------|
+| `web_search` | Pencarian web (built-in) |
+| `knowledge_base` | RAG dari dokumen yang diunggah (PDF, DOCX, TXT, CSV, JSON) |
+| `http_api` | Panggil REST API eksternal dengan parameter terdefinisi |
+| `database` | Query SQL read-only (MySQL/Postgres) |
+| `workflow` | Alur multi-step sederhana |
+| `parlay_calculator` | Kalkulator Mix Parlay untuk CS |
+
+**Built-in skills** (auto-seed saat chat pertama):
+
+- `web_search_agent` — cari berita, harga, skor live
+- `knowledge_base_search` — jawab dari dokumen internal
+- `cs_mix_parlay` — hitung return tiket parlay dari screenshot
+
+Panel skills juga menyediakan: log eksekusi, API keys per skill, upload dokumen knowledge base, dan tombol uji skill.
+
+Modul: `lib/agent-skills/` · UI: `components/settings/agent-skills-panel.tsx`
+
+## CS Mix Parlay Calculator
+
+Workflow untuk customer service taruhan olahraga:
+
+1. Upload **screenshot/foto tiket** Mix Parlay ke chat
+2. Agent membaca Ref No (`PAR…`), nominal bet, odds asli (3 desimal), status **W / WH / LH / D**
+3. Tool `skill_cs_mix_parlay` menghitung actual odds & payout
+4. UI menampilkan kartu **Balasan CS · Mix Parlay** dengan tombol **Salin balasan**
+
+Format output (contoh):
+
+```
+PAR17124504288
+
+NO | ODDS AWAL  | WIN LOSE 
+
+Odds 1.890 → WIN = 1.890
+Odds 1.950 → DRAW (tidak dihitung)
+...
+
+Perhitungan Actual Odds:
+1.890 × 1.850 × 2.080 × 1.870 × 0.500 = 6.800
+
+Bet : Rp506
+Actual odds : 6.800
+
+506 × 6.800 = Rp3,440.8
+
+Penjelasan : ...
+```
+
+**Hemat token:** setelah kartu tampil, agent tidak menulis ulang perhitungan di bawah (UI + instruksi tool menekan duplikasi).
+
+Logika: `lib/agent-skills/parlay-calculator.ts` · Kartu: `components/chat/parlay-cs-card.tsx`
 
 ## Keamanan
 
 1. **Login PIN (numpad)** — Halaman `/gate`, 4 digit. Sesi bertahan **30 hari** (atur via `VANDOR_GATE_TTL_SECONDS`). Tidak terikat IP — aman saat jaringan/VPN berubah.
-2. **Satu perangkat** — Login PIN di perangkat baru otomatis logout perangkat lama (~20 detik). Cookie perangkat + sesi DB; akhiri sesi manual dari **Pengaturan → Riwayat login**.
+2. **Satu perangkat** — Login PIN di perangkat baru otomatis logout perangkat lama (~20 detik). Cookie perangkat + sesi DB; akhiri sesi manual dari **Pengaturan → Keamanan → Riwayat login**.
 3. **Owner tunggal** — `VANDOR_OWNER_EMAIL` / `PASSWORD`; register dinonaktifkan.
 4. **Rate limit** — 3x PIN salah → blokir perangkat 1 jam.
+5. **Berangkas** — Blob terenkripsi di R2; akses unduh butuh PIN vault (sesi unlock terbatas).
 
 Akses utama lewat **PIN gate** (bukan IP allowlist).
 
@@ -32,13 +94,13 @@ Semua tool di bawah ini punya implementasi server (`lib/ai/tools/`):
 - `getCurrentTime`, `getLocation`, `getWeather`, `showMap`
 - `webSearch` (Tavily / DuckDuckGo + Wikipedia)
 - `saveMemory`, `getMemory`, `searchDb`, `manageNotes`, `updateTask`
-- **Vercel production:** set `BLOB_READ_WRITE_TOKEN` (or Cloudflare `R2_*`) for PDF/DOCX/uploads
-- **Web search:** `TAVILY_API_KEY` recommended for live scores & news (Settings → API also works)
 - Slash skills: `/catat`, `/catatan`, `/baca`, `/todo`, `/ingat`, `/cari`, `/cuaca`, …
 - `createDocument`, `editDocument`, `updateDocument`, `requestSuggestions`
 - `createPdf`, `createDocx`, `createSpreadsheet`, `generateImage`
+- **Vault:** upload, buka, unduh, cari file berangkas (mode vault di chat)
+- **Agent Skills:** tool dinamis `skill_*` dari skill aktif di database
 
-Model **tidak boleh** mengarang nama tool lain (daftar di `lib/ai/tools/registry.ts`).
+Model **tidak boleh** mengarang nama tool lain (daftar inti di `lib/ai/tools/registry.ts`; skill dinamis dari `lib/agent-skills/build-tools.ts`).
 
 ## Setup lokal (Windows)
 
@@ -66,16 +128,26 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 VANDOR_GATE_TTL_SECONDS=3600
 VANDOR_DISABLE_MESSAGE_LIMIT=true
+
+# WhatsApp bridge (opsional)
+WHATSAPP_OWNER_NUMBERS=628123456789
+WHATSAPP_BRIDGE_SECRET=
+
+# Cloudflare R2 — berangkas vault (opsional, disarankan production)
+# R2_ACCOUNT_ID=
+# R2_ACCESS_KEY_ID=
+# R2_SECRET_ACCESS_KEY=
+# R2_BUCKET_NAME=
 ```
 
 **Tetap wajib di `.env`:** `AUTH_SECRET`, `POSTGRES_URL`, owner, PIN (atau PIN dari UI DB).
 
-**Bisa dari UI:** OpenRouter key, Tavily, gaya bicara, model embedding, PIN baru (terenkripsi).
+**Bisa dari UI:** OpenRouter key, Tavily, gaya bicara, model embedding, PIN baru (terenkripsi), agent skills.
 
 ### Install & jalankan
 
 ```powershell
-cd "C:\Users\User\Documents\VANDOR V1"
+cd "C:\Users\User\Documents\VANDOR"
 npm.cmd install --legacy-peer-deps
 npm.cmd run db:migrate
 npm.cmd run dev
@@ -101,7 +173,7 @@ OPENROUTER_APP_URL=https://nama-projek.vercel.app
 ```
 
 4. Deploy. Log build harus: `Migrations completed`.
-5. Tes: `/gate` → PIN → chat → **Pengaturan** / **Pengaturan Memori**.
+5. Tes: `/gate` → PIN → chat → **Pengaturan** (Agent Skills, Berangkas, WhatsApp).
 
 | Variabel | Wajib di Vercel |
 |----------|-----------------|
@@ -111,7 +183,10 @@ OPENROUTER_APP_URL=https://nama-projek.vercel.app
 | `VANDOR_NUMPAD_PIN` | Ya (fallback; bisa ganti di UI) |
 | `NEXT_PUBLIC_APP_URL` | Ya |
 | `OPENROUTER_API_KEY` | Opsional (UI) |
-Opsional file upload production: `BLOB_READ_WRITE_TOKEN` (Vercel Blob) — tanpa ini export file pakai `public/storage` lokal.
+| `R2_*` | Opsional (wajib untuk vault cloud) |
+| `WHATSAPP_*` | Opsional (bridge WhatsApp) |
+
+Opsional file upload chat: `BLOB_READ_WRITE_TOKEN` (Vercel Blob) — tanpa ini export file pakai `public/storage` lokal.
 
 ### Unduh media (`/tt`, `/ytv`, `/yts`, `/ig`)
 
@@ -126,11 +201,12 @@ Contoh slash: `/ytv https://www.youtube.com/watch?v=...`
 ## VANDOR v4 (speed & token efficiency)
 
 - **Command-first**: `/cuaca`, `/waktu`, `/catatan`, `/todo …`, `/cari`, `/tt` → jalankan tool/code langsung (**0 token** LLM utama).
-- **Dynamic tool loading**: maks. ~5 tool aktif per request (bukan semua 20+).
+- **Dynamic tool loading**: maks. ~5 tool inti aktif per request + skill dinamis yang relevan.
 - **Memory cap**: top 5 memori, ~3k karakter context.
 - **Chat trim**: 10 pesan terakhir + conversation summary (bukan full history).
 - **Instant status**: UI "Sedang …" <300ms sebelum stream LLM.
 - **Agent loop**: maks. 4 step tool (hard cap).
+- **Parlay CS**: hasil final di kartu UI — agent tidak mengulang teks balasan (hemat output token).
 
 Modul: `lib/v4/` (`intent`, `tool-router`, `commands`, `fast-stream`, `model-pick`, `overhead`, cache cuaca).
 
@@ -140,15 +216,25 @@ Modul: `lib/v4/` (`intent`, `tool-router`, `commands`, `fast-stream`, `model-pic
 
 ```
 app/
-  gate/              # PIN numpad
-  denied/            # IP tidak diizinkan
-  (chat)/            # Chat + settings
+  gate/                    # PIN numpad
+  (chat)/                  # Chat + settings + API vault/whatsapp/skills
+  api/auth/                # NextAuth routes
 lib/
-  security/          # Gate, IP allowlist, client-access
-  memory/            # pgvector, extract, visual
-  ai/tools/          # Tool implementations
-  settings/          # Persona + secrets (encrypted)
-proxy.ts             # IP + gate pada setiap request
+  agent-skills/            # Skill modular, parlay calculator, KB, runner
+  ai/tools/                # Tool implementations
+  memory/                  # pgvector, extract, visual
+  security/                # Gate, vault unlock, client-access
+  settings/                # Persona + secrets (encrypted)
+  vault/                   # R2 storage, queries, scope
+  whatsapp/                # Bridge manager, ingest, outbound
+  v4/                      # Intent, commands, tool router
+components/
+  chat/parlay-cs-card.tsx  # Kartu salin balasan CS parlay
+  settings/
+    agent-skills-panel.tsx
+    vault-panel.tsx
+    whatsapp-panel.tsx
+proxy.ts                   # Gate pada setiap request
 ```
 
 ## Scripts
@@ -165,11 +251,15 @@ proxy.ts             # IP + gate pada setiap request
 | Masalah | Solusi |
 |---------|--------|
 | Gate / sesi | Cek cookie gate + `POSTGRES_URL`; lihat Pengaturan → Riwayat login |
-| PIN lagi setelah ganti jaringan | Normal — gate terikat IP; masukkan PIN |
+| PIN lagi setelah ganti jaringan | Normal — gate terikat perangkat; masukkan PIN |
 | `Login owner gagal` | Cek `VANDOR_OWNER_EMAIL` / `PASSWORD` |
 | Build gagal migrasi | Set `POSTGRES_URL` di Vercel sebelum build |
 | Memory tidak jalan | Migrasi + extension `vector` di Neon |
 | OpenRouter 402 | Tambah kredit atau pilih model `:free` |
+| Agent Skills kosong / error | Jalankan `npm run db:migrate`; buka chat sekali (auto-seed built-in) |
+| Parlay tidak muncul kartu | Pastikan skill `cs_mix_parlay` aktif di Pengaturan → Agent Skills |
+| Vault upload gagal | Set `R2_*` di env; cek Pengaturan → Berangkas |
+| WhatsApp tidak connect | Cek `WHATSAPP_BRIDGE_SECRET` + bridge service; lihat Pengaturan → WhatsApp |
 
 ## Lisensi
 

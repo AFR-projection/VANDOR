@@ -26,9 +26,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { ModelCapabilities } from "@/lib/ai/models";
 import { isBareMediaSlash, parseMediaSlash } from "@/lib/chat/media-slash";
 import {
-  isBareVaultUp,
   parseVaultEnter,
   parseVaultModeAdd,
+  isLegacyVaultChatCommand,
 } from "@/lib/chat/vault-slash";
 import { resolveChatFileDisplayUrl } from "@/lib/files/chat-file-url";
 import type { Attachment, ChatMessage } from "@/lib/types";
@@ -571,8 +571,8 @@ function PureMultimodalInput({
               return;
             }
 
-            if (isBareVaultUp(input)) {
-              vaultFileInputRef.current?.click();
+            if (isLegacyVaultChatCommand(input)) {
+              toast.error("Masuk Vault Mode dulu: ketik /v");
               setInput("");
               return;
             }

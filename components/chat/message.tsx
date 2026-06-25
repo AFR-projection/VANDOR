@@ -4,7 +4,7 @@ import { GlobeIcon } from "lucide-react";
 import type { Vote } from "@/lib/db/schema";
 import type { MemorySavedNotice } from "@/lib/memory/notice";
 import type { ChatMessage, ModelMeta } from "@/lib/types";
-import { cn, sanitizeText } from "@/lib/utils";
+import { cn, sanitizeChatMessageParts, sanitizeText } from "@/lib/utils";
 import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
 import {
   messageHasParlayCsCard,
@@ -42,11 +42,13 @@ import {
 import {
   getShareToAiFromMessage,
   getVaultDeniedFromMessage,
+  getVaultHelpFromMessage,
   getVaultModeEnterFromMessage,
   getVaultModeExitFromMessage,
   getVaultReadFromMessage,
   ShareToAiCard,
   VaultDeniedCard,
+  VaultHelpCard,
   VaultModeEnterCard,
   VaultModeExitCard,
   VaultReadCard,
@@ -93,7 +95,9 @@ const PurePreviewMessage = ({
   onEdit?: (message: ChatMessage) => void;
   isLatestAssistant?: boolean;
 }) => {
-  const attachmentsFromMessage = message.parts.filter(
+  const messageParts = sanitizeChatMessageParts(message.parts);
+
+  const attachmentsFromMessage = messageParts.filter(
     (part) => part.type === "file"
   );
 
@@ -102,7 +106,7 @@ const PurePreviewMessage = ({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
 
-  const hasAnyContent = message.parts?.some(
+  const hasAnyContent = messageParts?.some(
     (part) =>
       (part.type === "text" && part.text?.trim().length > 0) ||
       (part.type === "reasoning" &&
@@ -131,8 +135,9 @@ const PurePreviewMessage = ({
   const vaultDenied = isAssistant ? getVaultDeniedFromMessage(message) : null;
   const vaultRead = isAssistant ? getVaultReadFromMessage(message) : null;
   const shareToAi = isAssistant ? getShareToAiFromMessage(message) : null;
+  const vaultHelp = isAssistant ? getVaultHelpFromMessage(message) : null;
   const instantStatus = isAssistant
-    ? message.parts.find(
+    ? messageParts.find(
         (p) =>
           p.type === "data-instant-status" &&
           "data" in p &&
@@ -149,7 +154,7 @@ const PurePreviewMessage = ({
     mediaProgress.status !== "complete" &&
     mediaProgress.status !== "error" &&
     (isLoading ||
-      !message.parts.some((p) => p.type === "text" && p.text?.trim()));
+      !messageParts.some((p) => p.type === "text" && p.text?.trim()));
   const showMediaProgressCard =
     isAssistant &&
     mediaProgress != null &&
@@ -157,15 +162,15 @@ const PurePreviewMessage = ({
       mediaProgress.status === "complete" ||
       mediaProgress.status === "error");
   const memorySavedNotice = isAssistant
-    ? (message.parts.find((p) => p.type === "data-memory-saved" && "data" in p)
+    ? (messageParts.find((p) => p.type === "data-memory-saved" && "data" in p)
         ?.data as MemorySavedNotice | undefined)
     : undefined;
   const turnUsage = isAssistant
-    ? (message.parts.find((p) => p.type === "data-turn-usage" && "data" in p)
+    ? (messageParts.find((p) => p.type === "data-turn-usage" && "data" in p)
         ?.data as TurnUsageEstimate | undefined)
     : undefined;
   const modelMetaFromParts = isAssistant
-    ? (message.parts.find((p) => p.type === "data-model-meta" && "data" in p)
+    ? (messageParts.find((p) => p.type === "data-model-meta" && "data" in p)
         ?.data as ModelMeta | undefined)
     : undefined;
   const modelMeta =
@@ -174,18 +179,18 @@ const PurePreviewMessage = ({
       ? (latestModelMeta ?? undefined)
       : undefined);
   const memoryRecall = isAssistant
-    ? (message.parts.find((p) => p.type === "data-memory-recall" && "data" in p)
+    ? (messageParts.find((p) => p.type === "data-memory-recall" && "data" in p)
         ?.data as { active: boolean; charCount: number } | undefined)
     : undefined;
   const hasAnswerText =
-    message.parts.some((p) => p.type === "text" && Boolean(p.text?.trim())) ||
+    messageParts.some((p) => p.type === "text" && Boolean(p.text?.trim())) ||
     (isAssistant && messageHasParlayCsCard(message));
   const isWebSearching =
     isAssistant &&
     isLoading &&
     searchStatus?.status === "searching" &&
     !mediaProgress &&
-    !message.parts.some((p) => p.type === "text" && p.text?.trim());
+    !messageParts.some((p) => p.type === "text" && p.text?.trim());
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
@@ -205,7 +210,7 @@ const PurePreviewMessage = ({
     </div>
   );
 
-  const mergedReasoning = message.parts?.reduce(
+  const mergedReasoning = messageParts?.reduce(
     (acc, part) => {
       if (part.type === "reasoning" && part.text?.trim().length > 0) {
         return {
@@ -219,7 +224,7 @@ const PurePreviewMessage = ({
     { text: "", isStreaming: false, rendered: false }
   ) ?? { text: "", isStreaming: false, rendered: false };
 
-  const parts = message.parts?.map((part, index) => {
+  const renderedParts = messageParts.map((part, index) => {
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
 
@@ -264,6 +269,7 @@ const PurePreviewMessage = ({
       type === "data-vault-mode-exit" ||
       type === "data-vault-denied" ||
       type === "data-vault-read" ||
+      type === "data-vault-help" ||
       type === "data-share-to-ai" ||
       type === "data-vault-add-prompt" ||
       type === "data-vault-session-redirect"
@@ -884,6 +890,7 @@ const PurePreviewMessage = ({
       {vaultModeExit && <VaultModeExitCard data={vaultModeExit} />}
       {vaultDenied && <VaultDeniedCard data={vaultDenied} />}
       {vaultRead && <VaultReadCard data={vaultRead} />}
+      {vaultHelp && <VaultHelpCard data={vaultHelp} />}
       {shareToAi && <ShareToAiCard data={shareToAi} />}
       {showAgentActivity && !isThinking && (
         <AgentActivityPanel isLoading={isLoading} message={message} />
@@ -906,13 +913,13 @@ const PurePreviewMessage = ({
       {webSources &&
         webSources.sources.length > 0 &&
         isLoading &&
-        !message.parts.some((p) => p.type === "text" && p.text?.trim()) && (
+        !messageParts.some((p) => p.type === "text" && p.text?.trim()) && (
           <WebSearchIndicator
             query={webSources.query}
             sourceCount={webSources.sources.length}
           />
         )}
-      {parts}
+      {renderedParts}
       {isAssistant && richContent && (
         <RichContentBlocks
           onAsk={(question) => {

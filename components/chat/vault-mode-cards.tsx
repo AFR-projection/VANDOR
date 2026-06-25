@@ -80,6 +80,101 @@ export function getShareToAiFromMessage(
   return null;
 }
 
+export function getVaultHelpFromMessage(
+  message: ChatMessage
+): { commands: Array<{ cmd: string; desc: string; group: string }> } | null {
+  for (const part of message.parts) {
+    if (part.type === "data-vault-help" && "data" in part) {
+      return part.data as {
+        commands: Array<{ cmd: string; desc: string; group: string }>;
+      };
+    }
+  }
+  return null;
+}
+
+const HELP_GROUP_LABEL: Record<string, string> = {
+  navigasi: "Navigasi & cari",
+  file: "File",
+  organisasi: "Folder & favorit",
+  bulk: "Bulk",
+  sampah: "Sampah",
+};
+
+// ── Vault Help Card (command `i`) ─────────────────────────────────
+
+export function VaultHelpCard({
+  data,
+}: {
+  data: { commands: Array<{ cmd: string; desc: string; group: string }> };
+}) {
+  const groups = data.commands.reduce<
+    Array<{ key: string; label: string; items: typeof data.commands }>
+  >((acc, item) => {
+    const existing = acc.find((g) => g.key === item.group);
+    if (existing) {
+      existing.items.push(item);
+    } else {
+      acc.push({
+        key: item.group,
+        label: HELP_GROUP_LABEL[item.group] ?? item.group,
+        items: [item],
+      });
+    }
+    return acc;
+  }, []);
+
+  return (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="w-full max-w-lg overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-b from-emerald-950/70 to-slate-950/70 shadow-xl shadow-emerald-500/8 backdrop-blur-xl"
+      data-testid="vault-help-card"
+      initial={{ opacity: 0, y: 8 }}
+      transition={{ duration: 0.35 }}
+    >
+      <div className="flex items-center gap-2.5 border-b border-emerald-500/20 bg-emerald-500/8 px-4 py-3">
+        <TerminalIcon className="size-4 text-emerald-400" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-emerald-100">
+            Perintah Vault Mode
+          </p>
+          <p className="text-[10px] text-emerald-300/50">
+            Ketik <span className="font-mono text-emerald-300/80">i</span>{" "}
+            kapan saja untuk buka daftar ini
+          </p>
+        </div>
+      </div>
+      <div className="max-h-[min(70vh,520px)] overflow-y-auto p-3 font-mono">
+        {groups.map((group) => (
+          <section className="mb-3 last:mb-0" key={group.key}>
+            <p className="mb-1.5 px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-400/70">
+              {group.label}
+            </p>
+            <div className="divide-y divide-emerald-500/10 rounded-xl border border-emerald-500/15 bg-emerald-950/30">
+              {group.items.map(({ cmd, desc }) => (
+                <div
+                  className="flex flex-col gap-0.5 px-3 py-2 sm:flex-row sm:items-center sm:gap-3"
+                  key={cmd}
+                >
+                  <span className="shrink-0 text-[11px] font-medium text-emerald-200/90">
+                    {cmd}
+                  </span>
+                  <span className="hidden text-emerald-500/30 sm:inline">—</span>
+                  <span className="text-[11px] text-emerald-200/45">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+      <div className="border-t border-emerald-500/15 px-4 py-2 text-[10px] text-emerald-300/40">
+        Chat Mode: <span className="font-mono">/v</span> masuk ·{" "}
+        <span className="font-mono">/share-to-ai &lt;id&gt;</span> bagikan ke AI
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Vault Mode Enter Card ─────────────────────────────────────────
 
 export function VaultModeEnterCard({ data: _data }: { data: VaultModeNotice }) {

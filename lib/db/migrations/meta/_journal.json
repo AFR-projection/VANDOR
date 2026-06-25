@@ -115,10 +115,17 @@
       "breakpoints": true
     },
     {
-      "idx": 16,
+      "idx": 17,
       "version": "7",
-      "when": 1781200000000,
-      "tag": "0016_agent_skills",
+      "when": 1781300000000,
+      "tag": "0017_vault_enhancements",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1781400000000,
+      "tag": "0018_vault_folders_trash",
       "breakpoints": true
     }
   ]

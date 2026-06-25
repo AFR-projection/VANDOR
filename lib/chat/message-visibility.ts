@@ -1,8 +1,19 @@
 import type { ChatMessage } from "@/lib/types";
 
+function isValidPart(
+  part: ChatMessage["parts"][number] | null | undefined
+): part is ChatMessage["parts"][number] {
+  return (
+    part != null &&
+    typeof part === "object" &&
+    "type" in part &&
+    typeof part.type === "string"
+  );
+}
+
 /** Assistant bubble worth showing (not metadata-only shell). */
 export function assistantHasVisibleContent(message: ChatMessage): boolean {
-  return message.parts.some((part) => {
+  return message.parts.filter(isValidPart).some((part) => {
     if (part.type === "text" && part.text?.trim()) {
       return true;
     }
@@ -24,6 +35,7 @@ export function assistantHasVisibleContent(message: ChatMessage): boolean {
       part.type === "data-vault-mode-exit" ||
       part.type === "data-vault-denied" ||
       part.type === "data-vault-read" ||
+      part.type === "data-vault-help" ||
       part.type === "data-share-to-ai"
     ) {
       return true;

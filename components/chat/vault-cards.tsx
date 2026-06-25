@@ -14,6 +14,7 @@ import {
   LockIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  StarIcon,
 } from "lucide-react";
 import type {
   VaultDetailNotice,
@@ -118,9 +119,14 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
             <FolderLockIcon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Berangkas Pribadi</p>
+            <p className="text-sm font-semibold">
+              {data.filterLabel ? `Berangkas · ${data.filterLabel}` : "Berangkas Pribadi"}
+            </p>
             <p className="text-[11px] text-white/70">
               Terenkripsi AES-256-GCM
+              {data.totalBytes !== undefined && data.totalBytes > 0 && (
+                <span> · {formatBytes(data.totalBytes)} ditampilkan</span>
+              )}
             </p>
           </div>
           {data.total > 0 && (
@@ -140,8 +146,9 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
       <div className="space-y-1.5 p-3">
         {data.files.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            Berangkas kosong. Upload dengan{" "}
-            <span className="font-mono text-foreground/70">/v up</span>.
+            Berangkas kosong. Ketik{" "}
+            <span className="font-mono text-foreground/70">add</span> di Vault
+            Mode.
           </p>
         ) : (
           data.files.map((file, index) => {
@@ -165,9 +172,24 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
                   <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{file.name}</p>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium">
+                    {file.pinned && (
+                      <StarIcon
+                        aria-label="Favorit"
+                        className="size-3.5 shrink-0 fill-amber-400 text-amber-400"
+                      />
+                    )}
+                    <span className="truncate">{file.name}</span>
+                  </p>
                   <p className="text-[11px] text-muted-foreground">
+                    <span className="font-mono text-[10px] opacity-70">
+                      {file.id.slice(0, 8)}…
+                    </span>
+                    {" · "}
                     {file.type} · {formatBytes(file.size)}
+                    {file.folder && (
+                      <span className="opacity-70"> · 📁 {file.folder}</span>
+                    )}
                     {file.tags.length > 0 && (
                       <span className="opacity-60">
                         {" "}
@@ -176,14 +198,24 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
                     )}
                   </p>
                 </div>
-                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex shrink-0 gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                  <button
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
+                    onClick={() => copyText(file.id)}
+                    title="Salin ID file"
+                    type="button"
+                  >
+                    <span className="sr-only">Salin ID</span>
+                    <CopyIcon className="size-3.5" />
+                  </button>
                   <button
                     className="rounded-lg p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
                     onClick={() => copyText(`/share-to-ai ${file.id}`)}
                     title="Salin /share-to-ai"
                     type="button"
                   >
-                    <CopyIcon className="size-3.5" />
+                    <span className="sr-only">Salin share-to-ai</span>
+                    <SparklesIcon className="size-3.5" />
                   </button>
                   <VaultDownloadButton
                     filename={file.name}
@@ -379,7 +411,9 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
         <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
           <LockIcon className="size-3 shrink-0 text-emerald-500/60" />
           Lihat:{" "}
-          <span className="font-mono text-foreground/40">/v list</span>
+          <span className="font-mono text-foreground/40">/v</span>
+          {" → "}
+          <span className="font-mono text-foreground/40">list</span>
           {" · Bagikan: "}
           <span className="font-mono text-foreground/40">
             /share-to-ai &lt;id&gt;

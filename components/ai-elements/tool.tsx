@@ -65,12 +65,15 @@ const statusIcons: Record<ToolPart["state"], ReactNode> = {
   "output-error": <XCircleIcon className="size-4 text-red-600" />,
 };
 
-export const getStatusBadge = (status: ToolPart["state"]) => (
+export const getStatusBadge = (status: ToolPart["state"] | undefined) => {
+  const safeStatus = status ?? "input-streaming";
+  return (
   <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
-    {statusIcons[status]}
-    {statusLabels[status]}
+    {statusIcons[safeStatus]}
+    {statusLabels[safeStatus]}
   </Badge>
-);
+  );
+};
 
 export const ToolHeader = ({
   className,

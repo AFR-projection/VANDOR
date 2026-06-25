@@ -11,6 +11,7 @@ import {
   ZapOffIcon,
 } from "lucide-react";
 import { useEffect } from "react";
+import { VAULT_MODE_COMMANDS } from "@/lib/vault/help";
 
 export type VaultModeBannerProps = {
   enteredAt?: string;
@@ -132,15 +133,6 @@ export function VaultModeBanner({
 
 /** Command hint shown in vault mode input area */
 export function VaultModeHint() {
-  const commands = [
-    { cmd: "list", desc: "daftar semua file" },
-    { cmd: "read <nama|id>", desc: "baca & lihat file" },
-    { cmd: "add", desc: "upload file baru" },
-    { cmd: "update <nama> tags:...", desc: "edit metadata" },
-    { cmd: "delete <nama|id>", desc: "hapus file" },
-    { cmd: "exit", desc: "kembali ke Chat Mode" },
-  ];
-
   return (
     <motion.div
       animate={{ opacity: 1, y: 0 }}
@@ -161,13 +153,15 @@ export function VaultModeHint() {
         </div>
       </div>
       <div className="divide-y divide-emerald-500/10 font-mono">
-        {commands.map(({ cmd, desc }) => (
+        {VAULT_MODE_COMMANDS.map(({ cmd, desc }) => (
           <div
             className="flex items-center gap-3 px-4 py-2 text-[11px] transition-colors hover:bg-emerald-500/5"
             key={cmd}
           >
             <span className="text-emerald-400/70">$</span>
-            <span className="min-w-[11rem] text-emerald-200/90 font-medium">{cmd}</span>
+            <span className="min-w-[11rem] font-medium text-emerald-200/90">
+              {cmd}
+            </span>
             <span className="text-emerald-300/40">—</span>
             <span className="text-emerald-200/50">{desc}</span>
           </div>

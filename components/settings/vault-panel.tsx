@@ -414,7 +414,8 @@ export function VaultPanel() {
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 atau ketik{" "}
-                <span className="font-mono text-foreground/70">/v up</span> di
+                <span className="font-mono text-foreground/70">/v</span> lalu{" "}
+                <span className="font-mono text-foreground/70">add</span> di
                 chat
               </p>
             </div>
@@ -459,6 +460,10 @@ export function VaultPanel() {
                           {file.name}
                         </p>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          <span className="font-mono text-[10px] opacity-70">
+                            {file.id.slice(0, 8)}…
+                          </span>
+                          {" · "}
                           {typeLabels[file.type] ?? file.type} ·{" "}
                           {formatBytes(file.size)}
                         </p>
@@ -629,7 +634,7 @@ export function VaultPanel() {
 
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">
-                      Ringkasan (konteks AI)
+                      Ringkasan (konteks AI & nama tampilan jika belum diubah)
                     </Label>
                     <Textarea
                       className="min-h-[3.5rem] resize-none text-sm"

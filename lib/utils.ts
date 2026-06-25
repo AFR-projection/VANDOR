@@ -68,11 +68,28 @@ export function sanitizeText(text: string) {
   return text.replace('<has_function_call>', '');
 }
 
+export function sanitizeChatMessageParts(
+  parts: ChatMessage["parts"] | undefined
+): ChatMessage["parts"] {
+  if (!Array.isArray(parts)) {
+    return [];
+  }
+  return parts.filter(
+    (part): part is ChatMessage["parts"][number] =>
+      part != null &&
+      typeof part === "object" &&
+      "type" in part &&
+      typeof (part as { type?: unknown }).type === "string"
+  );
+}
+
 export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
   return messages.map((message) => ({
     id: message.id,
     role: message.role as 'user' | 'assistant' | 'system',
-    parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
+    parts: sanitizeChatMessageParts(
+      message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[]
+    ),
     metadata: {
       createdAt: formatISO(message.createdAt),
     },
@@ -80,7 +97,7 @@ export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
 }
 
 export function getTextFromMessage(message: ChatMessage | UIMessage): string {
-  return message.parts
+  return sanitizeChatMessageParts(message.parts as ChatMessage["parts"])
     .filter((part) => part.type === 'text')
     .map((part) => (part as { type: 'text'; text: string}).text)
     .join('');

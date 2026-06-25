@@ -59,10 +59,10 @@ const categoryLabels: Record<MemoryCategory, string> = {
 };
 
 export function MemorySettingsPage() {
-  const { data, mutate, isLoading } = useSWR(
-    "user-settings-memory",
-    fetchSettings
-  );
+  const { data, mutate, isLoading } = useSWR("user-settings-memory", fetchSettings, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
   const [tab, setTab] = useState<TabId>("memory");
   const [saving, setSaving] = useState(false);
 
@@ -82,7 +82,7 @@ export function MemorySettingsPage() {
           throw new Error("Save failed");
         }
         const json = await res.json();
-        mutate({ ...data, settings: json.settings }, false);
+        mutate({ ...data, settings: json.settings }, true);
         toast({ type: "success", description: "Pengaturan disimpan" });
       } catch {
         toast({ type: "error", description: "Gagal menyimpan pengaturan" });

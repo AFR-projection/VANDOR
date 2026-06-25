@@ -90,10 +90,6 @@ const SKILL_ICONS: Record<string, ReactNode> = {
   yts: <MusicIcon className="size-3.5" />,
   ig: <DownloadIcon className="size-3.5" />,
   v: <FolderLockIcon className="size-3.5" />,
-  "v up": <FolderLockIcon className="size-3.5" />,
-  "v list": <FolderLockIcon className="size-3.5" />,
-  "v get": <FolderLockIcon className="size-3.5" />,
-  "v del": <FolderLockIcon className="size-3.5" />,
   "share-to-ai": <FolderLockIcon className="size-3.5" />,
 };
 

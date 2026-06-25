@@ -29,6 +29,7 @@ import type {
   VaultListNotice,
   VaultOpenNotice,
   VaultReadNotice,
+  VaultHelpNotice,
   VaultUploadNotice,
 } from "./vault/notice";
 import type {
@@ -152,6 +153,7 @@ export type CustomUIDataTypes = {
   "vault-mode-exit": VaultModeExitNotice;
   "vault-denied": VaultDeniedNotice;
   "vault-read": VaultReadNotice;
+  "vault-help": VaultHelpNotice;
   "share-to-ai": ShareToAiNotice;
   "vault-add-prompt": { hint: string };
   "vault-session-redirect": {

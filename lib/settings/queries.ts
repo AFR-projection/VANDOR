@@ -10,6 +10,7 @@ import {
   type UserSettings,
   userSettingsSchema,
 } from "./types";
+import { stripUndefinedSettingsPatch } from "./patch";
 
 const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
 const db = drizzle(client);
@@ -45,7 +46,8 @@ export async function updateUserSettings(
   patch: Partial<UserSettings>
 ): Promise<UserSettings> {
   const current = await getUserSettings(userId);
-  const merged = mergeUserSettings({ ...current, ...patch });
+  const safePatch = stripUndefinedSettingsPatch(patch);
+  const merged = mergeUserSettings({ ...current, ...safePatch });
 
   if (!process.env.POSTGRES_URL) {
     return merged;

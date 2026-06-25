@@ -7,6 +7,7 @@ import { revokeAllGateSessions } from "@/lib/security/gate";
 import { GATE_PIN_LENGTH } from "@/lib/security/gate-edge";
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
+import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 import {
   getSecretsPublicView,
   updateUserSecrets,
@@ -48,9 +49,11 @@ export async function GET(request: Request) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
+  const settingsUserId = await resolveSettingsUserId(session.user.id);
+
   const [secrets, settings] = await Promise.all([
-    getSecretsPublicView(session.user.id),
-    getUserSettings(session.user.id),
+    getSecretsPublicView(settingsUserId),
+    getUserSettings(settingsUserId),
   ]);
 
   return Response.json({
@@ -92,6 +95,8 @@ export async function PATCH(request: Request) {
     return Response.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const settingsUserId = await resolveSettingsUserId(session.user.id);
+
   const data = parsed.data;
   const {
     currentPin,
@@ -123,7 +128,7 @@ export async function PATCH(request: Request) {
     }
 
     await updateUserSecrets({
-      userId: session.user.id,
+      userId: settingsUserId,
       newPin: newPin ?? undefined,
       openrouterApiKey,
       tavilyApiKey,
@@ -138,18 +143,20 @@ export async function PATCH(request: Request) {
 
   let savedSettings: UserSettings | null = null;
   if (hasSettingsChange) {
-    const current = await getUserSettings(session.user.id);
-    const merged: Partial<UserSettings> = {
-      persona: persona ? { ...current.persona, ...persona } : undefined,
-      integrations: integrations
-        ? { ...current.integrations, ...integrations }
-        : undefined,
-    };
-    savedSettings = await updateUserSettings(session.user.id, merged);
+    const current = await getUserSettings(settingsUserId);
+    const patch: Partial<UserSettings> = {};
+    if (persona) {
+      patch.persona = { ...current.persona, ...persona };
+    }
+    if (integrations) {
+      patch.integrations = { ...current.integrations, ...integrations };
+    }
+    savedSettings = await updateUserSettings(settingsUserId, patch);
   }
 
-  const secrets = await getSecretsPublicView(session.user.id);
-  const settings = savedSettings ?? (await getUserSettings(session.user.id));
+  const secrets = await getSecretsPublicView(settingsUserId);
+  const settings =
+    savedSettings ?? (await getUserSettings(settingsUserId));
 
   return Response.json({
     ok: true,

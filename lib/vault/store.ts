@@ -76,9 +76,38 @@ export async function storeVaultFile(
     input.mimeType,
     input.fileName
   );
-  const summary =
-    input.summary?.trim() || defaultSummary(input.fileName, input.fileType);
-  const tags = input.tags ?? [];
+
+  let summary = input.summary?.trim();
+  let tags = input.tags ?? [];
+
+  const userProvidedMeta =
+    Boolean(input.summary?.trim()) || (input.tags?.length ?? 0) > 0;
+
+  if (!userProvidedMeta) {
+    try {
+      const { suggestVaultMetadata } = await import("./auto-tag");
+      const suggested = await suggestVaultMetadata({
+        userId: input.userId,
+        fileName: input.fileName,
+        fileType: input.fileType,
+        mimeType: input.mimeType,
+        data: input.data,
+        extractedText,
+        caption:
+          typeof input.metadata?.waCaption === "string"
+            ? input.metadata.waCaption
+            : undefined,
+      });
+      if (suggested) {
+        summary = suggested.summary;
+        tags = suggested.tags;
+      }
+    } catch (error) {
+      console.error("Vault auto-tag failed:", error);
+    }
+  }
+
+  summary = summary || defaultSummary(input.fileName, input.fileType);
 
   const id = await insertVaultFileRow({
     id: fileId,
@@ -99,6 +128,7 @@ export async function storeVaultFile(
     sourceChatId: input.sourceChatId ?? null,
     sourceMessageId: input.sourceMessageId ?? null,
     metadata: input.metadata ?? null,
+    folder: input.folder ?? null,
   });
 
   if (!id) {
@@ -146,7 +176,10 @@ export async function storeVaultFile(
     summary,
     tags,
     sourceType: input.sourceType ?? "upload",
+    pinned: false,
+    folder: input.folder ?? null,
     createdAt: new Date(),
+    updatedAt: new Date(),
   });
 
   return { ok: true, file: snapshot };

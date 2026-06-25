@@ -1,6 +1,8 @@
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { requireVaultUnlock } from "@/lib/security/vault-unlock";
+import { vaultDownloadFileName } from "@/lib/vault/display-name";
+import { getVaultFileById } from "@/lib/vault/queries";
 import { downloadVaultFile } from "@/lib/vault/retrieve";
 import { requireVaultSession } from "@/lib/vault/route-auth";
 function clientIp(request: Request): string | undefined {
@@ -27,20 +29,31 @@ export async function GET(
   }
 
   const { id } = await params;
-  const file = await downloadVaultFile({
-    userId: vaultAuth.vaultUserId,    fileId: id,
-    ip: clientIp(request),
-  });
+  const [record, file] = await Promise.all([
+    getVaultFileById({ userId: vaultAuth.vaultUserId, fileId: id }),
+    downloadVaultFile({
+      userId: vaultAuth.vaultUserId,
+      fileId: id,
+      ip: clientIp(request),
+    }),
+  ]);
 
-  if (!file) {
+  if (!file || !record) {
     return Response.json({ error: "File not found" }, { status: 404 });
   }
+
+  const downloadName = vaultDownloadFileName({
+    fileName: record.fileName,
+    summary: record.summary,
+    tags: Array.isArray(record.tags) ? (record.tags as string[]) : [],
+    mimeType: record.mimeType,
+  });
 
   return new Response(new Uint8Array(file.data), {
     headers: {
       "Content-Type": file.mimeType,
       "Content-Length": String(file.data.byteLength),
-      "Content-Disposition": `attachment; filename="${encodeURIComponent(file.fileName)}"`,
+      "Content-Disposition": `attachment; filename="${encodeURIComponent(downloadName)}"`,
       "Cache-Control": "private, no-store",
     },
   });

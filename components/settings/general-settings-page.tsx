@@ -117,10 +117,10 @@ function SourceBadge({ source }: { source: SecretSource }) {
 }
 
 export function GeneralSettingsPage() {
-  const { data, mutate, isLoading } = useSWR(
-    "user-settings-general",
-    fetchGeneral
-  );
+  const { data, mutate, isLoading } = useSWR("user-settings-general", fetchGeneral, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+  });
   const [tab, setTab] = useState<TabId>("persona");
   const [saving, setSaving] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
@@ -192,7 +192,7 @@ export function GeneralSettingsPage() {
         if (!res.ok) {
           throw new Error("Gagal menyimpan");
         }
-        mutate({ ...data!, settings: json.settings }, false);
+        mutate({ ...data!, settings: json.settings }, true);
         toast({ type: "success", description: json.message ?? "Disimpan" });
       } catch {
         toast({ type: "error", description: "Gagal menyimpan gaya bicara" });

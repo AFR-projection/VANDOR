@@ -155,11 +155,7 @@ export async function upsertBuiltinSkill(input: {
   const existing = await getAgentSkillBySlug(input.userId, input.slug);
   if (existing) {
     const updated = await updateAgentSkill(input.userId, existing.id, {
-      name: input.name,
       description: input.description,
-      category: input.category,
-      skillType: input.skillType,
-      config: input.config,
     });
     return updated ?? existing;
   }

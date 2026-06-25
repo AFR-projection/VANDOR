@@ -22,6 +22,7 @@ import {
   extractInboundMedia,
   hasInboundMedia,
 } from "./inbound-media";
+import { isWhatsappVaultSaveCommand } from "./vault-ingest";
 import { deliverWhatsappOutboundMedia } from "./outbound-media";
 import {
   matchesOwnerList,
@@ -236,7 +237,42 @@ async function handleIncoming(
     return;
   }
 
-  // 3. Owner terverifikasi → cek unduhan media (/tt, /ytv, /yts, /ig).
+  // 3. Owner terverifikasi → simpan media ke vault (/vault, simpan vault, …).
+  if (inboundMedia && isWhatsappVaultSaveCommand(text)) {
+    try {
+      const { ingestWhatsappMediaToVault, vaultSaveReplyText } = await import(
+        "./vault-ingest"
+      );
+      const result = await ingestWhatsappMediaToVault({
+        sessionUserId: ownerUser.id,
+        chatId: deriveWhatsappChatId(identity.phone ?? identity.lid ?? ""),
+        media: inboundMedia,
+        caption: inboundMedia.caption,
+      });
+      await sock.sendMessage(
+        jid,
+        { text: vaultSaveReplyText(result) },
+        { quoted: msg }
+      );
+    } catch (err) {
+      console.error("[wa] vault ingest error:", err);
+      await sock
+        .sendMessage(
+          jid,
+          { text: "❌ Gagal menyimpan ke berangkas. Coba lagi." },
+          { quoted: msg }
+        )
+        .catch(() => null);
+    }
+    try {
+      await sock.sendPresenceUpdate("paused", jid);
+    } catch {
+      // non-fatal
+    }
+    return;
+  }
+
+  // 4. Owner terverifikasi → cek unduhan media (/tt, /ytv, /yts, /ig).
   try {
     const mediaResult = await deliverWhatsappMediaDownload(
       sock,
@@ -265,7 +301,7 @@ async function handleIncoming(
     return;
   }
 
-  // 4. Owner terverifikasi → jalankan agent turn.
+  // 5. Owner terverifikasi → jalankan agent turn.
   let reply = "Maaf, ada error saat memproses pesan. Coba lagi ya.";
   let outbound: Awaited<
     ReturnType<typeof runWhatsappAgentTurn>

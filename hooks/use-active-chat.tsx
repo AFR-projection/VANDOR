@@ -150,6 +150,8 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       return (
         lastMessage?.parts?.some(
           (part) =>
+            part != null &&
+            typeof part === "object" &&
             "state" in part &&
             part.state === "approval-responded" &&
             "approval" in part &&
@@ -166,6 +168,9 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
           lastMessage?.role !== "user" ||
           request.messages.some((msg) =>
             msg.parts?.some((part) => {
+              if (!part || typeof part !== "object") {
+                return false;
+              }
               const state = (part as { state?: string }).state;
               return (
                 state === "approval-responded" || state === "output-denied"

@@ -123,6 +123,7 @@ import type { RichContent, WebSearchOutput } from "@/lib/search/types";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { resolveClientGeo } from "@/lib/security/geo";
 import { getUserSettings } from "@/lib/settings/queries";
+import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 import type { ChatMessage } from "@/lib/types";
 import {
   convertToUIMessages,
@@ -491,9 +492,10 @@ export async function POST(request: Request) {
       classify(a.mime, a.name)
     );
 
-    const userSettings = await getUserSettings(session.user.id);
+    const settingsUserId = await resolveSettingsUserId(session.user.id);
+    const userSettings = await getUserSettings(settingsUserId);
     const openRouterApiKey = await resolveOpenRouterApiKeyForUser(
-      session.user.id
+      settingsUserId
     );
 
     if (!openRouterApiKey?.trim()) {
@@ -1061,15 +1063,15 @@ export async function POST(request: Request) {
 
         if (supportsTools) {
           try {
-            await ensureBuiltinSkills(session.user.id);
-            activeSkills = await listActiveAgentSkills(session.user.id);
+            await ensureBuiltinSkills(settingsUserId);
+            activeSkills = await listActiveAgentSkills(settingsUserId);
             skillToolNames = activeSkills.map((s) => toSkillToolName(s.slug));
             skillToolsBlock =
               activeSkills.length > 0
                 ? `\n\n## Custom Agent Skills\n${buildSkillPromptLines(activeSkills).join("\n")}\nPilih skill yang paling relevan. Isi parameter otomatis dari konteks user.`
                 : "";
             skillTools = buildSkillTools(activeSkills, {
-              userId: session.user.id,
+              userId: settingsUserId,
               chatId: id,
             });
           } catch {

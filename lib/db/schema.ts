@@ -450,6 +450,7 @@ export const vaultSourceTypes = [
   "export",
   "note",
   "backup",
+  "whatsapp",
 ] as const;
 
 export type VaultSourceType = (typeof vaultSourceTypes)[number];
@@ -458,6 +459,8 @@ export const vaultAuditActions = [
   "upload",
   "download",
   "delete",
+  "restore",
+  "purge",
   "decrypt",
   "search",
 ] as const;
@@ -488,6 +491,9 @@ export const vaultFile = pgTable("VaultFile", {
   storageBackend: varchar("storageBackend", { length: 16 })
     .notNull()
     .default("r2"),
+  pinned: boolean("pinned").notNull().default(false),
+  folder: text("folder"),
+  deletedAt: timestamp("deletedAt"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });

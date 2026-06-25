@@ -12,6 +12,7 @@ import {
 import { formatZodFieldErrors } from "@/lib/agent-skills/format-api-error";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
+import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 
 export async function GET(request: Request) {
   const denied = await requireClientAccess(request);
@@ -23,10 +24,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    await ensureBuiltinSkills(session.user.id);
+    const settingsUserId = await resolveSettingsUserId(session.user.id);
+    await ensureBuiltinSkills(settingsUserId);
     const [skills, apiKeys] = await Promise.all([
-      listAgentSkills(session.user.id),
-      listApiKeys(session.user.id),
+      listAgentSkills(settingsUserId),
+      listApiKeys(settingsUserId),
     ]);
     return Response.json({ skills, apiKeys });
   } catch (error) {
@@ -73,8 +75,10 @@ export async function POST(request: Request) {
     );
   }
 
+  const settingsUserId = await resolveSettingsUserId(session.user.id);
+
   const skill = await createAgentSkill({
-    userId: session.user.id,
+    userId: settingsUserId,
     slug: parsed.data.slug,
     name: parsed.data.name,
     description: parsed.data.description,

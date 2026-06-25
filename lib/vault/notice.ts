@@ -3,6 +3,8 @@ import type { VaultFileSnapshot } from "./types";
 export type VaultListNotice = {
   files: VaultFileSnapshot[];
   total: number;
+  filterLabel?: string;
+  totalBytes?: number;
 };
 
 export type VaultOpenNotice = {
@@ -40,6 +42,17 @@ export type ShareToAiNotice = {
   openUrl: string;
   downloadUrl: string;
 };
+
+export type VaultHelpNotice = {
+  commands: Array<{ cmd: string; desc: string; group: string }>;
+};
+
+export function vaultHelpDataPart(data: VaultHelpNotice): {
+  type: "data-vault-help";
+  data: VaultHelpNotice;
+} {
+  return { type: "data-vault-help", data };
+}
 
 export function vaultListDataPart(data: VaultListNotice): {
   type: "data-vault-list";

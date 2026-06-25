@@ -31,7 +31,7 @@ const TASK_RE =
   /\b(todo|task|tugas|to-?do)\b|buat(?:kan)?\s+(?:task|tugas|todo)|tambah(?:kan)?\s+(?:task|tugas)|daftar\s+(?:task|tugas|todo)|list\s+task/i;
 
 const VAULT_RE =
-  /\b(berangkas|vault)\b|\/v(?:\s|$)|\/v\s+(up|list|get|open|del|uploaded)\b|\/(?:share-to-ai|ai-read|share2ai)\s+|daftar\s+file\s+berangkas/i;
+  /\b(berangkas|vault)\b|\/v\s*$|\/(?:share-to-ai|ai-read|share2ai)\s+|daftar\s+file\s+berangkas/i;
 
 const MEMORY_RE =
   /\b(ingat|jangan lupa|remember|save\s+memory|simpan\s+ke\s+memori)\b/i;
