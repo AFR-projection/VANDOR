@@ -30,7 +30,8 @@
         "noDocumentCookie": "off",
         "noAlert": "off",
         "noArrayIndexKey": "off",
-        "useIterableCallbackReturn": "off"
+        "useIterableCallbackReturn": "off",
+        "noUnnecessaryConditions": "off"
       },
       "style": {
         "noMagicNumbers": "off",
@@ -42,7 +43,6 @@
         "useConsistentArrayType": "off"
       },
       "nursery": {
-        "noUnnecessaryConditions": "off",
         "useSortedClasses": "off"
       },
       "complexity": {
