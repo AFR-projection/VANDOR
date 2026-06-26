@@ -1,7 +1,6 @@
 import "server-only";
 
-import { mkdir, rm } from "node:fs/promises";
-import path from "node:path";
+import { mkdir } from "node:fs/promises";
 import type {
   ConnectionState,
   WAMessage,
@@ -24,6 +23,13 @@ import {
 } from "./inbound-media";
 import { isWhatsappVaultSaveCommand } from "./vault-ingest";
 import { deliverWhatsappOutboundMedia } from "./outbound-media";
+import {
+  clearPersistedWhatsappAuth,
+  hydrateAuthDir,
+  persistAuthDir,
+  wipeAuthDir,
+} from "./auth-persist";
+import { getWhatsappAuthDir } from "./auth-path";
 import {
   matchesOwnerList,
   resolveSenderIdentity,
@@ -53,9 +59,6 @@ type Manager = {
   connecting: boolean;
 };
 
-const AUTH_DIR = path.join(process.cwd(), ".whatsapp-auth");
-
-/** Verification codes must match XXXX-XXXX (8 uppercase alphanum + dash). */
 const CODE_RE = /^[A-Z2-9]{4}-[A-Z2-9]{4}$/;
 
 const globalForWa = globalThis as unknown as {
@@ -352,13 +355,23 @@ async function handleIncoming(
   }
 }
 
-async function wireSocket(sock: WASocket, saveCreds: () => Promise<void>) {
+async function wireSocket(
+  sock: WASocket,
+  saveCreds: () => Promise<void>,
+  authDir: string,
+  ownerUserId: string
+) {
   const { DisconnectReason } = await import("@whiskeysockets/baileys");
   const QRCode = (await import("qrcode")).default;
 
   const ownerUserPromise = resolveDeploymentOwnerUser();
 
-  sock.ev.on("creds.update", saveCreds);
+  const persistCreds = async () => {
+    await saveCreds();
+    await persistAuthDir(authDir, ownerUserId);
+  };
+
+  sock.ev.on("creds.update", persistCreds);
 
   sock.ev.on("connection.update", async (update: Partial<ConnectionState>) => {
     const { connection, lastDisconnect, qr } = update;
@@ -395,9 +408,8 @@ async function wireSocket(sock: WASocket, saveCreds: () => Promise<void>) {
 
       if (loggedOut) {
         setState({ status: "logged_out", qr: null, me: null });
-        await rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {
-          // ignore
-        });
+        await wipeAuthDir(authDir);
+        await clearPersistedWhatsappAuth(ownerUserId);
       } else {
         setState({ status: "connecting", qr: null });
         setTimeout(() => {
@@ -467,17 +479,25 @@ export async function connectWhatsapp(): Promise<WhatsappState> {
     return m.state;
   }
 
+  const ownerUser = await resolveDeploymentOwnerUser();
+  if (!ownerUser) {
+    setState({ status: "error", error: "Owner deployment belum tersedia." });
+    return m.state;
+  }
+
+  const authDir = getWhatsappAuthDir();
   m.connecting = true;
   setState({ status: "connecting", qr: null, error: null });
 
   try {
-    await mkdir(AUTH_DIR, { recursive: true });
+    await hydrateAuthDir(authDir, ownerUser.id);
+    await mkdir(authDir, { recursive: true });
     const { default: makeWASocket, useMultiFileAuthState } = await import(
       "@whiskeysockets/baileys"
     );
     const pino = (await import("pino")).default;
 
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+    const { state, saveCreds } = await useMultiFileAuthState(authDir);
     const sock = makeWASocket({
       auth: state,
       // biome-ignore lint/suspicious/noExplicitAny: pino logger shape differs across versions
@@ -488,7 +508,7 @@ export async function connectWhatsapp(): Promise<WhatsappState> {
     });
 
     m.sock = sock;
-    await wireSocket(sock, saveCreds);
+    await wireSocket(sock, saveCreds, authDir, ownerUser.id);
     m.connecting = false;
     return m.state;
   } catch (error) {
@@ -505,6 +525,7 @@ export async function connectWhatsapp(): Promise<WhatsappState> {
 
 export async function logoutWhatsapp(): Promise<WhatsappState> {
   const m = getManager();
+  const ownerUser = await resolveDeploymentOwnerUser();
   try {
     await m.sock?.logout();
   } catch {
@@ -512,9 +533,11 @@ export async function logoutWhatsapp(): Promise<WhatsappState> {
   }
   m.sock = null;
   m.connecting = false;
-  await rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {
-    // ignore
-  });
+  const authDir = getWhatsappAuthDir();
+  await wipeAuthDir(authDir);
+  if (ownerUser) {
+    await clearPersistedWhatsappAuth(ownerUser.id);
+  }
   setState({ status: "idle", qr: null, me: null, error: null });
   return m.state;
 }

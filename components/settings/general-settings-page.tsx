@@ -102,6 +102,8 @@ const base = apiBasePath;
 const emptyDraftSecrets = {
   openrouter: "",
   tavily: "",
+  r2AccountId: "",
+  r2BucketName: "",
   r2AccessKeyId: "",
   r2SecretAccessKey: "",
   cobaltApiKey: "",

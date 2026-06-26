@@ -22,11 +22,16 @@ import {
 } from "@/lib/settings/types";
 
 const extraSecretsPatchSchema = z
-  .object(
-    Object.fromEntries(
-      INTEGRATION_SECRET_KEYS.map((key) => [key, z.string().min(4).optional()])
-    )
-  )
+  .object({
+    r2AccountId: z.string().min(4).optional(),
+    r2BucketName: z.string().min(1).optional(),
+    r2AccessKeyId: z.string().min(4).optional(),
+    r2SecretAccessKey: z.string().min(8).optional(),
+    cobaltApiKey: z.string().min(4).optional(),
+    openweathermapApiKey: z.string().min(8).optional(),
+    whatsappBridgeSecret: z.string().min(8).optional(),
+    blobReadWriteToken: z.string().min(10).optional(),
+  })
   .partial();
 
 const secretsPatchSchema = z.object({

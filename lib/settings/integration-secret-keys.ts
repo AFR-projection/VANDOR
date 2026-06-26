@@ -1,4 +1,6 @@
 export const INTEGRATION_SECRET_KEYS = [
+  "r2AccountId",
+  "r2BucketName",
   "r2AccessKeyId",
   "r2SecretAccessKey",
   "cobaltApiKey",

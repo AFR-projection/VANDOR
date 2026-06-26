@@ -303,24 +303,6 @@ export function ApiIntegrationsPanel({
             </span>
           </div>
           <ConfigField
-            description="Cloudflare dashboard → R2 → Account ID."
-            id="r2-account"
-            label="R2 Account ID"
-            onBlur={() => onPatchIntegrations({ r2AccountId: int.r2AccountId })}
-            onChange={(v) => onIntegrationsFieldChange({ r2AccountId: v })}
-            placeholder="3d55e64e…"
-            value={int.r2AccountId}
-          />
-          <ConfigField
-            id="r2-bucket"
-            label="R2 Bucket name"
-            onBlur={() =>
-              onPatchIntegrations({ r2BucketName: int.r2BucketName })
-            }
-            onChange={(v) => onIntegrationsFieldChange({ r2BucketName: v })}
-            value={int.r2BucketName}
-          />
-          <ConfigField
             description="Domain publik r2.dev atau custom domain (opsional)."
             id="r2-public"
             label="R2 Public URL"
@@ -328,6 +310,42 @@ export function ApiIntegrationsPanel({
             onChange={(v) => onIntegrationsFieldChange({ r2PublicUrl: v })}
             placeholder="https://pub-….r2.dev"
             value={int.r2PublicUrl}
+          />
+          <SecretKeyField
+            clearKey="r2AccountId"
+            configured={secrets.r2AccountId}
+            description="Cloudflare dashboard → R2 → Account ID."
+            label="R2 Account ID"
+            minLength={4}
+            onChange={(v) => onDraftChange("r2AccountId", v)}
+            onClear={() =>
+              onSaveSecrets({ clearExtraSecrets: ["r2AccountId"] })
+            }
+            onSave={() =>
+              onSaveSecrets({
+                extraSecrets: { r2AccountId: draftSecrets.r2AccountId },
+              })
+            }
+            placeholder="3d55e64e…"
+            value={draftSecrets.r2AccountId}
+          />
+          <SecretKeyField
+            clearKey="r2BucketName"
+            configured={secrets.r2BucketName}
+            description="Nama bucket R2 untuk upload file VANDOR."
+            label="R2 Bucket name"
+            minLength={1}
+            onChange={(v) => onDraftChange("r2BucketName", v)}
+            onClear={() =>
+              onSaveSecrets({ clearExtraSecrets: ["r2BucketName"] })
+            }
+            onSave={() =>
+              onSaveSecrets({
+                extraSecrets: { r2BucketName: draftSecrets.r2BucketName },
+              })
+            }
+            placeholder="vandor-files"
+            value={draftSecrets.r2BucketName}
           />
           <SecretKeyField
             clearKey="r2AccessKeyId"

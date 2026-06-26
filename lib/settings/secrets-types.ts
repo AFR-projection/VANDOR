@@ -10,6 +10,8 @@ export type SecretsPublicView = {
   openrouter: SecretFieldView;
   tavily: SecretFieldView;
   pin: { configured: boolean; source: SecretSource };
+  r2AccountId: SecretFieldView;
+  r2BucketName: SecretFieldView;
   r2AccessKeyId: SecretFieldView;
   r2SecretAccessKey: SecretFieldView;
   cobaltApiKey: SecretFieldView;

@@ -189,6 +189,8 @@ export const userSecrets = pgTable("UserSecrets", {
   numpadPinHash: text("numpadPinHash"),
   /** AES-GCM encrypted JSON — lihat lib/settings/integration-secret-keys.ts */
   extraSecretsEnc: text("extraSecretsEnc"),
+  /** AES-GCM encrypted Baileys multi-file auth snapshot (serverless / Vercel). */
+  whatsappAuthEnc: text("whatsappAuthEnc"),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 

@@ -99,12 +99,14 @@ function buildRuntimeConfig(
     extra.r2SecretAccessKey,
     process.env.R2_SECRET_ACCESS_KEY
   );
-  const r2AccountId = pickConfig(
-    integrations.r2AccountId,
+  const r2AccountId = pickSecret(
+    extra.r2AccountId ??
+      (integrations.r2AccountId.trim() || undefined),
     process.env.R2_ACCOUNT_ID
   );
-  const r2Bucket = pickConfig(
-    integrations.r2BucketName,
+  const r2Bucket = pickSecret(
+    extra.r2BucketName ??
+      (integrations.r2BucketName.trim() || undefined),
     process.env.R2_BUCKET_NAME
   );
   const r2PublicUrl = pickConfig(
@@ -135,7 +137,10 @@ function buildRuntimeConfig(
   );
 
   const r2Configured = Boolean(
-    r2AccountId && r2Bucket && r2Access.value && r2Secret.value
+    r2AccountId.value &&
+      r2Bucket.value &&
+      r2Access.value &&
+      r2Secret.value
   );
 
   const cobaltConfigured = Boolean(
@@ -144,8 +149,8 @@ function buildRuntimeConfig(
 
   return {
     r2: {
-      accountId: r2AccountId,
-      bucket: r2Bucket,
+      accountId: r2AccountId.value,
+      bucket: r2Bucket.value,
       publicUrl: r2PublicUrl,
       accessKeyId: r2Access.value,
       secretAccessKey: r2Secret.value,

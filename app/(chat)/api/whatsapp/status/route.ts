@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
+import { isWhatsappServerlessHost } from "@/lib/whatsapp/auth-path";
 import { getWhatsappState } from "@/lib/whatsapp/manager";
 
 export async function GET(request: Request) {
@@ -14,5 +15,10 @@ export async function GET(request: Request) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  return NextResponse.json(getWhatsappState());
+  return NextResponse.json({
+    ...getWhatsappState(),
+    deployment: {
+      serverless: isWhatsappServerlessHost(),
+    },
+  });
 }

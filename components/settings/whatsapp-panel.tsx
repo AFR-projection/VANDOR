@@ -38,6 +38,7 @@ type WhatsappState = {
   me: string | null;
   error: string | null;
   updatedAt: number;
+  deployment?: { serverless: boolean };
 };
 
 type VerifCode = {
@@ -502,6 +503,17 @@ export function WhatsappPanel() {
   return (
     <div className="space-y-5">
       {/* ── Header card ── */}
+      {waState?.deployment?.serverless ? (
+        <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-xs text-amber-800 dark:text-amber-300">
+          <p className="font-medium">Host serverless (Vercel)</p>
+          <p className="mt-1 text-muted-foreground">
+            QR &amp; sesi WhatsApp disimpan terenkripsi di database. Scan QR
+            tetap bisa dari sini; untuk bot online 24 jam tanpa putus, jalankan
+            VANDOR di host yang selalu nyala (laptop/VPS/Railway) atau pakai
+            bridge + secret di tab API &amp; integrasi.
+          </p>
+        </section>
+      ) : null}
       <section className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-card/40 to-emerald-500/5 p-4 sm:p-5">
         <div
           aria-hidden
@@ -637,9 +649,9 @@ export function WhatsappPanel() {
       <AuditLogCard logs={logs} />
 
       <p className="text-[11px] text-muted-foreground">
-        Sambungan aktif selama server VANDOR berjalan. Di Vercel (serverless)
-        koneksi tidak menetap — untuk online 24 jam jalankan di host yang
-        selalu nyala.
+        Kredensial WhatsApp disimpan terenkripsi di database. Di Vercel,
+        koneksi WebSocket tidak menetap antar cold start — untuk online 24 jam
+        jalankan di host yang selalu nyala atau gunakan bridge eksternal.
       </p>
     </div>
   );

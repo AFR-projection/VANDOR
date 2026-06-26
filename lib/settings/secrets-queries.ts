@@ -168,10 +168,14 @@ export async function getSecretsPublicView(
     pinSource = "env";
   }
 
-  const r2AccountId =
-    int.r2AccountId.trim() || process.env.R2_ACCOUNT_ID?.trim() || "";
-  const r2Bucket =
-    int.r2BucketName.trim() || process.env.R2_BUCKET_NAME?.trim() || "";
+  const r2Account = secretFieldFromValues(
+    extra.r2AccountId ?? int.r2AccountId,
+    process.env.R2_ACCOUNT_ID
+  );
+  const r2BucketName = secretFieldFromValues(
+    extra.r2BucketName ?? int.r2BucketName,
+    process.env.R2_BUCKET_NAME
+  );
   const cobaltUrl =
     int.cobaltApiUrl.trim() || process.env.COBALT_API_URL?.trim() || "";
 
@@ -201,7 +205,10 @@ export async function getSecretsPublicView(
   );
 
   const r2Configured = Boolean(
-    r2AccountId && r2Bucket && r2Access.configured && r2Secret.configured
+    r2Account.configured &&
+      r2BucketName.configured &&
+      r2Access.configured &&
+      r2Secret.configured
   );
 
   return {
@@ -219,6 +226,8 @@ export async function getSecretsPublicView(
       configured: pinSource !== "none",
       source: pinSource,
     },
+    r2AccountId: r2Account,
+    r2BucketName,
     r2AccessKeyId: r2Access,
     r2SecretAccessKey: r2Secret,
     cobaltApiKey: cobaltKey,
