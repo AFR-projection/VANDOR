@@ -187,6 +187,8 @@ export const userSecrets = pgTable("UserSecrets", {
   openrouterApiKeyEnc: text("openrouterApiKeyEnc"),
   tavilyApiKeyEnc: text("tavilyApiKeyEnc"),
   numpadPinHash: text("numpadPinHash"),
+  /** AES-GCM encrypted JSON — lihat lib/settings/integration-secret-keys.ts */
+  extraSecretsEnc: text("extraSecretsEnc"),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 

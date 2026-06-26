@@ -33,21 +33,21 @@ const outfit = Outfit({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-display",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
 });
 
 const ibmPlex = IBM_Plex_Sans({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-body",
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
 });
 
 const jetBrains = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-mono",
-  weight: ["400", "500", "600"],
+  weight: ["400", "500"],
 });
 
 const LIGHT_THEME_COLOR = "hsl(0 0% 100%)";

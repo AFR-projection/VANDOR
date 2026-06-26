@@ -19,6 +19,23 @@ export const integrationsSettingsSchema = z.object({
   openrouterAppName: z.string().min(1).max(64),
 
   openrouterAppUrl: z.string().max(256),
+
+  /** Cloudflare R2 — non-secret fields */
+  r2AccountId: z.string().max(64),
+  r2BucketName: z.string().max(128),
+  r2PublicUrl: z.string().max(512),
+
+  /** Cobalt media downloader */
+  cobaltApiUrl: z.string().max(512),
+  cobaltAllowPublic: z.boolean(),
+
+  /** OpenRouter embedding model for memory */
+  memoryEmbeddingModel: z.string().max(128),
+
+  /** Comma-separated owner numbers (digits / +62…) */
+  whatsappOwnerNumbers: z.string().max(512),
+
+  whatsappModel: z.string().max(128),
 });
 
 const categoryFlagsSchema = z.object({
@@ -211,6 +228,22 @@ export const defaultUserSettings: UserSettings = {
     openrouterAppName: "VANDOR",
 
     openrouterAppUrl: "",
+
+    r2AccountId: "",
+
+    r2BucketName: "",
+
+    r2PublicUrl: "",
+
+    cobaltApiUrl: "",
+
+    cobaltAllowPublic: false,
+
+    memoryEmbeddingModel: "",
+
+    whatsappOwnerNumbers: "",
+
+    whatsappModel: "",
   },
 };
 
@@ -246,6 +279,43 @@ function migrateIntegrations(
     openrouterAppUrl:
       typeof raw.openrouterAppUrl === "string"
         ? raw.openrouterAppUrl.slice(0, 256)
+        : "",
+
+    r2AccountId:
+      typeof raw.r2AccountId === "string"
+        ? raw.r2AccountId.trim().slice(0, 64)
+        : "",
+
+    r2BucketName:
+      typeof raw.r2BucketName === "string"
+        ? raw.r2BucketName.trim().slice(0, 128)
+        : "",
+
+    r2PublicUrl:
+      typeof raw.r2PublicUrl === "string"
+        ? raw.r2PublicUrl.trim().slice(0, 512)
+        : "",
+
+    cobaltApiUrl:
+      typeof raw.cobaltApiUrl === "string"
+        ? raw.cobaltApiUrl.trim().slice(0, 512)
+        : "",
+
+    cobaltAllowPublic: raw.cobaltAllowPublic === true,
+
+    memoryEmbeddingModel:
+      typeof raw.memoryEmbeddingModel === "string"
+        ? raw.memoryEmbeddingModel.trim().slice(0, 128)
+        : "",
+
+    whatsappOwnerNumbers:
+      typeof raw.whatsappOwnerNumbers === "string"
+        ? raw.whatsappOwnerNumbers.trim().slice(0, 512)
+        : "",
+
+    whatsappModel:
+      typeof raw.whatsappModel === "string"
+        ? raw.whatsappModel.trim().slice(0, 128)
         : "",
   };
 }

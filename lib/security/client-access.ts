@@ -1,7 +1,11 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import { isSessionActive, touchSession } from "./gate";
+import { touchSession } from "./gate";
+import {
+  shouldTouchGateSession,
+  isSessionActiveCached,
+} from "./gate-session-cache";
 import {
   DEVICE_COOKIE_NAME,
   GATE_COOKIE_NAME,
@@ -58,13 +62,15 @@ export async function getClientAccessSnapshot(
 
   let sessionRevoked = false;
   if (gateConfigured && gateValid && payload?.sid) {
-    sessionRevoked = !(await isSessionActive(payload.sid));
+    sessionRevoked = !(await isSessionActiveCached(payload.sid));
   }
 
   const requiresPin = gateConfigured && (!gateValid || sessionRevoked);
 
   if (gateValid && payload?.sid && !sessionRevoked) {
-    void touchSession(payload.sid);
+    if (shouldTouchGateSession(payload.sid)) {
+      void touchSession(payload.sid);
+    }
   }
 
   return {

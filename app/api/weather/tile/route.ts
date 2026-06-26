@@ -54,15 +54,18 @@ function v2TileUrl(
   return `${OWM_MAPS_V2}/${op}/${z}/${x}/${y}?opacity=${opacity}&fill_bound=${fillBound ? "true" : "false"}&appid=${apiKey}`;
 }
 
+import { getIntegrationRuntimeConfig } from "@/lib/settings/integration-runtime";
+
 async function fetchTileImage(url: string): Promise<Response> {
   return fetch(url, { next: { revalidate: 900 } });
 }
 
 export async function GET(request: Request) {
-  const apiKey = process.env.OPENWEATHERMAP_API_KEY?.trim();
+  const cfg = await getIntegrationRuntimeConfig();
+  const apiKey = cfg.openweathermap.apiKey;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "OPENWEATHERMAP_API_KEY not configured" },
+      { error: "OpenWeatherMap API key belum dikonfigurasi" },
       { status: 503 }
     );
   }

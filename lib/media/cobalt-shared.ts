@@ -26,7 +26,20 @@ export function normalizeHttpUrl(raw: string, label: string): string {
   }
 }
 
-export function resolveCobaltApiBase(): string {
+export async function resolveCobaltApiBase(): Promise<string> {
+  const { getIntegrationRuntimeConfig } = await import(
+    "@/lib/settings/integration-runtime"
+  );
+  const cfg = await getIntegrationRuntimeConfig();
+  const raw = cfg.cobalt.apiUrl;
+  if (!raw) {
+    return "https://api.cobalt.tools";
+  }
+  return normalizeHttpUrl(raw, "Cobalt API URL").replace(/\/$/, "");
+}
+
+/** Sync fallback — env only (scripts). */
+export function resolveCobaltApiBaseFromEnv(): string {
   const raw = process.env.COBALT_API_URL?.trim();
   if (!raw) {
     return "https://api.cobalt.tools";
@@ -95,7 +108,15 @@ export function buildCobaltFetchHeaders(input: {
   return headers;
 }
 
-export function hasCobaltBackend(): boolean {
+export async function hasCobaltBackend(): Promise<boolean> {
+  const { getIntegrationRuntimeConfig } = await import(
+    "@/lib/settings/integration-runtime"
+  );
+  const cfg = await getIntegrationRuntimeConfig();
+  return cfg.cobalt.configured;
+}
+
+export function hasCobaltBackendFromEnv(): boolean {
   return Boolean(
     process.env.COBALT_API_URL?.trim() ||
       process.env.COBALT_ALLOW_PUBLIC === "1"

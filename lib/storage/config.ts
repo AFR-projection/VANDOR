@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getIntegrationRuntimeConfig } from "@/lib/settings/integration-runtime";
+
 export function isServerlessRuntime(): boolean {
   return (
     process.env.VERCEL === "1" ||
@@ -8,11 +10,13 @@ export function isServerlessRuntime(): boolean {
   );
 }
 
-export function hasVercelBlob(): boolean {
+/** @deprecated Prefer async hasVercelBlob() */
+export function hasVercelBlobEnv(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
 
-export function hasR2Storage(): boolean {
+/** @deprecated Prefer async hasR2Storage() */
+export function hasR2StorageEnv(): boolean {
   return Boolean(
     process.env.R2_ACCOUNT_ID?.trim() &&
       process.env.R2_ACCESS_KEY_ID?.trim() &&
@@ -21,17 +25,26 @@ export function hasR2Storage(): boolean {
   );
 }
 
-export function storageSetupHint(): string {
-  if (hasVercelBlob()) {
+export async function hasVercelBlob(): Promise<boolean> {
+  const cfg = await getIntegrationRuntimeConfig();
+  return cfg.vercelBlob.configured;
+}
+
+export async function hasR2Storage(): Promise<boolean> {
+  const cfg = await getIntegrationRuntimeConfig();
+  return cfg.r2.configured;
+}
+
+export async function storageSetupHint(): Promise<string> {
+  if (await hasVercelBlob()) {
     return "Vercel Blob aktif.";
   }
-  if (hasR2Storage()) {
+  if (await hasR2Storage()) {
     return "Cloudflare R2 aktif.";
   }
   if (isServerlessRuntime()) {
     return (
-      "Di Vercel/serverless wajib set BLOB_READ_WRITE_TOKEN (Vercel Blob) " +
-      "atau variabel R2_* (Cloudflare R2). Penyimpanan lokal public/storage tidak tersedia."
+      "Di Vercel/serverless wajib set Vercel Blob atau Cloudflare R2 di Pengaturan → API & integrasi."
     );
   }
   return "File disimpan di public/storage (development).";

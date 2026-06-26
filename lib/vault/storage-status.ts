@@ -13,8 +13,8 @@ export type VaultStorageStatus = {
   publicAccess: false;
 };
 
-export function getVaultStorageStatus(): VaultStorageStatus {
-  const r2 = hasR2Storage();
+export async function getVaultStorageStatus(): Promise<VaultStorageStatus> {
+  const r2 = await hasR2Storage();
 
   if (r2) {
     return {
@@ -31,7 +31,7 @@ export function getVaultStorageStatus(): VaultStorageStatus {
   return {
     available: true,
     activeBackend: "local",
-    storageLabel: "Local disk (dev) — set R2_* for production",
+    storageLabel: "Local disk (dev) — atur R2 di Pengaturan → API & integrasi",
     encrypted: true,
     algorithm: "AES-256-GCM",
     metadata: "Neon PostgreSQL + pgvector",

@@ -1,4 +1,10 @@
+import "server-only";
+
 import { createHash } from "node:crypto";
+
+import { getIntegrationRuntimeConfig } from "@/lib/settings/integration-runtime";
+import { getUserSettings } from "@/lib/settings/queries";
+import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
 
 /**
  * WhatsApp bridge configuration helpers.
@@ -13,22 +19,33 @@ export function normalizeWhatsappNumber(input: string): string {
   return (input || "").replace(/\D/g, "");
 }
 
-/** Allowed owner numbers (comma separated in env), normalized to digits. */
-export function getOwnerWhatsappNumbers(): string[] {
-  const raw = process.env.WHATSAPP_OWNER_NUMBERS ?? "";
+async function ownerNumbersRaw(): Promise<string> {
+  const owner = await resolveDeploymentOwnerUser();
+  if (owner) {
+    const settings = await getUserSettings(owner.id);
+    const fromUi = settings.integrations.whatsappOwnerNumbers.trim();
+    if (fromUi) {
+      return fromUi;
+    }
+  }
+  return process.env.WHATSAPP_OWNER_NUMBERS ?? "";
+}
+
+/** Allowed owner numbers (comma separated), normalized to digits. */
+export async function getOwnerWhatsappNumbers(): Promise<string[]> {
+  const raw = await ownerNumbersRaw();
   return raw
     .split(",")
     .map((n) => normalizeWhatsappNumber(n))
     .filter((n) => n.length >= 6);
 }
 
-export function isOwnerWhatsappNumber(input: string): boolean {
+export async function isOwnerWhatsappNumber(input: string): Promise<boolean> {
   const normalized = normalizeWhatsappNumber(input);
   if (!normalized) {
     return false;
   }
-  const owners = getOwnerWhatsappNumbers();
-  // No whitelist configured → reply to every 1:1 chat (personal-bot mode).
+  const owners = await getOwnerWhatsappNumbers();
   if (owners.length === 0) {
     return true;
   }
@@ -37,13 +54,22 @@ export function isOwnerWhatsappNumber(input: string): boolean {
   );
 }
 
-export function getBridgeSecret(): string | null {
-  const secret = process.env.WHATSAPP_BRIDGE_SECRET?.trim();
+export async function getBridgeSecret(): Promise<string | null> {
+  const cfg = await getIntegrationRuntimeConfig();
+  const secret = cfg.whatsappBridge.secret;
   return secret && secret.length >= 8 ? secret : null;
 }
 
 /** Concrete model used for WhatsApp turns (overridable, defaults to free tools-capable). */
-export function getWhatsappModelId(): string {
+export async function getWhatsappModelId(): Promise<string> {
+  const owner = await resolveDeploymentOwnerUser();
+  if (owner) {
+    const settings = await getUserSettings(owner.id);
+    const fromUi = settings.integrations.whatsappModel.trim();
+    if (fromUi) {
+      return fromUi;
+    }
+  }
   return (
     process.env.WHATSAPP_MODEL?.trim() ||
     "meta-llama/llama-3.3-70b-instruct:free"
@@ -59,7 +85,6 @@ export function deriveWhatsappChatId(number: string): string {
   const hash = createHash("sha256")
     .update(`vandor-whatsapp:${normalized}`)
     .digest("hex");
-  // Format the first 32 hex chars as a v4-shaped UUID (deterministic).
   return [
     hash.slice(0, 8),
     hash.slice(8, 12),

@@ -68,6 +68,12 @@ const nextConfig: NextConfig = {
     "qrcode",
   ],
   experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "date-fns",
+      "framer-motion",
+      "streamdown",
+    ],
     prefetchInlining: true,
     cachedNavigations: true,
     appNewScrollHandler: true,

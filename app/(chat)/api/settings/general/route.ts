@@ -6,6 +6,9 @@ import { requireClientAccess } from "@/lib/security/client-access";
 import { revokeAllGateSessions } from "@/lib/security/gate";
 import { GATE_PIN_LENGTH } from "@/lib/security/gate-edge";
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
+import { INTEGRATION_SECRET_KEYS } from "@/lib/settings/integration-secret-keys";
+import type { IntegrationSecretKey } from "@/lib/settings/integration-secret-keys";
+import { invalidateIntegrationRuntimeCache } from "@/lib/settings/integration-runtime";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
 import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 import {
@@ -17,6 +20,14 @@ import {
   personaSettingsSchema,
   type UserSettings,
 } from "@/lib/settings/types";
+
+const extraSecretsPatchSchema = z
+  .object(
+    Object.fromEntries(
+      INTEGRATION_SECRET_KEYS.map((key) => [key, z.string().min(4).optional()])
+    )
+  )
+  .partial();
 
 const secretsPatchSchema = z.object({
   currentPin: z
@@ -31,6 +42,10 @@ const secretsPatchSchema = z.object({
   tavilyApiKey: z.string().min(8).optional(),
   clearOpenrouter: z.boolean().optional(),
   clearTavily: z.boolean().optional(),
+  extraSecrets: extraSecretsPatchSchema.optional(),
+  clearExtraSecrets: z
+    .array(z.enum(INTEGRATION_SECRET_KEYS))
+    .optional(),
 });
 
 const settingsPatchSchema = z.object({
@@ -105,6 +120,8 @@ export async function PATCH(request: Request) {
     tavilyApiKey,
     clearOpenrouter,
     clearTavily,
+    extraSecrets,
+    clearExtraSecrets,
     persona,
     integrations,
   } = data;
@@ -114,7 +131,9 @@ export async function PATCH(request: Request) {
     openrouterApiKey ||
     tavilyApiKey ||
     clearOpenrouter ||
-    clearTavily;
+    clearTavily ||
+    (extraSecrets && Object.keys(extraSecrets).length > 0) ||
+    (clearExtraSecrets && clearExtraSecrets.length > 0);
 
   const hasSettingsChange = Boolean(persona || integrations);
 
@@ -134,6 +153,8 @@ export async function PATCH(request: Request) {
       tavilyApiKey,
       clearOpenrouter,
       clearTavily,
+      extraSecrets,
+      clearExtraSecrets: clearExtraSecrets as IntegrationSecretKey[] | undefined,
     });
 
     if (newPin) {
@@ -152,6 +173,7 @@ export async function PATCH(request: Request) {
       patch.integrations = { ...current.integrations, ...integrations };
     }
     savedSettings = await updateUserSettings(settingsUserId, patch);
+    invalidateIntegrationRuntimeCache();
   }
 
   const secrets = await getSecretsPublicView(settingsUserId);

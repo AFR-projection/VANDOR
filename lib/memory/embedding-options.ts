@@ -15,6 +15,7 @@ export async function getEmbeddingOptionsForUser(userId: string): Promise<{
 
   const models = resolveIntegrationModels(settings.integrations);
   const model =
+    settings.integrations.memoryEmbeddingModel.trim() ||
     models.embeddingModel.trim() ||
     process.env.MEMORY_EMBEDDING_MODEL?.trim() ||
     "openai/text-embedding-3-small";

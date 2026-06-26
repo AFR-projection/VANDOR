@@ -15,10 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import {
-  streamdownPlugins,
-  vandorStreamdownLinkSafety,
-} from "@/components/chat/streamdown-config";
+import dynamic from "next/dynamic";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import {
   createContext,
@@ -29,7 +26,14 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Streamdown } from "streamdown";
+
+const LazyMarkdownResponse = dynamic(
+  () =>
+    import("@/components/chat/markdown-response").then(
+      (m) => m.MarkdownResponse
+    ),
+  { ssr: false }
+);
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
@@ -318,17 +322,15 @@ export const MessageBranchPage = ({
   );
 };
 
-export type MessageResponseProps = ComponentProps<typeof Streamdown>;
+export type MessageResponseProps = ComponentProps<typeof LazyMarkdownResponse>;
 
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
-    <Streamdown
+    <LazyMarkdownResponse
       className={cn(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
-      linkSafety={vandorStreamdownLinkSafety}
-      plugins={streamdownPlugins}
       {...props}
     />
   ),

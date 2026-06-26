@@ -29,8 +29,8 @@ export type PutOptions = {
 const LOCAL_DIR = path.join(process.cwd(), "public", "storage");
 
 export class StorageNotConfiguredError extends Error {
-  constructor() {
-    super(storageSetupHint());
+  constructor(message?: string) {
+    super(message ?? "Storage belum dikonfigurasi.");
     this.name = "StorageNotConfiguredError";
   }
 }
@@ -64,8 +64,16 @@ export async function putFile(
   const contentType = options.contentType ?? "application/octet-stream";
   const addSuffix = options.addRandomSuffix !== false;
   const buf = toBuffer(data);
+  const runtime = await import("@/lib/settings/integration-runtime").then(
+    (m) => m.getIntegrationRuntimeConfig()
+  );
+  const blobToken = runtime.vercelBlob.token;
 
-  if (hasVercelBlob()) {
+  if (blobToken) {
+    process.env.BLOB_READ_WRITE_TOKEN = blobToken;
+  }
+
+  if (await hasVercelBlob()) {
     const result = await vercelPut(filename, buf, {
       access: "public",
       contentType,
@@ -78,7 +86,7 @@ export async function putFile(
     };
   }
 
-  if (hasR2Storage()) {
+  if (await hasR2Storage()) {
     const result = await putR2File(filename, buf, contentType, addSuffix);
     return {
       url: chatFileServeUrl(result.pathname),
@@ -88,7 +96,7 @@ export async function putFile(
   }
 
   if (isServerlessRuntime()) {
-    throw new StorageNotConfiguredError();
+    throw new StorageNotConfiguredError(await storageSetupHint());
   }
 
   await mkdir(LOCAL_DIR, { recursive: true });

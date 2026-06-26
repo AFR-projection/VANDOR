@@ -4,8 +4,6 @@ import {
   ArrowLeftIcon,
   BrainIcon,
   CircleHelpIcon,
-  EyeIcon,
-  EyeOffIcon,
   FolderLockIcon,
   Loader2Icon,
   MessageCircleIcon,
@@ -17,53 +15,100 @@ import {
   WrenchIcon,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
-import { SpeechStylesPanel } from "@/components/settings/speech-styles-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { type ModelTierId, normalizeModelTier } from "@/lib/ai/model-tiers";
 import { getTierUi } from "@/lib/ai/tier-styles";
+import { apiBasePath } from "@/lib/app-url";
 import {
   personaLanguageLabels,
   personaVerbosityLabels,
 } from "@/lib/settings/persona-presets";
 import { resolveActiveSpeechStyle } from "@/lib/settings/speech-styles";
+import type { SecretsPublicView } from "@/lib/settings/secrets-types";
 import type {
   IntegrationsSettings,
   PersonaSettings,
 } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
 import { APP_NAME, APP_VERSION } from "@/lib/version";
-import { ActivityPanel } from "./activity-panel";
-import { AgentSkillsPanel } from "./agent-skills-panel";
-import { HelpGuidePanel } from "./help-guide-panel";
-import { LoginHistoryPanel } from "./login-history-panel";
-import { ModelAiPanel } from "./model-ai-panel";
-import { VaultPanel } from "./vault-panel";
-import { WhatsappPanel } from "./whatsapp-panel";
 import { SettingSlider } from "./setting-row";
 
-import { apiBasePath } from "@/lib/app-url";
+const ActivityPanel = dynamic(
+  () => import("./activity-panel").then((m) => ({ default: m.ActivityPanel })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const AgentSkillsPanel = dynamic(
+  () =>
+    import("./agent-skills-panel").then((m) => ({
+      default: m.AgentSkillsPanel,
+    })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const HelpGuidePanel = dynamic(
+  () =>
+    import("./help-guide-panel").then((m) => ({ default: m.HelpGuidePanel })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const LoginHistoryPanel = dynamic(
+  () =>
+    import("./login-history-panel").then((m) => ({
+      default: m.LoginHistoryPanel,
+    })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const ModelAiPanel = dynamic(
+  () => import("./model-ai-panel").then((m) => ({ default: m.ModelAiPanel })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const VaultPanel = dynamic(
+  () => import("./vault-panel").then((m) => ({ default: m.VaultPanel })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const WhatsappPanel = dynamic(
+  () => import("./whatsapp-panel").then((m) => ({ default: m.WhatsappPanel })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const SpeechStylesPanel = dynamic(
+  () =>
+    import("./speech-styles-panel").then((m) => ({
+      default: m.SpeechStylesPanel,
+    })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+const ApiIntegrationsPanelLazy = dynamic(
+  () =>
+    import("./api-integrations-panel").then((m) => ({
+      default: m.ApiIntegrationsPanel,
+    })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
+
+function PanelSkeleton() {
+  return (
+    <div className="flex min-h-[12rem] items-center justify-center rounded-xl border border-border/40 bg-card/20">
+      <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
 const base = apiBasePath;
 
-type SecretSource = "database" | "env" | "none";
-
-type SecretsPublicView = {
-  openrouter: {
-    configured: boolean;
-    masked: string | null;
-    source: SecretSource;
-  };
-  tavily: {
-    configured: boolean;
-    masked: string | null;
-    source: SecretSource;
-  };
-  pin: { configured: boolean; source: SecretSource };
-};
+const emptyDraftSecrets = {
+  openrouter: "",
+  tavily: "",
+  r2AccessKeyId: "",
+  r2SecretAccessKey: "",
+  cobaltApiKey: "",
+  openweathermapApiKey: "",
+  whatsappBridgeSecret: "",
+  blobReadWriteToken: "",
+} as const;
 
 type GeneralPayload = {
   secrets: SecretsPublicView;
@@ -102,7 +147,11 @@ async function fetchGeneral(): Promise<GeneralPayload> {
   return res.json();
 }
 
-function SourceBadge({ source }: { source: SecretSource }) {
+function SourceBadge({
+  source,
+}: {
+  source: SecretsPublicView["openrouter"]["source"];
+}) {
   const label =
     source === "database"
       ? "Database · terenkripsi"
@@ -125,10 +174,7 @@ export function GeneralSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
-  const [openrouterKey, setOpenrouterKey] = useState("");
-  const [tavilyKey, setTavilyKey] = useState("");
-  const [showOr, setShowOr] = useState(false);
-  const [showTavily, setShowTavily] = useState(false);
+  const [draftSecrets, setDraftSecrets] = useState({ ...emptyDraftSecrets });
 
   const saveSecrets = useCallback(
     async (body: Record<string, unknown>) => {
@@ -160,8 +206,7 @@ export function GeneralSettingsPage() {
           },
           false
         );
-        setOpenrouterKey("");
-        setTavilyKey("");
+        setDraftSecrets({ ...emptyDraftSecrets });
         setNewPin("");
         toast({ type: "success", description: json.message ?? "Disimpan" });
       } catch (e) {
@@ -221,22 +266,31 @@ export function GeneralSettingsPage() {
     [data, mutate, savePersona]
   );
 
-  const patchIntegrations = useCallback(
+  const updateIntegrationsLocal = useCallback(
     (partial: Partial<IntegrationsSettings>) => {
       if (!data) {
         return;
       }
-      const next = { ...data.settings.integrations, ...partial };
       mutate(
         {
           ...data,
-          settings: { ...data.settings, integrations: next },
+          settings: {
+            ...data.settings,
+            integrations: { ...data.settings.integrations, ...partial },
+          },
         },
         false
       );
+    },
+    [data, mutate]
+  );
+
+  const patchIntegrations = useCallback(
+    (partial: Partial<IntegrationsSettings>) => {
+      updateIntegrationsLocal(partial);
       void savePersona({ integrations: partial });
     },
-    [data, mutate, savePersona]
+    [savePersona, updateIntegrationsLocal]
   );
 
   if (isLoading || !data) {
@@ -532,122 +586,20 @@ export function GeneralSettingsPage() {
             {tab === "skills" && <AgentSkillsPanel />}
 
             {tab === "api" && (
-              <>
-                <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground">
-                    Yang tetap di .env (server)
-                  </p>
-                  <ul className="mt-2 list-inside list-disc space-y-1">
-                    <li>
-                      <code>POSTGRES_URL</code> — database Neon{" "}
-                      {envRequired.postgres ? "✓" : "✗"}
-                    </li>
-                    <li>
-                      <code>AUTH_SECRET</code> — enkripsi key di DB{" "}
-                      {envRequired.authSecret ? "✓" : "✗"}
-                    </li>
-                    <li>
-                      <code>VANDOR_OWNER_EMAIL</code> — login owner{" "}
-                      {envRequired.ownerEmail ? "✓" : "✗"}
-                    </li>
-                  </ul>
-                  <p className="mt-2">
-                    OpenRouter, Tavily, PIN, model, dan gaya bicara bisa dari
-                    UI.
-                  </p>
-                </section>
-
-                <ApiKeySection
-                  configured={secrets.openrouter}
-                  description="Chat, embedding memori, polish, gambar."
-                  label="OpenRouter"
-                  onChange={setOpenrouterKey}
-                  onClear={() => saveSecrets({ clearOpenrouter: true })}
-                  onSave={() =>
-                    saveSecrets({ openrouterApiKey: openrouterKey })
-                  }
-                  placeholder="sk-or-v1-…"
-                  show={showOr}
-                  toggleShow={() => setShowOr((v) => !v)}
-                  value={openrouterKey}
-                />
-
-                <ApiKeySection
-                  configured={secrets.tavily}
-                  description="Pencarian web kaya (berita, gambar). Tanpa key: fallback DDG."
-                  label="Tavily (web search)"
-                  onChange={setTavilyKey}
-                  onClear={() => saveSecrets({ clearTavily: true })}
-                  onSave={() => saveSecrets({ tavilyApiKey: tavilyKey })}
-                  placeholder="tvly-…"
-                  show={showTavily}
-                  toggleShow={() => setShowTavily((v) => !v)}
-                  value={tavilyKey}
-                />
-
-                <section className="space-y-3 rounded-xl border border-border/40 bg-card/30 p-4">
-                  <h2 className="text-sm font-semibold">Header OpenRouter</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Tier model di tab Model & AI. Di sini hanya nama app untuk
-                    analytics OpenRouter.
-                  </p>
-                  <label className="block text-xs font-medium" htmlFor="appn">
-                    Nama app (header OpenRouter)
-                  </label>
-                  <Input
-                    id="appn"
-                    onBlur={() =>
-                      patchIntegrations({
-                        openrouterAppName: int.openrouterAppName,
-                      })
-                    }
-                    onChange={(e) =>
-                      mutate(
-                        {
-                          ...data,
-                          settings: {
-                            ...data.settings,
-                            integrations: {
-                              ...int,
-                              openrouterAppName: e.target.value,
-                            },
-                          },
-                        },
-                        false
-                      )
-                    }
-                    value={int.openrouterAppName}
-                  />
-                  <label className="block text-xs font-medium" htmlFor="appu">
-                    URL app (HTTP-Referer)
-                  </label>
-                  <Input
-                    id="appu"
-                    onBlur={() =>
-                      patchIntegrations({
-                        openrouterAppUrl: int.openrouterAppUrl,
-                      })
-                    }
-                    onChange={(e) =>
-                      mutate(
-                        {
-                          ...data,
-                          settings: {
-                            ...data.settings,
-                            integrations: {
-                              ...int,
-                              openrouterAppUrl: e.target.value,
-                            },
-                          },
-                        },
-                        false
-                      )
-                    }
-                    placeholder="https://…"
-                    value={int.openrouterAppUrl}
-                  />
-                </section>
-              </>
+              <ApiIntegrationsPanelLazy
+                currentPin={currentPin}
+                draftSecrets={draftSecrets}
+                envRequired={envRequired}
+                integrations={int}
+                onDraftChange={(key, value) =>
+                  setDraftSecrets((prev) => ({ ...prev, [key]: value }))
+                }
+                onIntegrationsFieldChange={updateIntegrationsLocal}
+                onPatchIntegrations={patchIntegrations}
+                onPinChange={setCurrentPin}
+                onSaveSecrets={saveSecrets}
+                secrets={secrets}
+              />
             )}
 
             {tab === "vault" && <VaultPanel />}
@@ -734,79 +686,5 @@ export function GeneralSettingsPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function ApiKeySection({
-  label,
-  description,
-  configured,
-  value,
-  onChange,
-  placeholder,
-  show,
-  toggleShow,
-  onSave,
-  onClear,
-}: {
-  label: string;
-  description: string;
-  configured: SecretsPublicView["openrouter"];
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  show: boolean;
-  toggleShow: () => void;
-  onSave: () => void;
-  onClear: () => void;
-}) {
-  return (
-    <section className="space-y-3 rounded-xl border border-border/40 bg-card/30 p-4">
-      <h2 className="text-sm font-semibold">{label}</h2>
-      <p className="text-xs text-muted-foreground">{description}</p>
-      {configured.masked && (
-        <p className="font-mono text-xs text-muted-foreground">
-          Aktif: {configured.masked} <SourceBadge source={configured.source} />
-        </p>
-      )}
-      <div className="relative">
-        <Input
-          autoComplete="off"
-          className="pr-10 font-mono text-sm"
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          type={show ? "text" : "password"}
-          value={value}
-        />
-        <Button
-          className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
-          onClick={toggleShow}
-          size="icon-sm"
-          type="button"
-          variant="ghost"
-        >
-          {show ? (
-            <EyeOffIcon className="size-3.5" />
-          ) : (
-            <EyeIcon className="size-3.5" />
-          )}
-        </Button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          disabled={value.length < 8}
-          onClick={onSave}
-          size="sm"
-          type="button"
-        >
-          Simpan
-        </Button>
-        {configured.source === "database" && (
-          <Button onClick={onClear} size="sm" type="button" variant="outline">
-            Hapus dari database
-          </Button>
-        )}
-      </div>
-    </section>
   );
 }

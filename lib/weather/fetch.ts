@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getIntegrationRuntimeConfig } from "@/lib/settings/integration-runtime";
 import { resolveWeatherLocation } from "./geocode";
 import { isUserLocationPhrase } from "./location-phrases";
 import { buildOwmWeatherMapUrl } from "./map-url";
@@ -51,9 +52,9 @@ export type WeatherPanelPayload = {
   };
 };
 
-function getOpenWeatherApiKey(): string | null {
-  const key = process.env.OPENWEATHERMAP_API_KEY?.trim();
-  return key || null;
+async function getOpenWeatherApiKey(): Promise<string | null> {
+  const cfg = await getIntegrationRuntimeConfig();
+  return cfg.openweathermap.apiKey;
 }
 
 function offsetToTimezone(offsetSeconds: number): string {
@@ -199,7 +200,7 @@ async function fetchFromOpenMeteo(
   data.cityName = displayName ?? data.cityName;
   data.provider = "open-meteo";
   data.mapUrl = buildOwmWeatherMapUrl(latitude, longitude, displayName);
-  data.mapLayerAvailable = Boolean(getOpenWeatherApiKey());
+  data.mapLayerAvailable = Boolean(await getOpenWeatherApiKey());
   return data;
 }
 
@@ -269,7 +270,7 @@ export async function fetchWeatherPanelData(input: {
   /** Label tampilan saat pakai koordinat IP (mis. kota dari geo). */
   locationLabel?: string;
 }): Promise<WeatherPanelPayload | { error: string }> {
-  const apiKey = getOpenWeatherApiKey();
+  const apiKey = await getOpenWeatherApiKey();
   const resolved = await resolveCoordinates({
     city: input.city,
     latitude: input.latitude,

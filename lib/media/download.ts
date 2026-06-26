@@ -46,14 +46,20 @@ const FETCH_TIMEOUT_MS = 120_000;
 
 const PUBLIC_COBALT_BASE = "https://api.cobalt.tools";
 
-function listYoutubeCobaltSources(): CobaltRequestOptions[] {
+async function listYoutubeCobaltSources(): Promise<CobaltRequestOptions[]> {
+  const { getIntegrationRuntimeConfig } = await import(
+    "@/lib/settings/integration-runtime"
+  );
+  const cfg = await getIntegrationRuntimeConfig();
   const sources: CobaltRequestOptions[] = [];
-  const userBase = process.env.COBALT_API_URL?.trim();
-  if (userBase) {
+  if (cfg.cobalt.apiUrl) {
     sources.push({
-      base: normalizeHttpUrl(userBase, "COBALT_API_URL").replace(/\/$/, ""),
-      apiKey: process.env.COBALT_API_KEY?.trim(),
-      label: "Cobalt Railway",
+      base: normalizeHttpUrl(cfg.cobalt.apiUrl, "Cobalt API URL").replace(
+        /\/$/,
+        ""
+      ),
+      apiKey: cfg.cobalt.apiKey ?? undefined,
+      label: "Cobalt (UI)",
     });
   }
   sources.push({
@@ -63,29 +69,27 @@ function listYoutubeCobaltSources(): CobaltRequestOptions[] {
   return sources;
 }
 
-function assertNonEmptyDownload(buffer: Buffer, backend: string): void {
-  if (buffer.length >= MIN_BYTES) {
-    return;
-  }
-  throw new Error(
-    `File unduhan kosong (${buffer.length} byte) via ${backend}. ` +
-      "Di Vercel: pastikan COBALT_API_URL benar, COBALT_API_KEY jika instance pakai auth, " +
-      "dan API_URL di instance Cobalt mengarah ke domain publik Railway/VPS (tunnel butuh ini)."
-  );
-}
-
-
-function shouldTryYtDlpFirst(): boolean {
+async function shouldTryYtDlpFirst(): Promise<boolean> {
   if (process.env.VERCEL) {
     return false;
   }
   if (process.env.YT_DLP_PATH?.trim()) {
     return true;
   }
-  if (hasCobaltBackend() && process.env.VANDOR_PREFER_YTDLP !== "1") {
+  if ((await hasCobaltBackend()) && process.env.VANDOR_PREFER_YTDLP !== "1") {
     return false;
   }
   return true;
+}
+
+function assertNonEmptyDownload(buffer: Buffer, backend: string): void {
+  if (buffer.length >= MIN_BYTES) {
+    return;
+  }
+  throw new Error(
+    `File unduhan kosong (${buffer.length} byte) via ${backend}. ` +
+      "Atur Cobalt di Pengaturan → API & integrasi jika pakai Vercel."
+  );
 }
 
 export type DownloadSocialMediaInput = {
@@ -365,9 +369,13 @@ async function downloadWithCobalt(
   platform: MediaPlatform,
   source?: CobaltRequestOptions
 ): Promise<{ buffer: Buffer; title: string; filename?: string }> {
+  const { getIntegrationRuntimeConfig } = await import(
+    "@/lib/settings/integration-runtime"
+  );
+  const runtime = await getIntegrationRuntimeConfig();
   const cobaltSource: CobaltRequestOptions = source ?? {
-    base: resolveCobaltApiBase(),
-    apiKey: process.env.COBALT_API_KEY?.trim(),
+    base: await resolveCobaltApiBase(),
+    apiKey: runtime.cobalt.apiKey ?? undefined,
     label: "Cobalt",
   };
 
@@ -429,7 +437,7 @@ async function downloadYoutube(
     }
   }
 
-  for (const source of listYoutubeCobaltSources()) {
+  for (const source of await listYoutubeCobaltSources()) {
     try {
       const cobalt = await downloadWithCobalt(
         url,
@@ -522,7 +530,7 @@ export async function downloadSocialMedia(
       26
     );
 
-    const ytdlp = shouldTryYtDlpFirst()
+    const ytdlp = (await shouldTryYtDlpFirst())
       ? await downloadWithYtDlp(url, format, onProgress, platform)
       : null;
     if (ytdlp && ytdlp.buffer.length > 0) {
@@ -548,9 +556,7 @@ export async function downloadSocialMedia(
         suggestedName = tikwm.filename;
         backend = "tikwm";
       } catch (tikwmErr) {
-        const cobaltConfigured =
-          process.env.COBALT_API_URL?.trim() ||
-          process.env.COBALT_ALLOW_PUBLIC === "1";
+        const cobaltConfigured = await hasCobaltBackend();
         if (!cobaltConfigured) {
           const msg = toErrorMessage(tikwmErr);
           reportProgress(
@@ -615,10 +621,7 @@ export async function downloadSocialMedia(
         stopResolvePulse = null;
         return { ok: false, platform, format, error: msg };
       }
-    } else if (
-      process.env.COBALT_API_URL?.trim() ||
-      process.env.COBALT_ALLOW_PUBLIC === "1"
-    ) {
+    } else if (await hasCobaltBackend()) {
       backend = "cobalt";
       try {
         const cobalt = await downloadWithCobalt(

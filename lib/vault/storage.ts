@@ -9,8 +9,8 @@ const LOCAL_VAULT_DIR = path.join(process.cwd(), "data", "vault");
 
 export type VaultStorageBackend = "r2" | "local";
 
-export function vaultStorageAvailable(): boolean {
-  return hasR2Storage() || !isServerlessRuntime();
+export async function vaultStorageAvailable(): Promise<boolean> {
+  return (await hasR2Storage()) || !isServerlessRuntime();
 }
 
 export function buildVaultKey(userId: string, fileId: string): string {
@@ -25,14 +25,14 @@ export async function putEncryptedBlob(
   key: string,
   ciphertext: Buffer
 ): Promise<VaultStorageBackend> {
-  if (hasR2Storage()) {
+  if (await hasR2Storage()) {
     await putR2Object(key, ciphertext, "application/octet-stream");
     return "r2";
   }
 
   if (isServerlessRuntime()) {
     throw new Error(
-      "Vault storage requires R2 in serverless. Set R2_* environment variables."
+      "Vault storage requires R2 in serverless. Atur Cloudflare R2 di Pengaturan → API & integrasi."
     );
   }
 

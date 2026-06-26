@@ -47,11 +47,11 @@ function defaultSummary(fileName: string, fileType: string): string {
 export async function storeVaultFile(
   input: StoreVaultFileInput
 ): Promise<{ ok: true; file: VaultFileSnapshot } | { ok: false; error: string }> {
-  if (!vaultStorageAvailable()) {
+  if (!(await vaultStorageAvailable())) {
     return {
       ok: false,
       error:
-        "Vault storage not configured. Set R2_* env vars or use local dev mode.",
+        "Vault storage belum dikonfigurasi. Atur Cloudflare R2 di Pengaturan → API & integrasi.",
     };
   }
 

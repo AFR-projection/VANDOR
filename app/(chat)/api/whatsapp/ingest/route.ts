@@ -23,7 +23,7 @@ function unauthorized(message: string) {
 }
 
 export async function POST(request: Request) {
-  const secret = getBridgeSecret();
+  const secret = await getBridgeSecret();
   if (!secret) {
     return NextResponse.json(
       { error: "WHATSAPP_BRIDGE_SECRET belum dikonfigurasi di server." },
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isOwnerWhatsappNumber(from)) {
+  if (!(await isOwnerWhatsappNumber(from))) {
     // Silently ignore non-owner numbers — bot only serves the owner.
     return NextResponse.json({ ignored: true, reason: "not_owner" });
   }

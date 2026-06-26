@@ -36,6 +36,6 @@ export async function GET(request: Request) {
     total,
     filteredCount: files.length,
     audit,
-    security: getVaultStorageStatus(),
+    security: await getVaultStorageStatus(),
   });
 }

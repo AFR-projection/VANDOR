@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -26,17 +27,30 @@ import { useVisualViewportInset } from "@/hooks/use-visual-viewport-inset";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
-import { CommandPalette } from "./command-palette";
 import { DataStreamHandler } from "./data-stream-handler";
 import { MemorySavedHandler } from "./memory-saved-handler";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MobileChatEffects } from "./mobile-chat-effects";
 import { MultimodalInput } from "./multimodal-input";
-import { SourcePanel } from "./source-panel";
 import { VaultModeBanner } from "./vault-mode-banner";
+
+const LazyArtifact = dynamic(
+  () => import("./artifact").then((m) => ({ default: m.Artifact })),
+  { ssr: false }
+);
+
+const LazySourcePanel = dynamic(
+  () => import("./source-panel").then((m) => ({ default: m.SourcePanel })),
+  { ssr: false }
+);
+
+const LazyCommandPalette = dynamic(
+  () =>
+    import("./command-palette").then((m) => ({ default: m.CommandPalette })),
+  { ssr: false }
+);
 
 export function ChatShell() {
   const {
@@ -253,9 +267,9 @@ export function ChatShell() {
         </div>
 
         {isSourcePanelVisible ? (
-          <SourcePanel overlay={useOverlayPanel} />
-        ) : (
-          <Artifact
+          <LazySourcePanel overlay={useOverlayPanel} />
+        ) : isArtifactVisible ? (
+          <LazyArtifact
             addToolApprovalResponse={addToolApprovalResponse}
             attachments={attachments}
             chatId={chatId}
@@ -273,12 +287,12 @@ export function ChatShell() {
             stop={stop}
             votes={votes}
           />
-        )}
+        ) : null}
       </div>
 
       <MemorySavedHandler messages={messages} status={status} />
       <DataStreamHandler />
-      <CommandPalette />
+      <LazyCommandPalette />
 
       <AlertDialog
         onOpenChange={setShowCreditCardAlert}

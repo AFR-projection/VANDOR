@@ -273,7 +273,7 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    void fetchAccountModelTier().then((tier) => {
+    const applyTier = (tier: ReturnType<typeof normalizeModelTier> | null) => {
       if (cancelled) return;
       if (tier) {
         const mode = tierCookieValue(tier);
@@ -282,10 +282,24 @@ export function ActiveChatProvider({ children }: { children: ReactNode }) {
       } else {
         setCurrentModelId(DEFAULT_CHAT_MODE);
       }
-    });
+    };
 
+    const loadTier = () => {
+      void fetchAccountModelTier().then(applyTier);
+    };
+
+    if (typeof requestIdleCallback === "function") {
+      const idleId = requestIdleCallback(loadTier, { timeout: 2500 });
+      return () => {
+        cancelled = true;
+        cancelIdleCallback(idleId);
+      };
+    }
+
+    const timerId = window.setTimeout(loadTier, 0);
     return () => {
       cancelled = true;
+      window.clearTimeout(timerId);
     };
   }, [chatData, isNewChat]);
 

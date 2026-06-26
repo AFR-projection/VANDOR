@@ -284,6 +284,8 @@ export async function revokeAllGateSessions(): Promise<void> {
     return;
   }
   try {
+    const { invalidateGateSessionCache } = await import("./gate-session-cache");
+    invalidateGateSessionCache();
     await db
       .update(numpadSession)
       .set({ revokedAt: sql`now()` })

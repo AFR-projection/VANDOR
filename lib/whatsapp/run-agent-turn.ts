@@ -202,7 +202,7 @@ export async function runWhatsappAgentTurn({
     id.endsWith(":free") || id === "openrouter/free";
 
   const envOverride = process.env.WHATSAPP_MODEL?.trim();
-  let modelId = envOverride || getWhatsappModelId();
+  let modelId = envOverride || (await getWhatsappModelId());
   let attemptModelIds: string[] | undefined;
   let freeMode = isFreeMid(modelId);
   let extraFallbacks: string[] | undefined;
