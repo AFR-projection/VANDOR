@@ -44,6 +44,8 @@ ufw --force enable
 mkdir -p "${APP_DIR}"
 mkdir -p "${APP_DIR}/public/storage"
 mkdir -p "${APP_DIR}/.whatsapp-auth"
+mkdir -p "${APP_DIR}/cookies"
+chmod 700 "${APP_DIR}/cookies" 2>/dev/null || true
 
 echo "==> Nginx site template"
 install -m 644 deploy/hostinger/nginx-vandor.conf /etc/nginx/sites-available/vandor

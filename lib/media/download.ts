@@ -33,6 +33,14 @@ import type {
 import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
 import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
 import {
+  hasYoutubeCookiesConfigured,
+  isYoutubeBotBlockError,
+  resolveYoutubeCookieHeaderForYtdlp,
+  resolveYoutubeCookiesFileForYtdlp,
+  YOUTUBE_VPS_COOKIE_HINT,
+  youtubePoTokenExtractorArg,
+} from "@/lib/media/youtube-ytdlp-cookies";
+import {
   downloadWithYtdlpApi,
   hasYtdlpApiBackend,
 } from "@/lib/media/youtube-ytdlp-api";
@@ -271,17 +279,40 @@ async function fetchRemoteFile(
   }
 }
 
-async function downloadWithYtDlp(
-  url: string,
-  format: MediaDownloadFormat,
-  onProgress: MediaDownloadProgressReporter | undefined,
-  platform: MediaPlatform
-): Promise<{ buffer: Buffer; title: string } | null> {
-  const bin = process.env.YT_DLP_PATH?.trim() || "yt-dlp";
-  const dir = await mkdtemp(path.join(tmpdir(), "vandor-ytdlp-"));
-  const outTemplate = path.join(dir, "%(title).80B.%(ext)s");
+async function runYtdlpAttempt(input: {
+  bin: string;
+  url: string;
+  format: MediaDownloadFormat;
+  platform: MediaPlatform;
+  outTemplate: string;
+  dir: string;
+  onProgress: MediaDownloadProgressReporter | undefined;
+  extractorArgs?: string;
+  cookiesFile?: string;
+  cookieHeader?: string;
+}): Promise<{ buffer: Buffer; title: string }> {
+  const {
+    bin,
+    url,
+    format,
+    platform,
+    outTemplate,
+    dir,
+    onProgress,
+    extractorArgs,
+    cookiesFile,
+    cookieHeader,
+  } = input;
+
+  const authArgs: string[] = [];
+  if (cookiesFile) {
+    authArgs.push("--cookies", cookiesFile);
+  } else if (cookieHeader) {
+    authArgs.push("--add-header", `Cookie:${cookieHeader}`);
+  }
 
   const sharedArgs = [
+    ...authArgs,
     "--newline",
     "--no-playlist",
     "--no-warnings",
@@ -293,19 +324,26 @@ async function downloadWithYtDlp(
     outTemplate,
   ];
 
-  const platformArgs =
-    platform === "youtube"
+  const youtubeVideoArgs =
+    platform === "youtube" && extractorArgs
       ? [
           "-f",
           "bv*+ba/b[ext=mp4]/b",
           "--merge-output-format",
           "mp4",
           "--extractor-args",
-          "youtube:player_client=android,web",
+          extractorArgs,
         ]
-      : platform === "tiktok"
-        ? ["-f", "b", "--merge-output-format", "mp4"]
-        : ["-f", "b", "--merge-output-format", "mp4"];
+      : platform === "youtube"
+        ? [
+            "-f",
+            "bv*+ba/b[ext=mp4]/b",
+            "--merge-output-format",
+            "mp4",
+          ]
+        : platform === "tiktok"
+          ? ["-f", "b", "--merge-output-format", "mp4"]
+          : ["-f", "b", "--merge-output-format", "mp4"];
 
   const args =
     format === "audio"
@@ -313,6 +351,7 @@ async function downloadWithYtDlp(
           "-x",
           "--audio-format",
           "mp3",
+          ...authArgs,
           "--newline",
           "--no-playlist",
           "--no-warnings",
@@ -320,14 +359,93 @@ async function downloadWithYtDlp(
           "3",
           "--socket-timeout",
           "30",
-          ...(platform === "youtube"
-            ? ["--extractor-args", "youtube:player_client=android,web"]
-            : []),
+          ...(extractorArgs ? ["--extractor-args", extractorArgs] : []),
           "-o",
           outTemplate,
           url,
         ]
-      : [...platformArgs, ...sharedArgs, url];
+      : [...youtubeVideoArgs, ...sharedArgs, url];
+
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn(bin, args, { stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    const killTimer = setTimeout(() => {
+      proc.kill("SIGKILL");
+      reject(new Error("yt-dlp timeout"));
+    }, YTDLP_TIMEOUT_MS);
+
+    proc.stderr?.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+      const match = stderr.match(/\[download\]\s+(\d+(?:\.\d+)?)%/);
+      if (match) {
+        const pct = Number.parseFloat(match[1]);
+        reportProgress(
+          onProgress,
+          baseProgress(platform, format, {
+            status: "downloading",
+            progress: Math.min(72, 18 + Math.round(pct * 0.54)),
+            stageLabel: `yt-dlp ${pct.toFixed(0)}%`,
+          })
+        );
+      }
+    });
+
+    proc.on("error", (err) => {
+      clearTimeout(killTimer);
+      reject(err);
+    });
+    proc.on("close", (code) => {
+      clearTimeout(killTimer);
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(stderr.slice(-600) || `yt-dlp exit ${code}`));
+    });
+  });
+
+  const files = await readdir(dir);
+  const mediaFile = files.find((f) =>
+    format === "audio"
+      ? f.endsWith(".mp3") || f.endsWith(".m4a")
+      : /\.(mp4|webm|mkv)$/i.test(f)
+  );
+  if (!mediaFile) {
+    throw new Error("yt-dlp tidak menghasilkan file media");
+  }
+  const fullPath = path.join(dir, mediaFile);
+  const buffer = await readFile(fullPath);
+  const title = path.basename(mediaFile, path.extname(mediaFile));
+  return { buffer, title };
+}
+
+async function downloadWithYtDlp(
+  url: string,
+  format: MediaDownloadFormat,
+  onProgress: MediaDownloadProgressReporter | undefined,
+  platform: MediaPlatform
+): Promise<{ buffer: Buffer; title: string } | null> {
+  const bin = process.env.YT_DLP_PATH?.trim() || "yt-dlp";
+  const dir = await mkdtemp(path.join(tmpdir(), "vandor-ytdlp-"));
+  const outTemplate = path.join(dir, "%(title).80B.%(ext)s");
+
+  const cookiesFile =
+    platform === "youtube"
+      ? await resolveYoutubeCookiesFileForYtdlp()
+      : undefined;
+  const cookieHeader =
+    platform === "youtube" && !cookiesFile
+      ? resolveYoutubeCookieHeaderForYtdlp()
+      : undefined;
+
+  const poToken = youtubePoTokenExtractorArg();
+  const youtubeClients = [
+    poToken,
+    "youtube:player_client=tv_embedded,web",
+    "youtube:player_client=android,web",
+    "youtube:player_client=mweb",
+    undefined,
+  ].filter((value, index, arr) => arr.indexOf(value) === index);
 
   const stopSim = startSimulatedDownloadProgress(
     onProgress,
@@ -337,55 +455,48 @@ async function downloadWithYtDlp(
     55
   );
 
+  let lastError = "yt-dlp gagal";
+
   try {
-    await new Promise<void>((resolve, reject) => {
-      const proc = spawn(bin, args, { stdio: ["ignore", "ignore", "pipe"] });
-      let stderr = "";
-      const killTimer = setTimeout(() => {
-        proc.kill("SIGKILL");
-        reject(new Error("yt-dlp timeout"));
-      }, YTDLP_TIMEOUT_MS);
+    const attempts =
+      platform === "youtube"
+        ? youtubeClients.map((client) => ({ extractorArgs: client }))
+        : [{ extractorArgs: undefined }];
 
-      proc.stderr?.on("data", (chunk: Buffer) => {
-        stderr += chunk.toString();
-        const match = stderr.match(/\[download\]\s+(\d+(?:\.\d+)?)%/);
-        if (match) {
-          const pct = Number.parseFloat(match[1]);
-          reportProgress(
-            onProgress,
-            baseProgress(platform, format, {
-              status: "downloading",
-              progress: Math.min(72, 18 + Math.round(pct * 0.54)),
-              stageLabel: `yt-dlp ${pct.toFixed(0)}%`,
-            })
-          );
+    for (const attempt of attempts) {
+      for (const file of await readdir(dir)) {
+        await rm(path.join(dir, file), { force: true }).catch(() => null);
+      }
+      try {
+        return await runYtdlpAttempt({
+          bin,
+          url,
+          format,
+          platform,
+          outTemplate,
+          dir,
+          onProgress,
+          extractorArgs: attempt.extractorArgs,
+          cookiesFile,
+          cookieHeader,
+        });
+      } catch (err) {
+        lastError = toErrorMessage(err);
+        if (platform !== "youtube") {
+          break;
         }
-      });
-
-      proc.on("error", (err) => {
-        clearTimeout(killTimer);
-        reject(err);
-      });
-      proc.on("close", (code) => {
-        clearTimeout(killTimer);
-        if (code === 0) resolve();
-        else reject(new Error(stderr.slice(-400) || `yt-dlp exit ${code}`));
-      });
-    });
-
-    const files = await readdir(dir);
-    const mediaFile = files.find((f) =>
-      format === "audio"
-        ? f.endsWith(".mp3") || f.endsWith(".m4a")
-        : /\.(mp4|webm|mkv)$/i.test(f)
-    );
-    if (!mediaFile) {
-      return null;
+      }
     }
-    const fullPath = path.join(dir, mediaFile);
-    const buffer = await readFile(fullPath);
-    const title = path.basename(mediaFile, path.extname(mediaFile));
-    return { buffer, title };
+
+    if (
+      platform === "youtube" &&
+      isYoutubeBotBlockError(lastError) &&
+      !hasYoutubeCookiesConfigured()
+    ) {
+      throw new Error(`${lastError}. ${YOUTUBE_VPS_COOKIE_HINT}`);
+    }
+
+    throw new Error(lastError);
   } catch (err) {
     console.error(
       `[media/ytdlp] ${platform}:`,
@@ -470,7 +581,9 @@ async function downloadYoutube(
       return { ...local, backend: "ytdlp" };
     }
     errors.push(
-      "yt-dlp lokal gagal — jalankan `yt-dlp --version` dan `bash deploy/hostinger/install-ytdlp.sh` di VPS"
+      hasYoutubeCookiesConfigured()
+        ? "yt-dlp lokal gagal — cookies mungkin expired, export ulang cookies/youtube.txt"
+        : `yt-dlp lokal gagal. ${YOUTUBE_VPS_COOKIE_HINT}`
     );
   }
 
