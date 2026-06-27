@@ -260,6 +260,15 @@ cd /var/www/vandor && bash deploy/hostinger/deploy.sh
 | Berangkas R2 | ✅ |
 | WhatsApp QR + bot 24/7 | ✅ (tanpa bridge Railway) |
 | Unduh `/ytv` `/tt` | ✅ yt-dlp native |
+
+**Unduh gagal di VPS?** Jalankan:
+
+```bash
+bash deploy/hostinger/install-ytdlp.sh
+cd /var/www/vandor && bash deploy/hostinger/deploy.sh
+```
+
+Pastikan **Cobalt publik** (`api.cobalt.tools`) tidak diaktifkan di Pengaturan — butuh JWT. VPS pakai **yt-dlp** otomatis.
 | Agent Skills / Parlay | ✅ |
 
 ### PM2 & log

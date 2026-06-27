@@ -18,6 +18,8 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "3000",
+        PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        VANDOR_PREFER_YTDLP: "1",
       },
       error_file: "/var/log/vandor-error.log",
       out_file: "/var/log/vandor-out.log",

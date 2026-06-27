@@ -46,6 +46,10 @@ const FETCH_TIMEOUT_MS = 120_000;
 
 const PUBLIC_COBALT_BASE = "https://api.cobalt.tools";
 
+function isSelfHostedRuntime(): boolean {
+  return !process.env.VERCEL;
+}
+
 async function listYoutubeCobaltSources(): Promise<CobaltRequestOptions[]> {
   const { getIntegrationRuntimeConfig } = await import(
     "@/lib/settings/integration-runtime"
@@ -62,16 +66,22 @@ async function listYoutubeCobaltSources(): Promise<CobaltRequestOptions[]> {
       label: "Cobalt (UI)",
     });
   }
-  sources.push({
-    base: PUBLIC_COBALT_BASE,
-    label: "Cobalt publik",
-  });
+  if (cfg.cobalt.allowPublic || process.env.COBALT_ALLOW_PUBLIC === "1") {
+    sources.push({
+      base: PUBLIC_COBALT_BASE,
+      label: "Cobalt publik",
+    });
+  }
   return sources;
 }
 
 async function shouldTryYtDlpFirst(): Promise<boolean> {
-  if (process.env.VERCEL) {
+  if (process.env.VERCEL || process.env.VANDOR_DISABLE_YTDLP === "1") {
     return false;
+  }
+  // VPS / self-hosted: native yt-dlp selalu prioritas (Cobalt UI tidak memblokir).
+  if (isSelfHostedRuntime()) {
+    return true;
   }
   if (process.env.YT_DLP_PATH?.trim()) {
     return true;
@@ -271,6 +281,32 @@ async function downloadWithYtDlp(
   const dir = await mkdtemp(path.join(tmpdir(), "vandor-ytdlp-"));
   const outTemplate = path.join(dir, "%(title).80B.%(ext)s");
 
+  const sharedArgs = [
+    "--newline",
+    "--no-playlist",
+    "--no-warnings",
+    "--retries",
+    "3",
+    "--socket-timeout",
+    "30",
+    "-o",
+    outTemplate,
+  ];
+
+  const platformArgs =
+    platform === "youtube"
+      ? [
+          "-f",
+          "bv*+ba/b[ext=mp4]/b",
+          "--merge-output-format",
+          "mp4",
+          "--extractor-args",
+          "youtube:player_client=android,web",
+        ]
+      : platform === "tiktok"
+        ? ["-f", "b", "--merge-output-format", "mp4"]
+        : ["-f", "b", "--merge-output-format", "mp4"];
+
   const args =
     format === "audio"
       ? [
@@ -280,22 +316,18 @@ async function downloadWithYtDlp(
           "--newline",
           "--no-playlist",
           "--no-warnings",
+          "--retries",
+          "3",
+          "--socket-timeout",
+          "30",
+          ...(platform === "youtube"
+            ? ["--extractor-args", "youtube:player_client=android,web"]
+            : []),
           "-o",
           outTemplate,
           url,
         ]
-      : [
-          "-f",
-          "bv*+ba/b[ext=mp4]/b",
-          "--merge-output-format",
-          "mp4",
-          "--newline",
-          "--no-playlist",
-          "--no-warnings",
-          "-o",
-          outTemplate,
-          url,
-        ];
+      : [...platformArgs, ...sharedArgs, url];
 
   const stopSim = startSimulatedDownloadProgress(
     onProgress,
@@ -354,7 +386,11 @@ async function downloadWithYtDlp(
     const buffer = await readFile(fullPath);
     const title = path.basename(mediaFile, path.extname(mediaFile));
     return { buffer, title };
-  } catch {
+  } catch (err) {
+    console.error(
+      `[media/ytdlp] ${platform}:`,
+      toErrorMessage(err).slice(0, 500)
+    );
     return null;
   } finally {
     stopSim();
@@ -428,6 +464,16 @@ async function downloadYoutube(
 }> {
   const errors: string[] = [];
 
+  if (isSelfHostedRuntime() && process.env.VANDOR_DISABLE_YTDLP !== "1") {
+    const local = await downloadWithYtDlp(url, format, onProgress, "youtube");
+    if (local && local.buffer.length > 0) {
+      return { ...local, backend: "ytdlp" };
+    }
+    errors.push(
+      "yt-dlp lokal gagal — jalankan `yt-dlp --version` dan `bash deploy/hostinger/install-ytdlp.sh` di VPS"
+    );
+  }
+
   if (!process.env.VERCEL) {
     try {
       const innertube = await downloadWithInnertube(url, format, onProgress);
@@ -468,7 +514,7 @@ async function downloadYoutube(
   }
 
   throw new Error(
-    `${errors.join(". ")}. Coba lagi nanti atau gunakan /ytv dari PC (npm run dev).`
+    `${errors.join(". ")}. Coba perbarui yt-dlp di VPS: bash deploy/hostinger/install-ytdlp.sh`
   );
 }
 

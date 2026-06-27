@@ -25,6 +25,12 @@ ENV_FILE="${APP_DIR}/.env.local"
 echo "==> Cek DNS ${DOMAIN}"
 RESOLVED=$(dig +short "${DOMAIN}" A 2>/dev/null | head -1 || true)
 if [[ -z "${RESOLVED}" ]]; then
+  RESOLVED=$(getent ahostsv4 "${DOMAIN}" 2>/dev/null | awk '{print $1; exit}' || true)
+fi
+if [[ -z "${RESOLVED}" ]]; then
+  RESOLVED=$(nslookup "${DOMAIN}" 8.8.8.8 2>/dev/null | awk '/^Address: / { print $2; exit }' || true)
+fi
+if [[ -z "${RESOLVED}" ]]; then
   echo "WARN: DNS belum resolve untuk ${DOMAIN}."
   echo "      Buat A record di panel domain → IP VPS, tunggu 5–30 menit, lalu jalankan ulang."
   read -r -p "Lanjutkan anyway? [y/N] " ans

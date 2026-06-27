@@ -20,9 +20,12 @@ apt-get install -y \
   certbot \
   python3-certbot-nginx \
   ffmpeg \
-  yt-dlp \
+  python3-pip \
   ufw \
   build-essential
+
+echo "==> yt-dlp (latest via pip — apt sering kedaluwarsa untuk YouTube)"
+pip3 install -U yt-dlp
 
 echo "==> Node.js ${NODE_MAJOR}"
 if ! command -v node >/dev/null 2>&1; then
