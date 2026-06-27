@@ -1,0 +1,8 @@
+.git/
+node_modules/
+.next/
+.env.local
+.env.production
+.whatsapp-auth/
+public/storage/*
+!public/storage/.gitkeep

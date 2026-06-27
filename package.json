@@ -7,6 +7,7 @@
     "dev:direct": "node node_modules/next/dist/bin/next dev --turbo",
     "build": "tsx lib/db/migrate && next build",
     "start": "next start",
+    "start:hostinger": "NODE_ENV=production next start -p ${PORT:-3000}",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "db:generate": "drizzle-kit generate",

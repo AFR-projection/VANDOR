@@ -188,6 +188,88 @@ OPENROUTER_APP_URL=https://nama-projek.vercel.app
 
 Opsional file upload chat: `BLOB_READ_WRITE_TOKEN` (Vercel Blob) — tanpa ini export file pakai `public/storage` lokal.
 
+## Deploy ke Hostinger VPS (disarankan — WhatsApp 24/7)
+
+VPS Ubuntu (KVM) menjalankan **semua fitur** VANDOR: AI agent, memori, berangkas R2, WhatsApp QR tanpa bridge, unduh media via **yt-dlp**.
+
+Database tetap **Neon Postgres** (external) — tidak perlu Postgres di VPS.
+
+### Ringkas (5 langkah)
+
+1. SSH ke VPS: `ssh root@IP-VPS`
+2. Clone repo ke `/var/www/vandor` (atau upload kode)
+3. Setup server (sekali): `bash deploy/hostinger/setup-server.sh`
+4. Env: `cp deploy/hostinger/env.template /var/www/vandor/.env.local` → edit URL & secrets
+5. Deploy: `cd /var/www/vandor && bash deploy/hostinger/first-deploy.sh`
+
+Update berikutnya: `bash deploy/hostinger/deploy.sh`
+
+### Env wajib di VPS
+
+```env
+AUTH_SECRET=                          # openssl rand -base64 32
+POSTGRES_URL=postgresql://...@neon.tech/...?sslmode=require
+VANDOR_OWNER_EMAIL=...
+VANDOR_OWNER_PASSWORD=...
+VANDOR_NUMPAD_PIN=1234
+NEXT_PUBLIC_APP_URL=http://IP-ATAU-DOMAIN
+OPENROUTER_APP_URL=http://IP-ATAU-DOMAIN
+```
+
+API keys (OpenRouter, R2, Tavily) bisa lewat **Pengaturan → API & integrasi** setelah jalan.
+
+### SSL + domain (opsional)
+
+Set `server_name` di `/etc/nginx/sites-available/vandor`, lalu:
+
+```bash
+certbot --nginx -d vandor.domain-kamu.com
+```
+
+Update `NEXT_PUBLIC_APP_URL` dan `OPENROUTER_APP_URL` ke `https://...`, lalu `bash deploy/hostinger/deploy.sh`.
+
+### Fitur di VPS vs Vercel
+
+| Fitur | Hostinger VPS |
+|-------|---------------|
+| AI agent / chat | ✅ |
+| Memory pgvector | ✅ (Neon) |
+| Berangkas R2 | ✅ |
+| WhatsApp QR + bot 24/7 | ✅ (tanpa bridge Railway) |
+| Unduh `/ytv` `/tt` | ✅ yt-dlp native |
+| Agent Skills / Parlay | ✅ |
+
+### PM2 & log
+
+```bash
+pm2 status
+pm2 logs vandor
+pm2 restart vandor
+```
+
+Health check: `curl http://127.0.0.1:3000/ping`
+
+### Docker (alternatif)
+
+```bash
+cp deploy/hostinger/env.template .env.local   # edit dulu
+docker compose up -d --build
+```
+
+Nginx tetap proxy ke port `3000`.
+
+### File deploy
+
+```
+deploy/hostinger/
+  setup-server.sh    # apt, node, nginx, yt-dlp, pm2
+  first-deploy.sh    # install + build + pm2 start
+  deploy.sh          # git pull + rebuild + restart
+  ecosystem.config.cjs
+  nginx-vandor.conf
+  env.template
+```
+
 ### Unduh media (`/tt`, `/ytv`, `/yts`, `/ig`)
 
 | Yang perlu | Lokal (dev) | Vercel (production) |
@@ -259,7 +341,7 @@ proxy.ts                   # Gate pada setiap request
 | Agent Skills kosong / error | Jalankan `npm run db:migrate`; buka chat sekali (auto-seed built-in) |
 | Parlay tidak muncul kartu | Pastikan skill `cs_mix_parlay` aktif di Pengaturan → Agent Skills |
 | Vault upload gagal | Set `R2_*` di env; cek Pengaturan → Berangkas |
-| WhatsApp tidak connect | Cek `WHATSAPP_BRIDGE_SECRET` + bridge service; lihat Pengaturan → WhatsApp |
+| WhatsApp tidak connect | Di VPS: Pengaturan → WhatsApp → Sambungkan (scan QR). Di Vercel: pakai bridge `services/whatsapp-bridge/` |
 
 ## Lisensi
 
