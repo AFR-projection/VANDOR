@@ -12,8 +12,9 @@ if [[ ! -f package.json ]]; then
 fi
 
 if [[ -d .git ]]; then
-  echo "==> git pull"
-  git pull --ff-only
+  echo "==> git sync (origin/main)"
+  git fetch origin
+  git reset --hard origin/main
 fi
 
 echo "==> Install"

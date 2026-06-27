@@ -1,5 +1,6 @@
 import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
+import { isBotIdEnabledAtBuild } from "./lib/botid-config";
 
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 
@@ -82,4 +83,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBotId(nextConfig);
+export default isBotIdEnabledAtBuild() ? withBotId(nextConfig) : nextConfig;

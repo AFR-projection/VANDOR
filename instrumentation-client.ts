@@ -1,10 +1,13 @@
 import { initBotId } from "botid/client/core";
+import { isBotIdEnabledInBrowser } from "@/lib/botid-config";
 
-initBotId({
-  protect: [
-    {
-      path: "/api/chat",
-      method: "POST",
-    },
-  ],
-});
+if (isBotIdEnabledInBrowser()) {
+  initBotId({
+    protect: [
+      {
+        path: "/api/chat",
+        method: "POST",
+      },
+    ],
+  });
+}

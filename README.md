@@ -218,9 +218,15 @@ OPENROUTER_APP_URL=http://IP-ATAU-DOMAIN
 
 API keys (OpenRouter, R2, Tavily) bisa lewat **Pengaturan → API & integrasi** setelah jalan.
 
-### SSL + domain (opsional)
+**HTTP tanpa SSL (`http://IP`):** login & chat jalan — BotID (Vercel) otomatis dimatikan karena Web Crypto butuh HTTPS. Jika chat error `importKey`, rebuild setelah pull fix terbaru.
 
-Set `server_name` di `/etc/nginx/sites-available/vandor`, lalu:
+### SSL + domain (disarankan production)
+
+```bash
+bash deploy/hostinger/setup-ssl.sh vandor.domain-kamu.com email@example.com
+```
+
+Atau manual: set `server_name` di `/etc/nginx/sites-available/vandor`, lalu:
 
 ```bash
 certbot --nginx -d vandor.domain-kamu.com
