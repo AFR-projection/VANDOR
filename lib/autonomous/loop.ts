@@ -1,68 +1,52 @@
-import os from "node:os";
+import { autonomousConfig } from "./config";
+import { emitEvent } from "./events";
+import {
+  executeApprovedRemediations,
+  processTaskQueue,
+} from "./executor";
+import { detectIssues, type ObservationBundle } from "./healing/detectors";
+import { handleIssues } from "./healing/remediations";
 import { createLogger } from "./logger";
+import { scanLogs } from "./logs";
+import { collectMetrics } from "./metrics";
+import { assessSystem } from "./planner";
+import { expireOldApprovals } from "./permission";
+import { ensureDefaultSchedules, runDueSchedules } from "./schedules";
+import { collectServiceHealth } from "./services";
 import { resolveOwnerUserId } from "./owner";
 import { getAgentState, recordHeartbeat } from "./state";
-import { registerBuiltinTools, runTool } from "./tools";
-import type {
-  Analysis,
-  Observation,
-  Plan,
-  ToolContext,
-} from "./types";
+import { persistMetrics, registerMonitorTools } from "./tools/monitor";
+import { registerBuiltinTools } from "./tools";
+import { registerShellTools } from "./tools/shell";
+import type { ToolContext } from "./types";
+import { checkUrls } from "./uptime";
 
 const log = createLogger("loop");
 
-/** Fase OBSERVE — kumpulkan fakta dasar tentang host & worker. */
-function observe(): Observation {
-  return {
-    at: new Date().toISOString(),
-    facts: {
-      hostname: os.hostname(),
-      platform: os.platform(),
-      uptimeSec: Math.round(os.uptime()),
-      loadAvg: os.loadavg(),
-      freeMemMb: Math.round(os.freemem() / 1024 / 1024),
-      totalMemMb: Math.round(os.totalmem() / 1024 / 1024),
-    },
-  };
+let bootstrapped = false;
+let tickCounter = 0;
+
+async function bootstrap(): Promise<void> {
+  if (bootstrapped) {
+    return;
+  }
+  registerBuiltinTools();
+  registerMonitorTools();
+  registerShellTools();
+  await ensureDefaultSchedules();
+  bootstrapped = true;
+  log.info("Bootstrap selesai — tools & schedules siap.");
 }
 
-/** Fase ANALYZE — interpretasi observasi (Fase 0: heuristik ringan). */
-function analyze(obs: Observation): Analysis {
-  const issues: string[] = [];
-  const freeMemMb = Number(obs.facts.freeMemMb ?? 0);
-  const totalMemMb = Number(obs.facts.totalMemMb ?? 1);
-  const freeRatio = freeMemMb / totalMemMb;
-  if (freeRatio < 0.05) {
-    issues.push(`Memori bebas sangat rendah (${Math.round(freeRatio * 100)}%)`);
-  }
-  return { issues, healthy: issues.length === 0 };
-}
-
-/** Fase PLAN — tentukan task (Fase 0: belum membuat task mutasi). */
-function plan(analysis: Analysis): Plan {
-  if (analysis.healthy) {
-    return { taskTypes: [], note: "Sistem sehat — tidak ada aksi diperlukan." };
-  }
-  return {
-    taskTypes: [],
-    note: `Terdeteksi ${analysis.issues.length} isu — penanganan otomatis menyusul di fase berikutnya.`,
-  };
-}
-
-/** Fase ACT — jalankan tool aman. Fase 0 hanya health-check internal. */
-async function act(ctx: ToolContext): Promise<void> {
-  const result = await runTool("system.ping", {}, ctx);
-  if (!result.ok) {
-    log.warn("system.ping gagal", result.error);
-  }
-}
-
-/** Fase EVALUATE + LEARN — placeholder (diisi pada fase reasoning). */
-function evaluateAndLearn(analysis: Analysis): void {
-  if (!analysis.healthy) {
-    log.warn("Isu terdeteksi", analysis.issues);
-  }
+/** OBSERVE: kumpulkan seluruh sinyal sistem secara paralel. */
+async function observe(): Promise<ObservationBundle> {
+  const [metrics, services, uptime, logs] = await Promise.all([
+    collectMetrics(),
+    collectServiceHealth(),
+    checkUrls(autonomousConfig.uptimeTargets),
+    scanLogs(autonomousConfig.logPaths),
+  ]);
+  return { metrics, services, uptime, logs };
 }
 
 /** Satu siklus OODA lengkap. */
@@ -75,24 +59,67 @@ export async function runTick(): Promise<void> {
     return;
   }
 
+  await bootstrap();
+  tickCounter += 1;
   const autonomous = state.mode === "autonomous";
-  const obs = observe();
-  const analysis = analyze(obs);
-  const planResult = plan(analysis);
-
-  log.debug("observe", obs.facts);
-  log.info(
-    `tick mode=${state.mode} healthy=${analysis.healthy} ${planResult.note}`
-  );
-
   const ownerUserId = await resolveOwnerUserId();
   const ctx: ToolContext = { logger: log, ownerUserId, autonomous };
 
-  registerBuiltinTools();
+  await expireOldApprovals();
 
-  // Mode manual: hanya observasi & rekomendasi, tanpa aksi mutasi.
-  await act(ctx);
+  // 1. OBSERVE
+  const obs = await observe();
+  if (
+    tickCounter === 1 ||
+    tickCounter % autonomousConfig.metricEveryTicks === 0
+  ) {
+    await persistMetrics(obs.metrics);
+  }
 
-  evaluateAndLearn(analysis);
-  await recordHeartbeat(analysis.healthy ? "healthy" : "issues-detected");
+  // 2. ANALYZE (heuristik) + penilaian LLM opsional
+  const issues = detectIssues(obs);
+  const assessment = await assessSystem({
+    metrics: obs.metrics,
+    services: obs.services,
+    issues,
+  });
+
+  const servicesDown = obs.services.filter((s) => !s.healthy).length;
+  log.info(
+    `tick#${tickCounter} mode=${state.mode} cpu=${obs.metrics.cpuPct}% mem=${obs.metrics.memUsedPct}% disk=${obs.metrics.diskUsedPct ?? "?"}% svcDown=${servicesDown} issues=${issues.length}${assessment ? ` llm=${assessment.status}` : ""}`
+  );
+
+  // 3. PLAN + ACT untuk isu (konservatif: approval + notifikasi)
+  let remediation = { approvalsCreated: 0, notified: 0 };
+  if (issues.length > 0) {
+    remediation = await handleIssues(issues);
+  }
+
+  // 4. ACT: scheduler → task queue → remediasi yang sudah disetujui
+  const scheduled = await runDueSchedules();
+  const tasksDone = await processTaskQueue(ctx);
+  const executed = await executeApprovedRemediations();
+
+  // 5. EVALUATE + LEARN
+  if (issues.length > 0 || executed > 0 || scheduled > 0) {
+    await emitEvent({
+      type: "tick-summary",
+      severity: issues.some((i) => i.severity === "critical")
+        ? "critical"
+        : issues.length > 0
+          ? "warn"
+          : "info",
+      source: "loop",
+      message:
+        assessment?.summary ??
+        `Tick#${tickCounter}: ${issues.length} isu, ${remediation.approvalsCreated} approval baru, ${executed} remediasi dijalankan, ${tasksDone} task selesai.`,
+      payload: {
+        issues: issues.map((i) => i.key),
+        recommendations: assessment?.recommendations ?? [],
+        scheduled,
+      },
+    });
+  }
+
+  await recordHeartbeat(issues.length === 0 ? "healthy" : "issues-detected");
 }

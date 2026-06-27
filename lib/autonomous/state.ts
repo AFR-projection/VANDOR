@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { type AgentMode, agentState } from "@/lib/db/schema";
 import { db } from "./db";
 
@@ -60,4 +60,57 @@ export async function setKillSwitch(active: boolean) {
     .update(agentState)
     .set({ killSwitch: active, updatedAt: new Date() })
     .where(eq(agentState.id, STATE_ID));
+}
+
+/**
+ * Leader election berbasis DB lease — andal di lingkungan connection pooler
+ * (Neon/pgbouncer) di mana advisory lock sesi tidak reliabel.
+ * Mengembalikan true bila instance ini memegang lease.
+ */
+export async function acquireLease(
+  owner: string,
+  ttlMs: number
+): Promise<boolean> {
+  await getAgentState(); // pastikan baris ada
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ttlMs);
+  const res = await db
+    .update(agentState)
+    .set({ leaseOwner: owner, leaseExpiresAt: expiresAt, updatedAt: now })
+    .where(
+      and(
+        eq(agentState.id, STATE_ID),
+        or(
+          isNull(agentState.leaseExpiresAt),
+          lt(agentState.leaseExpiresAt, now),
+          eq(agentState.leaseOwner, owner)
+        )
+      )
+    )
+    .returning({ id: agentState.id });
+  return res.length > 0;
+}
+
+export async function renewLease(
+  owner: string,
+  ttlMs: number
+): Promise<boolean> {
+  const now = new Date();
+  const res = await db
+    .update(agentState)
+    .set({ leaseExpiresAt: new Date(now.getTime() + ttlMs), updatedAt: now })
+    .where(
+      and(eq(agentState.id, STATE_ID), eq(agentState.leaseOwner, owner))
+    )
+    .returning({ id: agentState.id });
+  return res.length > 0;
+}
+
+export async function releaseLease(owner: string): Promise<void> {
+  await db
+    .update(agentState)
+    .set({ leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date() })
+    .where(
+      and(eq(agentState.id, STATE_ID), eq(agentState.leaseOwner, owner))
+    );
 }

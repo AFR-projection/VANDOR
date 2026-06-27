@@ -2,6 +2,7 @@
 
 import {
   ArrowLeftIcon,
+  BotIcon,
   BrainIcon,
   CircleHelpIcon,
   FolderLockIcon,
@@ -88,6 +89,11 @@ const ApiIntegrationsPanelLazy = dynamic(
     })),
   { ssr: false, loading: () => <PanelSkeleton /> }
 );
+const OperatorPanel = dynamic(
+  () =>
+    import("./operator-panel").then((m) => ({ default: m.OperatorPanel })),
+  { ssr: false, loading: () => <PanelSkeleton /> }
+);
 
 function PanelSkeleton() {
   return (
@@ -128,6 +134,7 @@ type GeneralPayload = {
 };
 
 const tabs = [
+  { id: "operator", label: "Operator", icon: BotIcon },
   { id: "persona", label: "Gaya bicara", icon: MessageCircleIcon },
   { id: "model", label: "Model & AI", icon: SparklesIcon },
   { id: "skills", label: "Agent Skills", icon: WrenchIcon },
@@ -584,6 +591,8 @@ export function GeneralSettingsPage() {
                 saving={saving}
               />
             )}
+
+            {tab === "operator" && <OperatorPanel />}
 
             {tab === "skills" && <AgentSkillsPanel />}
 

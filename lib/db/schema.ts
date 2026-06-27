@@ -705,6 +705,7 @@ export const agentApprovalStatuses = [
   "approved",
   "rejected",
   "expired",
+  "executed",
 ] as const;
 export type AgentApprovalStatus = (typeof agentApprovalStatuses)[number];
 
@@ -718,6 +719,8 @@ export const agentState = pgTable("AgentState", {
   killSwitch: boolean("killSwitch").notNull().default(false),
   status: varchar("status", { length: 32 }).notNull().default("idle"),
   note: text("note"),
+  leaseOwner: varchar("leaseOwner", { length: 80 }),
+  leaseExpiresAt: timestamp("leaseExpiresAt"),
   lastHeartbeatAt: timestamp("lastHeartbeatAt"),
   lastTickAt: timestamp("lastTickAt"),
   tickCount: integer("tickCount").notNull().default(0),
@@ -836,3 +839,90 @@ export const agentSchedule = pgTable("AgentSchedule", {
 });
 
 export type AgentSchedule = InferSelectModel<typeof agentSchedule>;
+
+/* ---------- VANDOR Autonomous — Observability & Safety (Fase 1-4) ---------- */
+
+/** Snapshot metrik sistem untuk dashboard & analisis tren. */
+export const systemMetric = pgTable("SystemMetric", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  host: varchar("host", { length: 128 }),
+  cpuPct: integer("cpuPct"),
+  memUsedPct: integer("memUsedPct"),
+  diskUsedPct: integer("diskUsedPct"),
+  load1x100: integer("load1x100"),
+  uptimeSec: integer("uptimeSec"),
+  payload: json("payload"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type SystemMetric = InferSelectModel<typeof systemMetric>;
+
+export const agentEventSeverities = [
+  "info",
+  "warn",
+  "error",
+  "critical",
+] as const;
+export type AgentEventSeverity = (typeof agentEventSeverities)[number];
+
+/** Event system — perubahan sistem yang dapat memicu aksi/triggers. */
+export const agentEvent = pgTable("AgentEvent", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  type: varchar("type", { length: 64 }).notNull(),
+  severity: varchar("severity", { enum: agentEventSeverities })
+    .notNull()
+    .default("info"),
+  source: varchar("source", { length: 64 }).notNull(),
+  message: text("message").notNull(),
+  payload: json("payload"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type AgentEvent = InferSelectModel<typeof agentEvent>;
+
+export const agentRuleKinds = ["allow", "deny", "require_approval"] as const;
+export type AgentRuleKind = (typeof agentRuleKinds)[number];
+
+/** Rule Engine — batas keamanan untuk keputusan otonom. */
+export const agentRule = pgTable("AgentRule", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: varchar("name", { length: 128 }).notNull(),
+  kind: varchar("kind", { enum: agentRuleKinds }).notNull().default("deny"),
+  pattern: text("pattern").notNull(),
+  riskLevel: varchar("riskLevel", { enum: agentRiskLevels })
+    .notNull()
+    .default("dangerous"),
+  enabled: boolean("enabled").notNull().default(true),
+  priority: integer("priority").notNull().default(100),
+  note: text("note"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type AgentRule = InferSelectModel<typeof agentRule>;
+
+export const agentNotificationStatuses = [
+  "queued",
+  "sent",
+  "failed",
+] as const;
+export type AgentNotificationStatus =
+  (typeof agentNotificationStatuses)[number];
+
+/** Notifikasi keluar (WhatsApp/Telegram/Discord/Email). */
+export const agentNotification = pgTable("AgentNotification", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  channel: varchar("channel", { length: 32 }).notNull().default("whatsapp"),
+  level: varchar("level", { enum: agentEventSeverities })
+    .notNull()
+    .default("info"),
+  title: varchar("title", { length: 200 }).notNull(),
+  body: text("body").notNull(),
+  status: varchar("status", { enum: agentNotificationStatuses })
+    .notNull()
+    .default("queued"),
+  error: text("error"),
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type AgentNotification = InferSelectModel<typeof agentNotification>;

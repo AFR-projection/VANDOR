@@ -11,6 +11,17 @@ function envInt(key: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function envList(key: string, fallback: string[] = []): string[] {
+  const raw = process.env[key];
+  if (!raw) {
+    return fallback;
+  }
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 /**
  * Konfigurasi worker otonom. Semua nilai bisa di-override via .env.local
  * sehingga tidak perlu mengubah kode untuk tuning di VPS.
@@ -26,6 +37,51 @@ export const autonomousConfig = {
   ownerEmail: process.env.VANDOR_OWNER_EMAIL ?? "",
   /** Aktif tidaknya worker (kill switch level env, di atas DB). */
   enabled: process.env.VANDOR_AGENT_ENABLED !== "false",
+
+  /** URL aplikasi Next internal (untuk kirim notifikasi via web process). */
+  internalApiUrl:
+    process.env.VANDOR_INTERNAL_API_URL ?? "http://127.0.0.1:3000",
+  /** Secret bersama worker<->web untuk endpoint internal. */
+  internalSecret: process.env.VANDOR_AGENT_INTERNAL_SECRET ?? "",
+
+  /** OpenRouter (reasoning/planner). Kosong = fallback heuristik. */
+  openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
+  plannerModel:
+    process.env.VANDOR_AGENT_MODEL ??
+    "meta-llama/llama-3.3-70b-instruct:free",
+  appUrl: process.env.OPENROUTER_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "",
+
+  /** Ambang batas peringatan & kritis (persen). */
+  thresholds: {
+    cpuWarn: envInt("VANDOR_AGENT_CPU_WARN", 85),
+    cpuCrit: envInt("VANDOR_AGENT_CPU_CRIT", 95),
+    memWarn: envInt("VANDOR_AGENT_MEM_WARN", 85),
+    memCrit: envInt("VANDOR_AGENT_MEM_CRIT", 95),
+    diskWarn: envInt("VANDOR_AGENT_DISK_WARN", 85),
+    diskCrit: envInt("VANDOR_AGENT_DISK_CRIT", 95),
+  },
+
+  /** Service yang dipantau (systemd unit). */
+  monitoredServices: envList("VANDOR_AGENT_SERVICES", [
+    "nginx",
+    "redis-server",
+  ]),
+  /** Proses PM2 yang dipantau (selalu sertakan worker & app). */
+  pm2Processes: envList("VANDOR_AGENT_PM2", ["vandor"]),
+  /** Container Docker yang dipantau (kosong = semua). */
+  dockerContainers: envList("VANDOR_AGENT_DOCKER", []),
+  /** Target uptime HTTP yang dicek. */
+  uptimeTargets: envList("VANDOR_AGENT_UPTIME", [
+    "http://127.0.0.1:3000/ping",
+  ]),
+  /** File log yang dibaca/di-scan error. */
+  logPaths: envList("VANDOR_AGENT_LOGS", [
+    "/var/log/vandor-error.log",
+    "/var/log/vandor-agent-error.log",
+  ]),
+
+  /** Berapa banyak tick antar snapshot metrik tersimpan (hemat baris). */
+  metricEveryTicks: envInt("VANDOR_AGENT_METRIC_EVERY", 2),
 } as const;
 
 export type AutonomousConfig = typeof autonomousConfig;

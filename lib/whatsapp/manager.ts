@@ -8,7 +8,11 @@ import type {
 } from "@whiskeysockets/baileys";
 import { getOwnerCredentials } from "@/lib/security/gate";
 import { resolveDeploymentOwnerUser } from "./deployment-owner";
-import { deriveWhatsappChatId, normalizeWhatsappNumber } from "./config";
+import {
+  deriveWhatsappChatId,
+  getOwnerWhatsappNumbers,
+  normalizeWhatsappNumber,
+} from "./config";
 import {
   addWhatsappOwner,
   getActiveOwnerPhones,
@@ -102,6 +106,51 @@ function setState(patch: Partial<WhatsappState>): void {
 
 export function getWhatsappState(): WhatsappState {
   return getManager().state;
+}
+
+/**
+ * Kirim pesan teks ke nomor owner via koneksi WhatsApp aktif.
+ * Dipakai oleh worker otonom (lewat endpoint internal) untuk alert.
+ */
+export async function sendWhatsappToOwner(
+  text: string
+): Promise<{ ok: boolean; error?: string; sentTo: number }> {
+  const m = getManager();
+  if (!m.sock || m.state.status !== "connected") {
+    return {
+      ok: false,
+      error: `WhatsApp belum tersambung (status: ${m.state.status})`,
+      sentTo: 0,
+    };
+  }
+
+  const ownerUser = await resolveDeploymentOwnerUser();
+  const phones = new Set<string>();
+  if (ownerUser) {
+    for (const p of await getActiveOwnerPhones(ownerUser.id)) {
+      phones.add(normalizeWhatsappNumber(p));
+    }
+  }
+  for (const p of await getOwnerWhatsappNumbers()) {
+    phones.add(p);
+  }
+  const list = [...phones].filter((p) => p.length >= 6);
+  if (list.length === 0) {
+    return { ok: false, error: "Tidak ada nomor owner terdaftar", sentTo: 0 };
+  }
+
+  const sock = m.sock;
+  const results = await Promise.allSettled(
+    list.map((phone) =>
+      sock.sendMessage(`${phone}@s.whatsapp.net`, { text })
+    )
+  );
+  const sentTo = results.filter((r) => r.status === "fulfilled").length;
+  return {
+    ok: sentTo > 0,
+    sentTo,
+    error: sentTo === 0 ? "Gagal mengirim ke semua nomor owner" : undefined,
+  };
 }
 
 const idleState = (): WhatsappState => ({
