@@ -218,21 +218,38 @@ OPENROUTER_APP_URL=http://IP-ATAU-DOMAIN
 
 API keys (OpenRouter, R2, Tavily) bisa lewat **Pengaturan → API & integrasi** setelah jalan.
 
-**HTTP tanpa SSL (`http://IP`):** login & chat jalan — BotID (Vercel) otomatis dimatikan karena Web Crypto butuh HTTPS. Jika chat error `importKey`, rebuild setelah pull fix terbaru.
+**HTTP tanpa SSL (`http://IP`):** login & chat jalan — BotID otomatis dimatikan. Setelah pakai HTTPS, BotID aktif lagi (lebih aman).
 
-### SSL + domain (disarankan production)
+### Domain + SSL (contoh `dataku.id`)
+
+1. **DNS** — di panel domain (Hostinger/Cloudflare), buat **A record**:
+   - `vandor` → `IP-VPS` (subdomain `vandor.dataku.id`), **atau**
+   - `@` → `IP-VPS` (root `dataku.id`)
+   - Proxy Cloudflare: **DNS only** (grey cloud) saat pertama kali certbot, atau pakai Full SSL
+
+2. **Tunggu propagate** (~5–30 menit), cek: `dig +short vandor.dataku.id`
+
+3. **Di VPS** (setelah `git pull` / deploy fix terbaru):
 
 ```bash
-bash deploy/hostinger/setup-ssl.sh vandor.domain-kamu.com email@example.com
+cd /var/www/vandor
+bash deploy/hostinger/configure-domain.sh vandor.dataku.id email@dataku.id
 ```
 
-Atau manual: set `server_name` di `/etc/nginx/sites-available/vandor`, lalu:
+Untuk root + www:
 
 ```bash
-certbot --nginx -d vandor.domain-kamu.com
+bash deploy/hostinger/configure-domain.sh dataku.id email@dataku.id --www
 ```
 
-Update `NEXT_PUBLIC_APP_URL` dan `OPENROUTER_APP_URL` ke `https://...`, lalu `bash deploy/hostinger/deploy.sh`.
+Script otomatis: nginx → certbot → update `.env.local` → rebuild PM2.
+
+### SSL manual (alternatif)
+
+```bash
+bash deploy/hostinger/setup-ssl.sh vandor.dataku.id email@dataku.id
+cd /var/www/vandor && bash deploy/hostinger/deploy.sh
+```
 
 ### Fitur di VPS vs Vercel
 
