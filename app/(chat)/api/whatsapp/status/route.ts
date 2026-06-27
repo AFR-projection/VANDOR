@@ -3,7 +3,7 @@ import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { isWhatsappServerlessHost } from "@/lib/whatsapp/auth-path";
-import { getWhatsappState } from "@/lib/whatsapp/manager";
+import { getWhatsappPublicState } from "@/lib/whatsapp/manager";
 
 export async function GET(request: Request) {
   const denied = await requireClientAccess(request);
@@ -15,8 +15,9 @@ export async function GET(request: Request) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
+  const state = await getWhatsappPublicState();
   return NextResponse.json({
-    ...getWhatsappState(),
+    ...state,
     deployment: {
       serverless: isWhatsappServerlessHost(),
     },

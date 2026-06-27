@@ -259,6 +259,21 @@ export const whatsappVerifLog = pgTable("WhatsappVerifLog", {
 
 export type WhatsappVerifLog = InferSelectModel<typeof whatsappVerifLog>;
 
+/** Shared WA UI state — survives serverless cold starts / multi-instance polling. */
+export const whatsappSessionState = pgTable("WhatsappSessionState", {
+  userId: uuid("userId")
+    .primaryKey()
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 16 }).notNull().default("idle"),
+  qrDataUrl: text("qrDataUrl"),
+  me: varchar("me", { length: 32 }),
+  error: text("error"),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type WhatsappSessionState = InferSelectModel<typeof whatsappSessionState>;
+
 export const gateLockout = pgTable("GateLockout", {
   ip: text("ip").primaryKey().notNull(),
   failedAttempts: integer("failedAttempts").notNull().default(0),

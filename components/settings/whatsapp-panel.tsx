@@ -382,6 +382,28 @@ function AuditLogCard({ logs }: { logs: LogEntry[] }) {
 
 // ─── Main panel ───────────────────────────────────────────────────────────────
 
+function mergePollState(
+  prev: WhatsappState | null,
+  next: WhatsappState
+): WhatsappState {
+  if (!prev) {
+    return next;
+  }
+  if (
+    prev.qr &&
+    prev.status === "qr" &&
+    (!next.qr || next.status === "idle" || next.status === "connecting")
+  ) {
+    if (next.updatedAt <= prev.updatedAt) {
+      return prev;
+    }
+  }
+  if (next.updatedAt >= prev.updatedAt) {
+    return next;
+  }
+  return prev;
+}
+
 export function WhatsappPanel() {
   const [waState, setWaState] = useState<WhatsappState | null>(null);
   const [activeCode, setActiveCode] = useState<VerifCode | null>(null);
@@ -397,7 +419,7 @@ export function WhatsappPanel() {
         fetchCodeData(),
         fetchOwners(),
       ]);
-      setWaState(stateRes);
+      setWaState((prev) => mergePollState(prev, stateRes));
       setActiveCode(codeRes.active);
       setLogs(codeRes.logs);
       setOwners(ownersRes.owners);
@@ -408,13 +430,15 @@ export function WhatsappPanel() {
 
   useEffect(() => {
     void refreshAll();
+    const ms =
+      waState?.status === "qr" || waState?.status === "connecting" ? 1500 : 4000;
     pollRef.current = setInterval(() => {
       void refreshAll();
-    }, 3000);
+    }, ms);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [refreshAll]);
+  }, [refreshAll, waState?.status]);
 
   const connect = useCallback(async () => {
     setBusy(true);
@@ -424,8 +448,12 @@ export function WhatsappPanel() {
       });
       const json = (await res.json()) as WhatsappState;
       if (!res.ok) throw new Error(json.error ?? "Gagal menyambungkan");
-      setWaState(json);
-      toast({ type: "success", description: "Menyiapkan sambungan WhatsApp…" });
+      setWaState((prev) => mergePollState(prev, json));
+      if (json.status === "qr" && json.qr) {
+        toast({ type: "success", description: "QR siap — scan dari HP sekarang." });
+      } else {
+        toast({ type: "success", description: "Menyiapkan sambungan WhatsApp…" });
+      }
     } catch (e) {
       toast({
         type: "error",
@@ -595,7 +623,7 @@ export function WhatsappPanel() {
                   )}
                   <p className="px-6 text-center text-xs">
                     {isActivating
-                      ? "Menyiapkan QR code…"
+                      ? "Menyiapkan QR code… (bisa 10–30 detik)"
                       : "Klik Sambungkan untuk memunculkan QR."}
                   </p>
                 </div>

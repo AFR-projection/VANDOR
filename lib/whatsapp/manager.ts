@@ -29,7 +29,13 @@ import {
   persistAuthDir,
   wipeAuthDir,
 } from "./auth-persist";
-import { getWhatsappAuthDir } from "./auth-path";
+import { getWhatsappAuthDir, isWhatsappServerlessHost } from "./auth-path";
+import {
+  clearWhatsappState,
+  loadWhatsappState,
+  mergeWhatsappStates,
+  saveWhatsappState,
+} from "./state-persist";
 import {
   matchesOwnerList,
   resolveSenderIdentity,
@@ -57,6 +63,7 @@ type Manager = {
   sock: WASocket | null;
   state: WhatsappState;
   connecting: boolean;
+  ownerUserId: string | null;
 };
 
 const CODE_RE = /^[A-Z2-9]{4}-[A-Z2-9]{4}$/;
@@ -70,6 +77,7 @@ function getManager(): Manager {
     globalForWa.__vandorWaManager = {
       sock: null,
       connecting: false,
+      ownerUserId: null,
       state: {
         status: "idle",
         qr: null,
@@ -85,10 +93,61 @@ function getManager(): Manager {
 function setState(patch: Partial<WhatsappState>): void {
   const m = getManager();
   m.state = { ...m.state, ...patch, updatedAt: Date.now() };
+  if (m.ownerUserId) {
+    void saveWhatsappState(m.ownerUserId, m.state).catch((err) => {
+      console.error("[wa] gagal simpan state ke DB:", err);
+    });
+  }
 }
 
 export function getWhatsappState(): WhatsappState {
   return getManager().state;
+}
+
+const idleState = (): WhatsappState => ({
+  status: "idle",
+  qr: null,
+  me: null,
+  error: null,
+  updatedAt: Date.now(),
+});
+
+export async function getWhatsappPublicState(): Promise<WhatsappState> {
+  const ownerUser = await resolveDeploymentOwnerUser();
+  if (!ownerUser) {
+    return idleState();
+  }
+  const persisted = await loadWhatsappState(ownerUser.id);
+  return mergeWhatsappStates(getManager().state, persisted);
+}
+
+function isReadyState(state: WhatsappState): boolean {
+  if (state.status === "connected" || state.status === "error") {
+    return true;
+  }
+  return state.status === "qr" && Boolean(state.qr);
+}
+
+export async function waitForWhatsappPublicState(
+  timeoutMs: number
+): Promise<WhatsappState> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const state = await getWhatsappPublicState();
+    if (isReadyState(state)) {
+      return state;
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 400);
+    });
+  }
+  return await getWhatsappPublicState();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function extractText(message: WAMessage["message"]): string {
@@ -410,6 +469,13 @@ async function wireSocket(
         setState({ status: "logged_out", qr: null, me: null });
         await wipeAuthDir(authDir);
         await clearPersistedWhatsappAuth(ownerUserId);
+      } else if (isWhatsappServerlessHost()) {
+        setState({
+          status: "error",
+          qr: null,
+          error:
+            "Sambungan putus di serverless. Klik Sambungkan lagi atau pakai bridge Railway untuk 24/7.",
+        });
       } else {
         setState({ status: "connecting", qr: null });
         setTimeout(() => {
@@ -469,22 +535,35 @@ async function wireSocket(
   );
 }
 
-export async function connectWhatsapp(): Promise<WhatsappState> {
+export async function connectWhatsapp(options?: {
+  holdMs?: number;
+}): Promise<WhatsappState> {
   const m = getManager();
-  if (m.sock || m.connecting) {
-    return m.state;
+  if (m.sock) {
+    if (options?.holdMs && options.holdMs > 0) {
+      await sleep(options.holdMs);
+    }
+    return await getWhatsappPublicState();
+  }
+  if (m.connecting) {
+    await waitForWhatsappPublicState(55_000);
+    if (options?.holdMs && options.holdMs > 0) {
+      await sleep(options.holdMs);
+    }
+    return await getWhatsappPublicState();
   }
   if (!getOwnerCredentials()) {
     setState({ status: "error", error: "VANDOR_OWNER_EMAIL belum diset." });
-    return m.state;
+    return await getWhatsappPublicState();
   }
 
   const ownerUser = await resolveDeploymentOwnerUser();
   if (!ownerUser) {
     setState({ status: "error", error: "Owner deployment belum tersedia." });
-    return m.state;
+    return await getWhatsappPublicState();
   }
 
+  m.ownerUserId = ownerUser.id;
   const authDir = getWhatsappAuthDir();
   m.connecting = true;
   setState({ status: "connecting", qr: null, error: null });
@@ -510,7 +589,14 @@ export async function connectWhatsapp(): Promise<WhatsappState> {
     m.sock = sock;
     await wireSocket(sock, saveCreds, authDir, ownerUser.id);
     m.connecting = false;
-    return m.state;
+
+    await waitForWhatsappPublicState(55_000);
+
+    if (options?.holdMs && options.holdMs > 0) {
+      await sleep(options.holdMs);
+    }
+
+    return await getWhatsappPublicState();
   } catch (error) {
     m.connecting = false;
     m.sock = null;
@@ -519,7 +605,7 @@ export async function connectWhatsapp(): Promise<WhatsappState> {
       error:
         error instanceof Error ? error.message : "Gagal connect WhatsApp.",
     });
-    return m.state;
+    return await getWhatsappPublicState();
   }
 }
 
@@ -537,7 +623,9 @@ export async function logoutWhatsapp(): Promise<WhatsappState> {
   await wipeAuthDir(authDir);
   if (ownerUser) {
     await clearPersistedWhatsappAuth(ownerUser.id);
+    await clearWhatsappState(ownerUser.id);
   }
+  m.ownerUserId = null;
   setState({ status: "idle", qr: null, me: null, error: null });
-  return m.state;
+  return await getWhatsappPublicState();
 }

@@ -1,8 +1,13 @@
+import { waitUntil } from "@vercel/functions";
 import { NextResponse } from "next/server";
 import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
-import { connectWhatsapp } from "@/lib/whatsapp/manager";
+import { isWhatsappServerlessHost } from "@/lib/whatsapp/auth-path";
+import {
+  connectWhatsapp,
+  waitForWhatsappPublicState,
+} from "@/lib/whatsapp/manager";
 
 export const maxDuration = 60;
 
@@ -16,6 +21,14 @@ export async function POST(request: Request) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const state = await connectWhatsapp();
-  return NextResponse.json(state);
+  const sessionWork = connectWhatsapp({
+    holdMs: isWhatsappServerlessHost() ? 110_000 : 0,
+  });
+  waitUntil(sessionWork);
+
+  const state = await waitForWhatsappPublicState(55_000);
+  return NextResponse.json({
+    ...state,
+    deployment: { serverless: isWhatsappServerlessHost() },
+  });
 }
