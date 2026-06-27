@@ -7,14 +7,12 @@ import { DEVICE_COOKIE_NAME, GATE_COOKIE_NAME } from "@/lib/security/gate-edge";
 
 const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
-/** Salin cookie sesi NextAuth ke response redirect (signIn tidak selalu menempel pada JSON). */
-export async function buildGateLoginSuccessResponse(
-  target: URL,
+async function attachGateSessionCookies(
+  response: NextResponse,
   gateToken: string,
   deviceId: string,
   gateCookieMaxAge: number
 ): Promise<NextResponse> {
-  const response = NextResponse.redirect(target);
   const secure = useSecureCookies();
   const cookieOpts = {
     httpOnly: true,
@@ -47,4 +45,32 @@ export async function buildGateLoginSuccessResponse(
   }
 
   return response;
+}
+
+/** Form POST / navigasi penuh — redirect + cookie. */
+export async function buildGateLoginSuccessResponse(
+  target: URL,
+  gateToken: string,
+  deviceId: string,
+  gateCookieMaxAge: number
+): Promise<NextResponse> {
+  const response = NextResponse.redirect(target);
+  return attachGateSessionCookies(response, gateToken, deviceId, gateCookieMaxAge);
+}
+
+/**
+ * fetch() dari halaman /gate tidak menerapkan Set-Cookie pada redirect 302.
+ * Kembalikan JSON 200 + cookie agar browser menyimpan sesi login.
+ */
+export async function buildGateLoginSuccessJsonResponse(
+  redirectPath: string,
+  gateToken: string,
+  deviceId: string,
+  gateCookieMaxAge: number
+): Promise<NextResponse> {
+  const response = NextResponse.json({
+    ok: true,
+    redirectUrl: redirectPath,
+  });
+  return attachGateSessionCookies(response, gateToken, deviceId, gateCookieMaxAge);
 }

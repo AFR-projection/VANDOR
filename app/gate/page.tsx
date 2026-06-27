@@ -91,18 +91,25 @@ function GateForm() {
         const res = await fetch(`${base}/api/gate/verify`, {
           method: "POST",
           credentials: "same-origin",
-          redirect: "follow",
+          redirect: "manual",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pin: value, redirectUrl: target }),
         });
 
-        if (res.redirected && res.url) {
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          redirectUrl?: string;
+          error?: string;
+        };
+
+        if (res.ok && data.ok) {
           setSuccess(true);
-          window.location.assign(res.url);
+          window.location.assign(
+            `${base}${data.redirectUrl?.startsWith("/") ? data.redirectUrl : target}`
+          );
           return;
         }
 
-        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           setError(data.error ?? "Akses ditolak");
           setShake(true);

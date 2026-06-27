@@ -24,7 +24,10 @@ import {
   registerSession,
 } from "@/lib/security/gate";
 
-import { buildGateLoginSuccessResponse } from "@/lib/security/gate-verify-response";
+import {
+  buildGateLoginSuccessJsonResponse,
+  buildGateLoginSuccessResponse,
+} from "@/lib/security/gate-verify-response";
 import { lookupGeoIp } from "@/lib/security/geo-ip";
 
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
@@ -237,6 +240,15 @@ export async function POST(request: Request) {
   }
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+  if (contentType.includes("application/json")) {
+    return buildGateLoginSuccessJsonResponse(
+      redirectPath,
+      token,
+      deviceId,
+      GATE_COOKIE_MAX_AGE
+    );
+  }
 
   const target = new URL(`${base}${redirectPath}`, request.url);
 
