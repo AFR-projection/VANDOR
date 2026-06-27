@@ -259,14 +259,10 @@ cd /var/www/vandor && bash deploy/hostinger/deploy.sh
 | Memory pgvector | ✅ (Neon) |
 | Berangkas R2 | ✅ |
 | WhatsApp QR + bot 24/7 | ✅ (tanpa bridge Railway) |
-| Unduh `/ytv` `/tt` | ✅ yt-dlp native |
+| Unduh `/tt` `/ig` | ✅ yt-dlp + TikWM (WA kirim langsung) |
 
-**Unduh gagal di VPS?** YouTube **wajib cookies** (IP datacenter diblokir Google). Lihat `deploy/hostinger/YOUTUBE-COOKIES.md`.
+**Unduh TikTok gagal?** Perbarui yt-dlp: `bash deploy/hostinger/install-ytdlp.sh`
 
-```bash
-bash deploy/hostinger/install-ytdlp.sh
-cd /var/www/vandor && bash deploy/hostinger/deploy.sh
-```
 | Agent Skills / Parlay | ✅ |
 
 ### PM2 & log
@@ -300,15 +296,15 @@ deploy/hostinger/
   env.template
 ```
 
-### Unduh media (`/tt`, `/ytv`, `/yts`, `/ig`)
+### Unduh media (`/tt`, `/ig`)
 
-| Yang perlu | Lokal (dev) | Vercel (production) |
-|------------|-------------|---------------------|
-| **Link file untuk user** | Opsional (`public/storage`) | **Wajib** `BLOB_READ_WRITE_TOKEN` atau `R2_*` |
-| **Engine unduh** | Pasang **yt-dlp** (`winget install yt-dlp`) | **Cobalt** `COBALT_API_URL` (+ `COBALT_API_KEY` jika perlu) |
-| OpenRouter | Tidak dipakai untuk slash unduh | Sama |
+| Platform | Slash | Catatan |
+|----------|-------|---------|
+| TikTok | `/tt <url>` | VPS: yt-dlp → TikWM. WA: video langsung ke chat |
+| Instagram | `/ig <url>` | Butuh Cobalt instance atau yt-dlp |
+| YouTube | — | **Tidak didukung** (Google blokir IP server) |
 
-Contoh slash: `/ytv https://www.youtube.com/watch?v=...`
+Contoh: `/tt https://vt.tiktok.com/...`
 
 ## VANDOR v4 (speed & token efficiency)
 

@@ -661,3 +661,178 @@ export const knowledgeBaseChunk = pgTable("KnowledgeBaseChunk", {
 });
 
 export type KnowledgeBaseChunk = InferSelectModel<typeof knowledgeBaseChunk>;
+
+/* ============================================================
+ * VANDOR Autonomous — Digital System Operator (Fase 0)
+ * Otak otonom yang berjalan 24/7 (worker PM2 terpisah).
+ * Tabel di bawah dipakai bersama oleh worker & dashboard.
+ * ========================================================== */
+
+export const agentModes = ["autonomous", "manual"] as const;
+export type AgentMode = (typeof agentModes)[number];
+
+export const agentRiskLevels = ["safe", "moderate", "dangerous"] as const;
+export type AgentRiskLevel = (typeof agentRiskLevels)[number];
+
+export const agentGoalStatuses = [
+  "active",
+  "paused",
+  "done",
+  "archived",
+] as const;
+export type AgentGoalStatus = (typeof agentGoalStatuses)[number];
+
+export const agentTaskStatuses = [
+  "queued",
+  "running",
+  "awaiting_approval",
+  "done",
+  "failed",
+  "cancelled",
+] as const;
+export type AgentTaskStatus = (typeof agentTaskStatuses)[number];
+
+export const agentActionStatuses = [
+  "ok",
+  "error",
+  "blocked",
+  "pending",
+] as const;
+export type AgentActionStatus = (typeof agentActionStatuses)[number];
+
+export const agentApprovalStatuses = [
+  "pending",
+  "approved",
+  "rejected",
+  "expired",
+] as const;
+export type AgentApprovalStatus = (typeof agentApprovalStatuses)[number];
+
+export const agentScheduleKinds = ["cron", "interval"] as const;
+export type AgentScheduleKind = (typeof agentScheduleKinds)[number];
+
+/** Singleton state otak otonom (mode + kill switch + heartbeat). */
+export const agentState = pgTable("AgentState", {
+  id: varchar("id", { length: 32 }).primaryKey().notNull().default("default"),
+  mode: varchar("mode", { enum: agentModes }).notNull().default("manual"),
+  killSwitch: boolean("killSwitch").notNull().default(false),
+  status: varchar("status", { length: 32 }).notNull().default("idle"),
+  note: text("note"),
+  lastHeartbeatAt: timestamp("lastHeartbeatAt"),
+  lastTickAt: timestamp("lastTickAt"),
+  tickCount: integer("tickCount").notNull().default(0),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type AgentState = InferSelectModel<typeof agentState>;
+
+/** Objective jangka panjang yang dikejar AI. */
+export const agentGoal = pgTable("AgentGoal", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId").references(() => user.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: varchar("status", { enum: agentGoalStatuses })
+    .notNull()
+    .default("active"),
+  priority: integer("priority").notNull().default(5),
+  metadata: json("metadata"),
+  deadline: timestamp("deadline"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type AgentGoal = InferSelectModel<typeof agentGoal>;
+
+/** Task queue — unit kerja yang dijalankan worker. */
+export const agentTask = pgTable("AgentTask", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  goalId: uuid("goalId").references(() => agentGoal.id, {
+    onDelete: "set null",
+  }),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: text("title").notNull(),
+  payload: json("payload"),
+  status: varchar("status", { enum: agentTaskStatuses })
+    .notNull()
+    .default("queued"),
+  priority: integer("priority").notNull().default(5),
+  attempts: integer("attempts").notNull().default(0),
+  maxAttempts: integer("maxAttempts").notNull().default(3),
+  result: json("result"),
+  error: text("error"),
+  scheduledFor: timestamp("scheduledFor"),
+  startedAt: timestamp("startedAt"),
+  finishedAt: timestamp("finishedAt"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type AgentTask = InferSelectModel<typeof agentTask>;
+
+/** Audit log — setiap aksi tool yang dijalankan/diblokir otak otonom. */
+export const agentAction = pgTable("AgentAction", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  taskId: uuid("taskId").references(() => agentTask.id, {
+    onDelete: "set null",
+  }),
+  approvalId: uuid("approvalId"),
+  tool: varchar("tool", { length: 64 }).notNull(),
+  action: varchar("action", { length: 128 }).notNull(),
+  input: json("input"),
+  output: json("output"),
+  status: varchar("status", { enum: agentActionStatuses })
+    .notNull()
+    .default("ok"),
+  riskLevel: varchar("riskLevel", { enum: agentRiskLevels })
+    .notNull()
+    .default("safe"),
+  reason: text("reason"),
+  durationMs: integer("durationMs"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type AgentAction = InferSelectModel<typeof agentAction>;
+
+/** Antrian approval untuk aksi berisiko (mode konservatif). */
+export const agentApproval = pgTable("AgentApproval", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  taskId: uuid("taskId").references(() => agentTask.id, {
+    onDelete: "set null",
+  }),
+  actionType: varchar("actionType", { length: 64 }).notNull(),
+  summary: text("summary").notNull(),
+  payload: json("payload"),
+  riskLevel: varchar("riskLevel", { enum: agentRiskLevels })
+    .notNull()
+    .default("dangerous"),
+  status: varchar("status", { enum: agentApprovalStatuses })
+    .notNull()
+    .default("pending"),
+  decidedBy: varchar("decidedBy", { length: 128 }),
+  decidedAt: timestamp("decidedAt"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type AgentApproval = InferSelectModel<typeof agentApproval>;
+
+/** Jadwal job (cron/interval) yang memicu task otomatis. */
+export const agentSchedule = pgTable("AgentSchedule", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  name: varchar("name", { length: 128 }).notNull(),
+  kind: varchar("kind", { enum: agentScheduleKinds })
+    .notNull()
+    .default("interval"),
+  expression: varchar("expression", { length: 128 }).notNull(),
+  taskType: varchar("taskType", { length: 64 }).notNull(),
+  payload: json("payload"),
+  enabled: boolean("enabled").notNull().default(true),
+  lastRunAt: timestamp("lastRunAt"),
+  nextRunAt: timestamp("nextRunAt"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type AgentSchedule = InferSelectModel<typeof agentSchedule>;

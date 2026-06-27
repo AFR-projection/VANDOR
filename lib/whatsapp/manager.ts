@@ -334,7 +334,7 @@ async function handleIncoming(
     return;
   }
 
-  // 4. Owner terverifikasi → cek unduhan media (/tt, /ytv, /yts, /ig).
+  // 4. Owner terverifikasi → cek unduhan media (/tt, /ig).
   try {
     const mediaResult = await deliverWhatsappMediaDownload(
       sock,

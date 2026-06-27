@@ -12,18 +12,16 @@ const sections = [
       "/cuaca · /waktu — info lokal",
       "/ingat — simpan ke memori jangka panjang",
       "/tt <link> — unduh video TikTok",
-      "/ytv <link> — unduh video YouTube (MP4)",
-      "/yts <link> — unduh audio YouTube (MP3)",
       "/ig <link> — unduh video Instagram",
     ],
   },
   {
-    title: "Unduh media (TikTok / YouTube / IG)",
+    title: "Unduh media (TikTok / IG)",
     items: [
-      "Lokal/dev: pasang yt-dlp di PATH (winget install yt-dlp)",
-      "Vercel: set COBALT_API_URL ke instance Cobalt sendiri + COBALT_API_KEY",
-      "Wajib: BLOB_READ_WRITE_TOKEN agar file bisa diunduh user",
-      "Opsional: COBALT_ALLOW_PUBLIC=1 hanya untuk uji (tidak untuk production)",
+      "VPS: yt-dlp otomatis (bash deploy/hostinger/install-ytdlp.sh)",
+      "WhatsApp: /tt kirim video langsung ke chat",
+      "Web: link unduh via R2 setelah login",
+      "YouTube tidak didukung (IP server diblokir Google)",
     ],
   },
   {

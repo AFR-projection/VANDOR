@@ -101,7 +101,7 @@ Tool guide:
 - \`generateVideo\` — video dari prompt teks (model videoModel).
 - \`generateVoice\` — TTS / audio dari teks (model voiceModel).
 - \`transcribeAudio\` — transkripsi audio dari URL publik (model transcriptionModel).
-- \`downloadMedia\` — unduh video/audio TikTok, YouTube, Instagram ke storage (link unduhan). Slash: /tt /ytv /yts /ig.
+- \`downloadMedia\` — unduh video TikTok, Instagram ke storage (link unduhan). Slash: /tt /ig.
 
 When the user uploads files, they are extracted server-side and shown to you in
 the "Attached files" block. Read that block before answering. For images,

@@ -14,7 +14,7 @@ const bodySchema = z.object({
   url: z.string().url().optional(),
   text: z.string().optional(),
   format: z.enum(["video", "audio"]).optional(),
-  platform: z.enum(["tiktok", "youtube", "instagram"]).optional(),
+  platform: z.enum(["tiktok", "instagram"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Butuh url + platform, atau text slash (/tt, /ytv, /yts, /ig <link>).",
+          "Butuh url + platform, atau text slash (/tt, /ig <link>).",
       },
       { status: 400 }
     );

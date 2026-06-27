@@ -23,7 +23,7 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   generateVideo: "video dari prompt",
   generateVoice: "TTS",
   transcribeAudio: "transkripsi audio",
-  downloadMedia: "unduh TT/YT/IG",
+  downloadMedia: "unduh TT/IG",
 };
 
 const VAULT_ISOLATION_HINT = `

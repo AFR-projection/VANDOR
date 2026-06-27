@@ -26,5 +26,27 @@ module.exports = {
       merge_logs: true,
       time: true,
     },
+    {
+      // Otak otonom 24/7 (VANDOR Autonomous — Fase 0).
+      name: "vandor-agent",
+      cwd: appDir,
+      script: "node_modules/tsx/dist/cli.mjs",
+      args: "lib/autonomous/worker.ts",
+      interpreter: "node",
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "600M",
+      kill_timeout: 12_000,
+      env: {
+        NODE_ENV: "production",
+        PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      },
+      error_file: "/var/log/vandor-agent-error.log",
+      out_file: "/var/log/vandor-agent-out.log",
+      merge_logs: true,
+      time: true,
+    },
   ],
 };

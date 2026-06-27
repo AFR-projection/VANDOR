@@ -11,14 +11,8 @@ export type WhatsappMediaDeliveryResult = {
   caption?: string;
 };
 
-async function fetchBufferFromUrl(url: string): Promise<Buffer> {
-  const res = await fetch(url, { redirect: "follow" });
-  if (!res.ok) {
-    throw new Error(`Gagal mengambil file (${res.status})`);
-  }
-  const arrayBuffer = await res.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-}
+/** WhatsApp video limit ~16MB untuk kirim sebagai video; lebih besar → dokumen. */
+const WA_VIDEO_BYTES_MAX = 16 * 1024 * 1024;
 
 function mimeFor(format: MediaDownloadFormat, contentType?: string): string {
   if (contentType?.includes("/")) {
@@ -28,8 +22,8 @@ function mimeFor(format: MediaDownloadFormat, contentType?: string): string {
 }
 
 /**
- * Handle /tt, /ytv, /yts, /ig slash commands on WhatsApp.
- * Downloads media and sends the file directly to the chat (not just a link).
+ * Handle /tt, /ig slash commands on WhatsApp.
+ * Downloads media and sends the file directly (buffer, tanpa re-fetch R2).
  */
 export async function deliverWhatsappMediaDownload(
   sock: WASocket,
@@ -51,11 +45,14 @@ export async function deliverWhatsappMediaDownload(
     { quoted: msg }
   );
 
-  const result = await downloadSocialMedia({
-    url: slash.url,
-    format: slash.format,
-    platform: slash.platform,
-  });
+  const result = await downloadSocialMedia(
+    {
+      url: slash.url,
+      format: slash.format,
+      platform: slash.platform,
+      retainBuffer: true,
+    }
+  );
 
   recordMediaDownloadLog({
     userId,
@@ -64,7 +61,7 @@ export async function deliverWhatsappMediaDownload(
     result,
   });
 
-  if (!result.ok || !result.url) {
+  if (!result.ok || !result.buffer?.length) {
     const err = result.error ?? "Unduhan gagal";
     await sock.sendMessage(
       jid,
@@ -75,7 +72,7 @@ export async function deliverWhatsappMediaDownload(
   }
 
   try {
-    const buffer = await fetchBufferFromUrl(result.url);
+    const buffer = result.buffer;
     const filename =
       result.filename ??
       `vandor-${slash.platform}.${slash.format === "audio" ? "mp3" : "mp4"}`;
@@ -92,6 +89,17 @@ export async function deliverWhatsappMediaDownload(
           mimetype,
           fileName: filename,
           ptt: false,
+        },
+        { quoted: msg }
+      );
+    } else if (buffer.length > WA_VIDEO_BYTES_MAX) {
+      await sock.sendMessage(
+        jid,
+        {
+          document: buffer,
+          mimetype,
+          fileName: filename,
+          caption: `${caption}\n_(video besar — dikirim sebagai file)_`,
         },
         { quoted: msg }
       );
@@ -114,7 +122,7 @@ export async function deliverWhatsappMediaDownload(
     await sock.sendMessage(
       jid,
       {
-        text: `⚠️ Unduhan berhasil tapi gagal kirim file: ${message}\n\nLink: ${result.url}`,
+        text: `❌ Unduhan selesai tapi gagal kirim ke WhatsApp: ${message}`,
       },
       { quoted: msg }
     );

@@ -64,18 +64,6 @@ export const SLASH_SKILLS: SlashSkillDef[] = [
     insertText: "/tt ",
   },
   {
-    name: "ytv",
-    description: "Unduh video YouTube (MP4)",
-    kind: "insert",
-    insertText: "/ytv ",
-  },
-  {
-    name: "yts",
-    description: "Unduh audio YouTube (MP3)",
-    kind: "insert",
-    insertText: "/yts ",
-  },
-  {
     name: "ig",
     description: "Unduh video Instagram (MP4)",
     kind: "insert",

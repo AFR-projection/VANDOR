@@ -193,7 +193,7 @@ export function ActivityPanel() {
           {!isLoading && filtered.length === 0 && (
             <p className="text-[#8b949e]">
               {filter === "all"
-                ? "Belum ada log. Jalankan chat, unduh media (/ytv), atau tool lain."
+                ? "Belum ada log. Jalankan chat, unduh media (/tt), atau tool lain."
                 : `Tidak ada log dengan level "${filter}".`}
             </p>
           )}

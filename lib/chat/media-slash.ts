@@ -1,17 +1,17 @@
 import type { MediaDownloadFormat, MediaPlatform } from "@/lib/media/types";
 
 export type MediaSlashCommand = {
-  command: "tt" | "ytv" | "yts" | "ig";
+  command: "tt" | "ig";
   url: string;
   format: MediaDownloadFormat;
   platform: MediaPlatform;
 };
 
-const MEDIA_SLASH_RE = /^\/?(tt|ytv|yts|ig)\s+(\S+)/i;
+const MEDIA_SLASH_RE = /^\/?(tt|ig)\s+(\S+)/i;
 
 /** `/tt` tanpa URL — Enter menampilkan petunjuk, bukan mengirim kosong. */
 export function isBareMediaSlash(text: string): boolean {
-  return /^\/?(tt|ytv|yts|ig)\s*$/i.test(text.trim());
+  return /^\/?(tt|ig)\s*$/i.test(text.trim());
 }
 
 export function parseMediaSlash(text: string): MediaSlashCommand | null {
@@ -25,7 +25,7 @@ export function parseMediaSlash(text: string): MediaSlashCommand | null {
   const url = match[2].replace(/[<>]/g, "");
 
   let format: MediaDownloadFormat = "video";
-  let platform: MediaPlatform = "youtube";
+  let platform: MediaPlatform = "tiktok";
 
   switch (command) {
     case "tt":
@@ -34,14 +34,6 @@ export function parseMediaSlash(text: string): MediaSlashCommand | null {
       break;
     case "ig":
       platform = "instagram";
-      format = "video";
-      break;
-    case "yts":
-      platform = "youtube";
-      format = "audio";
-      break;
-    case "ytv":
-      platform = "youtube";
       format = "video";
       break;
     default:
@@ -82,10 +74,8 @@ export function isUrlForPlatform(
 }
 
 export const MEDIA_SLASH_HINT = `
-## Unduh media (/tt, /ytv, /yts, /ig)
+## Unduh media (/tt, /ig)
 - **/tt <url>** — video TikTok (MP4)
-- **/ytv <url>** — video YouTube (MP4)
-- **/yts <url>** — audio YouTube (MP3)
 - **/ig <url>** — video Instagram (MP4)
 - Panggil \`downloadMedia\` dengan URL lengkap jika user minta unduh tanpa slash. Jangan webSearch untuk unduhan.
 `.trim();

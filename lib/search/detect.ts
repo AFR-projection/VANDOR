@@ -3,7 +3,7 @@ const SKIP_PATTERNS = [
   /^(hi|halo|hello|hey|thanks|thank you|terima kasih|makasih|ok|oke|sip|noted|good|bagus|mantap)\s*[!.?]*$/i,
   /^(write|buatkan|generate|create)\s+(me\s+)?(a\s+)?(code|script|function|program|gambar|image|logo|pdf|docx)/i,
   /^\/\w+/,
-  /^\/?(tt|ytv|yts|ig)\s+\S+/i,
+  /^\/?(tt|ig)\s+\S+/i,
   /\b(edit|edot|editan|photoshop|manipulasi|inpaint|ganti background|ubah foto|ubah gambar|retouch|airbrush)\b/i,
   /\b(buatkan gambar|generate image|draw|gambarin|ilustrasi|logo)\b/i,
   /\b(siapa kamu|siapa anda|kamu siapa|who are you|nama kamu|kamu bisa apa|apa yang bisa kamu|what can you do|apa kabar|how are you|kabar kamu)\b/i,
@@ -23,7 +23,7 @@ const LOCAL_TASK_PATTERNS = [
   /\b(username|user\s?name|password|pin|rekening|no\.?\s*rek|transfer ke|biaya transfer)\b/i,
   /\b(daftar file berangkas|file berangkas|buka berangkas)\b/i,
   /\b(download|unduh|simpan)\s+(video|audio|mp3|mp4)\b/i,
-  /^\/?(tt|ytv|yts|ig)\s+\S+/i,
+  /^\/?(tt|ig)\s+\S+/i,
 ];
 
 /** Minta tautan / URL — butuh web (sering follow-up singkat). */
@@ -222,7 +222,7 @@ export function shouldDisableWebSearchTool(userText: string): boolean {
   if (needed) {
     return false;
   }
-  if (/^\/?(tt|ytv|yts|ig)\s+\S+/i.test(userText.trim())) {
+  if (/^\/?(tt|ig)\s+\S+/i.test(userText.trim())) {
     return true;
   }
   return reason === "local_task" || reason === "skip_pattern";

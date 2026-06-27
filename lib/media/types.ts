@@ -32,6 +32,8 @@ export type MediaDownloadProgressReporter = (
 export type MediaDownloadResult = {
   ok: boolean;
   url?: string;
+  /** Buffer mentah — untuk WhatsApp (tanpa re-fetch R2 yang butuh auth). */
+  buffer?: Buffer;
   filename?: string;
   title?: string;
   platform: MediaPlatform;

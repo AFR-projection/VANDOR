@@ -18,7 +18,9 @@
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
-    "test:unit": "npx tsx --test lib/search/detect.test.ts"
+    "test:unit": "npx tsx --test lib/search/detect.test.ts",
+    "agent": "tsx lib/autonomous/worker.ts",
+    "agent:once": "tsx lib/autonomous/worker.ts --once"
   },
   "dependencies": {
     "@ai-sdk/provider": "^3.0.3",

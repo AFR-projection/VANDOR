@@ -114,6 +114,8 @@ export type DownloadSocialMediaInput = {
   url: string;
   format: MediaDownloadFormat;
   platform: MediaPlatform;
+  /** Lewati upload storage; kembalikan buffer (WhatsApp). */
+  retainBuffer?: boolean;
 };
 
 function extForFormat(format: MediaDownloadFormat): string {
@@ -635,7 +637,17 @@ export async function downloadSocialMedia(
   input: DownloadSocialMediaInput,
   onProgress?: MediaDownloadProgressReporter
 ): Promise<MediaDownloadResult> {
-  const { url, format, platform } = input;
+  const { url, format, platform, retainBuffer } = input;
+
+  if (platform === "youtube") {
+    return {
+      ok: false,
+      platform,
+      format,
+      error:
+        "Unduhan YouTube (/ytv, /yts) tidak didukung di VANDOR. Gunakan /tt (TikTok) atau /ig (Instagram).",
+    };
+  }
 
   reportProgress(
     onProgress,
@@ -758,29 +770,7 @@ export async function downloadSocialMedia(
           return { ok: false, platform, format, error: msg };
         }
       }
-    } else if (platform === "youtube") {
-      try {
-        const yt = await downloadYoutube(url, format, onProgress);
-        buffer = yt.buffer;
-        title = yt.title;
-        suggestedName = yt.filename;
-        backend = yt.backend;
-      } catch (ytErr) {
-        const msg = toErrorMessage(ytErr);
-        reportProgress(
-          onProgress,
-          baseProgress(platform, format, {
-            status: "error",
-            progress: 0,
-            stageLabel: "Gagal mengunduh",
-            error: msg,
-          })
-        );
-        stopResolvePulse?.();
-        stopResolvePulse = null;
-        return { ok: false, platform, format, error: msg };
-      }
-    } else if (await hasCobaltBackend()) {
+    } else if (platform === "instagram" && (await hasCobaltBackend())) {
       backend = "cobalt";
       try {
         const cobalt = await downloadWithCobalt(
@@ -843,8 +833,37 @@ export async function downloadSocialMedia(
     if (!buffer || buffer.length < MIN_BYTES) {
       throw new Error(
         `File unduhan kosong (${buffer?.length ?? 0} byte). ` +
-          "Periksa COBALT_API_URL, COBALT_API_KEY, dan API_URL di instance Cobalt."
+          "Periksa yt-dlp di VPS atau coba link lain."
       );
+    }
+
+    const filename = sanitizeFilename(suggestedName ?? title, format);
+    const contentType = contentTypeForFilename(filename, format);
+
+    if (retainBuffer) {
+      reportProgress(
+        onProgress,
+        baseProgress(platform, format, {
+          status: "complete",
+          progress: 100,
+          stageLabel: "Selesai — siap dikirim",
+          filename,
+          title,
+          bytesReceived: buffer.length,
+        })
+      );
+      return {
+        ok: true,
+        buffer,
+        filename,
+        title,
+        platform,
+        format,
+        sizeBytes: buffer.length,
+        contentType,
+        backend,
+        delivery: "direct",
+      };
     }
 
     reportProgress(
@@ -858,7 +877,7 @@ export async function downloadSocialMedia(
       })
     );
 
-    const filename = sanitizeFilename(suggestedName ?? title, format);
+    const filenameForUpload = filename;
     const stopUploadSim = startUploadProgressSimulation(
       onProgress,
       platform,
@@ -867,7 +886,7 @@ export async function downloadSocialMedia(
     );
     let uploaded: Awaited<ReturnType<typeof uploadBuffer>>;
     try {
-      uploaded = await uploadBuffer(buffer, filename, format);
+      uploaded = await uploadBuffer(buffer, filenameForUpload, format);
     } finally {
       stopUploadSim();
     }
@@ -886,7 +905,7 @@ export async function downloadSocialMedia(
     const result: MediaDownloadResult = {
       ok: true,
       url: uploaded.url,
-      filename,
+      filename: filenameForUpload,
       title,
       platform,
       format,
@@ -903,7 +922,7 @@ export async function downloadSocialMedia(
         progress: 100,
         stageLabel: "Selesai — file siap diunduh",
         downloadUrl: uploaded.url,
-        filename,
+        filename: filenameForUpload,
         title,
         bytesReceived: uploaded.sizeBytes,
       })

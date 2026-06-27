@@ -6,12 +6,12 @@ import {
   formatMediaDownloadReply,
 } from "@/lib/media/download";
 
-const platformSchema = z.enum(["tiktok", "youtube", "instagram", "auto"]);
+const platformSchema = z.enum(["tiktok", "instagram", "auto"]);
 
 export function makeDownloadMediaTool() {
   return tool({
     description:
-      "Download video/audio from TikTok, YouTube, or Instagram. Use for /tt, /ytv, /yts, /ig or when user asks to download/save media from a link. Returns a hosted download URL (Vercel Blob/R2).",
+      "Download video from TikTok or Instagram. Use for /tt, /ig or when user asks to download/save media from a link. Returns a hosted download URL (R2).",
     inputSchema: z.object({
       url: z.string().url(),
       format: z.enum(["video", "audio"]).default("video"),
@@ -20,14 +20,15 @@ export function makeDownloadMediaTool() {
     execute: async ({ url, format, platform: platformIn }) => {
       let platform = platformIn;
       if (platform === "auto") {
-        if (isUrlForPlatform(url, "tiktok")) platform = "tiktok";
-        else if (isUrlForPlatform(url, "instagram")) platform = "instagram";
-        else if (isUrlForPlatform(url, "youtube")) platform = "youtube";
-        else {
+        if (isUrlForPlatform(url, "tiktok")) {
+          platform = "tiktok";
+        } else if (isUrlForPlatform(url, "instagram")) {
+          platform = "instagram";
+        } else {
           return {
             ok: false,
             error:
-              "URL tidak dikenali. Gunakan link TikTok, YouTube, atau Instagram.",
+              "URL tidak dikenali. Gunakan link TikTok atau Instagram. (YouTube tidak didukung.)",
           };
         }
       }
