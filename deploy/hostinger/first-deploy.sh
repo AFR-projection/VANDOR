@@ -26,6 +26,14 @@ fi
 
 mkdir -p public/storage .whatsapp-auth
 
+echo "==> Test database (Neon)"
+chmod +x deploy/hostinger/test-db.sh
+if ! bash deploy/hostinger/test-db.sh; then
+  echo ""
+  echo "Deploy dihentikan — perbaiki koneksi Neon dulu (lihat pesan di atas)."
+  exit 1
+fi
+
 echo "==> Install dependencies"
 pnpm install --frozen-lockfile
 

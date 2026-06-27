@@ -13,7 +13,12 @@ const runMigrate = async () => {
     process.exit(0);
   }
 
-  const connection = postgres(process.env.POSTGRES_URL, { max: 1 });
+  const connection = postgres(process.env.POSTGRES_URL, {
+    max: 1,
+    connect_timeout: 60,
+    ssl: "require",
+    prepare: false,
+  });
   const db = drizzle(connection);
 
   console.log("Running migrations...");

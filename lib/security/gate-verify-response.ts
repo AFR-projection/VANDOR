@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { useSecureCookies } from "@/lib/constants";
 import { DEVICE_COOKIE_NAME, GATE_COOKIE_NAME } from "@/lib/security/gate-edge";
 
 const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
@@ -15,7 +15,7 @@ export async function buildGateLoginSuccessResponse(
   gateCookieMaxAge: number
 ): Promise<NextResponse> {
   const response = NextResponse.redirect(target);
-  const secure = !isDevelopmentEnvironment;
+  const secure = useSecureCookies();
   const cookieOpts = {
     httpOnly: true,
     secure,

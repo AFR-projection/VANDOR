@@ -8,6 +8,21 @@ export const isTestEnvironment = Boolean(
     process.env.CI_PLAYWRIGHT
 );
 
+/** False on http:// deploys (VPS IP) so login cookies work before SSL. */
+export function useSecureCookies(): boolean {
+  if (isDevelopmentEnvironment || isTestEnvironment) {
+    return false;
+  }
+  if (process.env.VANDOR_INSECURE_COOKIES === "1") {
+    return false;
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().toLowerCase() ?? "";
+  if (appUrl.startsWith("http://")) {
+    return false;
+  }
+  return true;
+}
+
 export const guestRegex = /^guest-\d+$/;
 
 export const DUMMY_PASSWORD = generateDummyPassword();

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { isDevelopmentEnvironment } from "./lib/constants";
+import { useSecureCookies } from "./lib/constants";
 import {
   clearGateCookieOnResponse,
   getClientAccessSnapshot,
@@ -26,7 +26,7 @@ function isPublicPath(pathname: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const secureCookie = !isDevelopmentEnvironment;
+  const secureCookie = useSecureCookies();
 
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });

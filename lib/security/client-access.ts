@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
+import { useSecureCookies } from "@/lib/constants";
 import { touchSession } from "./gate";
 import {
   shouldTouchGateSession,
@@ -88,7 +89,7 @@ export async function accessDeniedResponse(
   snapshot: ClientAccessSnapshot,
   opts?: { secureCookie?: boolean }
 ): Promise<NextResponse> {
-  const secure = opts?.secureCookie ?? process.env.NODE_ENV === "production";
+  const secure = opts?.secureCookie ?? useSecureCookies();
 
   let reason: AccessDenyReason = "gate_required";
   if (snapshot.sessionRevoked) {

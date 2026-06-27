@@ -75,7 +75,7 @@ function GateForm() {
     status?.locked && status.lockedUntil && status.lockedUntil > now
   );
   const remainingMs = locked ? (status?.lockedUntil ?? 0) - now : 0;
-  const attemptsLeft = status?.attemptsLeft ?? PIN_LENGTH;
+  const attemptsLeft = status?.attemptsLeft ?? 3;
 
   const submit = useCallback(
     async (value: string) => {

@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { signIn } from "@/app/(auth)/auth";
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { useSecureCookies } from "@/lib/constants";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
       : "/";
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const secure = !isDevelopmentEnvironment;
+  const secure = useSecureCookies();
 
   const token = await getToken({
     req: request,

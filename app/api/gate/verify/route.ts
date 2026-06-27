@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { signIn } from "@/app/(auth)/auth";
 
-import { isDevelopmentEnvironment } from "@/lib/constants";
+import { useSecureCookies } from "@/lib/constants";
 
 import { ensureOwnerUser } from "@/lib/db/ensure-owner";
 import {
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
         failRes.cookies.set(DEVICE_COOKIE_NAME, deviceId, {
           httpOnly: true,
 
-          secure: !isDevelopmentEnvironment,
+          secure: useSecureCookies(),
 
           sameSite: "lax",
 
@@ -165,7 +165,7 @@ export async function POST(request: Request) {
       failRes.cookies.set(DEVICE_COOKIE_NAME, deviceId, {
         httpOnly: true,
 
-        secure: !isDevelopmentEnvironment,
+        secure: useSecureCookies(),
 
         sameSite: "lax",
 
