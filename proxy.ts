@@ -23,6 +23,23 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
+/** Worker → web internal notify; auth via shared secret, bukan gate PIN. */
+function isInternalAgentNotify(request: NextRequest): boolean {
+  const { pathname } = request.nextUrl;
+  if (
+    pathname !== "/api/agent/notify" &&
+    !pathname.endsWith("/api/agent/notify")
+  ) {
+    return false;
+  }
+  const secret = (process.env.VANDOR_AGENT_INTERNAL_SECRET ?? "").trim();
+  if (!secret) {
+    return false;
+  }
+  const header = request.headers.get("x-agent-secret")?.trim();
+  return header === secret;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -53,6 +70,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (isInternalAgentNotify(request)) {
     return NextResponse.next();
   }
 

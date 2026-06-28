@@ -1,6 +1,15 @@
 import { config as loadEnv } from "dotenv";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
-loadEnv({ path: ".env.local" });
+const envLocal = join(process.cwd(), ".env.local");
+if (existsSync(envLocal)) {
+  loadEnv({ path: envLocal });
+}
+
+function envTrim(key: string): string {
+  return (process.env[key] ?? "").trim();
+}
 
 function envInt(key: string, fallback: number): number {
   const raw = process.env[key];
@@ -40,9 +49,9 @@ export const autonomousConfig = {
 
   /** URL aplikasi Next internal (untuk kirim notifikasi via web process). */
   internalApiUrl:
-    process.env.VANDOR_INTERNAL_API_URL ?? "http://127.0.0.1:3000",
+    envTrim("VANDOR_INTERNAL_API_URL") || "http://127.0.0.1:3000",
   /** Secret bersama worker<->web untuk endpoint internal. */
-  internalSecret: process.env.VANDOR_AGENT_INTERNAL_SECRET ?? "",
+  internalSecret: envTrim("VANDOR_AGENT_INTERNAL_SECRET"),
 
   /** OpenRouter (reasoning/planner). Kosong = fallback heuristik. */
   openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",

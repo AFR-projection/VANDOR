@@ -3,6 +3,7 @@ import { autonomousConfig } from "./config";
 import { sqlClient } from "./db";
 import { createLogger } from "./logger";
 import { runTick } from "./loop";
+import { logNotifyChannelHealth } from "./notify-ping";
 import { acquireLease, releaseLease, renewLease } from "./state";
 
 const log = createLogger("worker");
@@ -88,6 +89,7 @@ async function main(): Promise<void> {
 
   if (once) {
     try {
+      await logNotifyChannelHealth();
       await runTick();
     } catch (error) {
       log.error("Tick gagal", error);
@@ -99,6 +101,7 @@ async function main(): Promise<void> {
   process.on("SIGINT", () => void shutdown("SIGINT"));
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
+  await logNotifyChannelHealth();
   await tickSafe();
   scheduleNext();
 }

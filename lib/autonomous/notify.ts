@@ -66,14 +66,21 @@ async function deliver(
   level: AgentEventSeverity
 ): Promise<{ ok: boolean; error?: string }> {
   if (!autonomousConfig.internalSecret) {
-    return { ok: false, error: "VANDOR_AGENT_INTERNAL_SECRET belum diset" };
+    return {
+      ok: false,
+      error:
+        "VANDOR_AGENT_INTERNAL_SECRET kosong — isi di .env.local lalu pm2 reload --update-env",
+    };
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12_000);
-  try {
-    const res = await fetch(
-      `${autonomousConfig.internalApiUrl}/api/agent/notify`,
-      {
+
+  const url = `${autonomousConfig.internalApiUrl}/api/agent/notify`;
+  let lastError = "unknown";
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+    try {
+      const res = await fetch(url, {
         method: "POST",
         signal: controller.signal,
         headers: {
@@ -85,21 +92,41 @@ async function deliver(
           body: input.body,
           level,
         }),
+      });
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson.error) {
+            detail = `${detail}: ${errJson.error}`;
+          }
+        } catch {
+          /* ignore */
+        }
+        lastError = detail;
+        if (res.status === 401 || res.status === 503) {
+          return { ok: false, error: lastError };
+        }
+        continue;
       }
-    );
-    if (!res.ok) {
-      return { ok: false, error: `HTTP ${res.status}` };
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (json.ok) {
+        return { ok: true };
+      }
+      lastError = json.error ?? "notify rejected";
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : "fetch failed";
+    } finally {
+      clearTimeout(timer);
     }
-    const json = (await res.json()) as { ok?: boolean; error?: string };
-    return json.ok ? { ok: true } : { ok: false, error: json.error };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "fetch failed",
-    };
-  } finally {
-    clearTimeout(timer);
+    if (attempt === 1) {
+      await new Promise((r) => {
+        setTimeout(r, 1500);
+      });
+    }
   }
+
+  return { ok: false, error: lastError };
 }
 
 /** Notifikasi permintaan approval baru ke owner utama via WhatsApp. */
