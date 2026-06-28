@@ -10,7 +10,7 @@ import type { Issue } from "./healing/detectors";
 export async function recordOperatorIncident(input: {
   userId: string | null;
   issue: Issue;
-  outcome?: "detected" | "approval_requested" | "remediated" | "failed";
+  outcome?: "detected" | "approval_requested" | "remediated" | "failed" | "auto_fixed" | "auto_fix_failed";
   command?: string;
 }): Promise<void> {
   if (!input.userId) {

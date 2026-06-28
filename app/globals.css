@@ -186,9 +186,22 @@
   }
 }
 
-/* Gate page inherits the global --vandor-accent now — no local override. */
+@keyframes vandor-pin-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .vandor-gate {
-  /* placeholder hook for gate-specific tweaks */
+  --gate-glow: oklch(0.55 0.14 220 / 0.12);
 }
 
 @layer base {

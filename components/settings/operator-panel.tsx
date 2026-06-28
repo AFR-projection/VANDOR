@@ -40,7 +40,31 @@ type Overview = {
     status: string;
     tickCount: number;
     lastHeartbeatAt: string | null;
+    note?: string | null;
   };
+  heartbeat: {
+    healthScore: number;
+    grade: string;
+    summary: string;
+    subsystems: {
+      worker: string;
+      web: string;
+      whatsapp: string;
+      database: string;
+    };
+    metrics: {
+      cpuPct: number;
+      memUsedPct: number;
+      diskUsedPct: number | null;
+      servicesDown: number;
+    };
+    tickDurationMs: number;
+    autoFix: {
+      lastAt: string | null;
+      lastSuccess: boolean | null;
+      lastSummary: string | null;
+    };
+  } | null;
   metrics: {
     latest: {
       cpuPct: number | null;
@@ -521,9 +545,10 @@ export function OperatorPanel() {
     );
   }
 
-  const { state, metrics, approvals, actions, events, tasks, goals, rules, schedules, terminal } =
+  const { state, heartbeat, metrics, approvals, actions, events, tasks, goals, rules, schedules, terminal } =
     data;
   const m = metrics.latest;
+  const hb = heartbeat;
 
   const tabs: { id: Tab; label: string; icon: typeof BotIcon }[] = [
     { id: "overview", label: "Overview", icon: ActivityIcon },
@@ -553,9 +578,33 @@ export function OperatorPanel() {
             </span>
           </div>
           <p className="mt-1 text-muted-foreground text-xs">
-            Tick #{state.tickCount} · heartbeat {timeAgo(state.lastHeartbeatAt)}{" "}
-            · auto-refresh 5 dtk
+            Tick #{state.tickCount}
+            {hb ? (
+              <>
+                {" "}
+                · skor{" "}
+                <span
+                  className={cn(
+                    hb.healthScore >= 75
+                      ? "text-emerald-400"
+                      : hb.healthScore >= 50
+                        ? "text-amber-400"
+                        : "text-red-400"
+                  )}
+                >
+                  {hb.healthScore}/100
+                </span>{" "}
+                ({hb.grade})
+              </>
+            ) : null}{" "}
+            · heartbeat {timeAgo(state.lastHeartbeatAt)}{" "}
+            {hb ? `· ${hb.tickDurationMs}ms/tick` : ""} · auto-refresh 5 dtk
           </p>
+          {hb?.summary ? (
+            <p className="mt-0.5 text-[11px] text-muted-foreground/90">
+              {hb.summary}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -863,6 +912,40 @@ export function OperatorPanel() {
           value={formatUptime(m?.uptimeSec ?? null)}
         />
       </div>
+
+      {hb ? (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(
+            [
+              ["Worker", hb.subsystems.worker],
+              ["Web", hb.subsystems.web],
+              ["WhatsApp", hb.subsystems.whatsapp],
+              ["Database", hb.subsystems.database],
+            ] as const
+          ).map(([label, status]) => (
+            <div
+              className="rounded-lg border border-border/40 bg-card/25 px-3 py-2"
+              key={label}
+            >
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                {label}
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 font-medium text-xs capitalize",
+                  status === "ok"
+                    ? "text-emerald-400"
+                    : status === "warn"
+                      ? "text-amber-400"
+                      : "text-red-400"
+                )}
+              >
+                {status}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between gap-2">
         <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">

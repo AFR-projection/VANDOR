@@ -46,6 +46,22 @@ const DEFAULT_RULES: CreateRuleInput[] = [
     priority: 30,
     note: "PM2 mutasi butuh approval",
   },
+  {
+    name: "allow-auto-fix-npm",
+    kind: "allow",
+    pattern: String.raw`^npm run (fix|check|build)\b`,
+    riskLevel: "safe",
+    priority: 25,
+    note: "Auto-fix codebase tanpa approval",
+  },
+  {
+    name: "allow-auto-fix-pm2-vandor",
+    kind: "allow",
+    pattern: String.raw`^pm2 (restart|reload) (vandor|vandor-agent)\b`,
+    riskLevel: "moderate",
+    priority: 26,
+    note: "Restart proses VANDOR — auto-fix",
+  },
 ];
 
 export async function ensureDefaultRules(): Promise<void> {

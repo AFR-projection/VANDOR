@@ -1,30 +1,19 @@
 "use client";
 
 import {
-  ArrowLeftIcon,
-  BotIcon,
-  BrainIcon,
-  CircleHelpIcon,
-  FolderLockIcon,
   Loader2Icon,
   MessageCircleIcon,
-  ServerIcon,
   ShieldIcon,
-  SmartphoneIcon,
   SparklesIcon,
-  TerminalIcon,
-  WrenchIcon,
 } from "lucide-react";
-import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { type ModelTierId, normalizeModelTier } from "@/lib/ai/model-tiers";
-import { getTierUi } from "@/lib/ai/tier-styles";
 import { apiBasePath } from "@/lib/app-url";
 import {
   personaLanguageLabels,
@@ -37,8 +26,9 @@ import type {
   PersonaSettings,
 } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
-import { APP_NAME, APP_VERSION } from "@/lib/version";
 import { SettingSlider } from "./setting-row";
+import { SettingsShell } from "./settings-shell";
+import type { GeneralTabId } from "./settings-nav-config";
 
 const ActivityPanel = dynamic(
   () => import("./activity-panel").then((m) => ({ default: m.ActivityPanel })),
@@ -133,20 +123,28 @@ type GeneralPayload = {
   defaultModelTier: ModelTierId;
 };
 
-const tabs = [
-  { id: "operator", label: "Operator", icon: BotIcon },
-  { id: "persona", label: "Gaya bicara", icon: MessageCircleIcon },
-  { id: "model", label: "Model & AI", icon: SparklesIcon },
-  { id: "skills", label: "Agent Skills", icon: WrenchIcon },
-  { id: "vault", label: "Berangkas", icon: FolderLockIcon },
-  { id: "whatsapp", label: "WhatsApp", icon: SmartphoneIcon },
-  { id: "api", label: "API & integrasi", icon: ServerIcon },
-  { id: "security", label: "Keamanan", icon: ShieldIcon },
-  { id: "activity", label: "Log", icon: TerminalIcon },
-  { id: "guide", label: "Panduan", icon: CircleHelpIcon },
-] as const;
+const validTabs: GeneralTabId[] = [
+  "operator",
+  "persona",
+  "model",
+  "skills",
+  "vault",
+  "whatsapp",
+  "api",
+  "security",
+  "activity",
+  "guide",
+];
 
-type TabId = (typeof tabs)[number]["id"];
+function tabFromHash(): GeneralTabId | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.location.hash.replace("#", "");
+  return validTabs.includes(raw as GeneralTabId)
+    ? (raw as GeneralTabId)
+    : null;
+}
 
 async function fetchGeneral(): Promise<GeneralPayload> {
   const res = await fetch(`${base()}/api/settings/general`);
@@ -179,7 +177,14 @@ export function GeneralSettingsPage() {
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   });
-  const [tab, setTab] = useState<TabId>("persona");
+  const [tab, setTab] = useState<GeneralTabId>("persona");
+
+  useEffect(() => {
+    const fromHash = tabFromHash();
+    if (fromHash) {
+      setTab(fromHash);
+    }
+  }, []);
   const [saving, setSaving] = useState(false);
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -318,74 +323,12 @@ export function GeneralSettingsPage() {
     activeStyle.samplePhrase?.trim() || "Halo! Saya siap membantu.";
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <header className="flex shrink-0 items-center gap-3 border-b border-border/40 px-4 py-3 sm:px-6">
-        <Button asChild size="icon-sm" type="button" variant="ghost">
-          <Link href="/">
-            <ArrowLeftIcon className="size-4" />
-            <span className="sr-only">Kembali ke chat</span>
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-semibold tracking-tight">Pengaturan</h1>
-          <p className="text-xs text-muted-foreground">
-            Model AI, gaya bicara, API keys, dan keamanan · {APP_NAME}{" "}
-            <span className="font-mono text-[10px]">v{APP_VERSION}</span>
-          </p>
-        </div>
-        <Button asChild size="sm" type="button" variant="outline">
-          <Link href={`${base()}/settings/memory`}>
-            <BrainIcon className="size-3.5" />
-            Memori
-          </Link>
-        </Button>
-        {saving && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2Icon className="size-3 animate-spin" />
-            Menyimpan…
-          </span>
-        )}
-      </header>
-
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border/40 p-2 md:w-52 md:flex-col md:border-b-0 md:border-r md:p-3">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const tierUi =
-              t.id === "model"
-                ? getTierUi(normalizeModelTier(int.modelTier))
-                : null;
-            return (
-              <button
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                  tab === t.id
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                )}
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                type="button"
-              >
-                <Icon className="size-4 shrink-0" />
-                <span className="flex-1">{t.label}</span>
-                {tierUi ? (
-                  <span
-                    className={cn(
-                      "rounded px-1.5 py-px text-[9px] font-semibold uppercase",
-                      tierUi.chip
-                    )}
-                  >
-                    {tierUi.label}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="mx-auto max-w-2xl space-y-5">
+    <SettingsShell
+      area="general"
+      generalTab={tab}
+      onGeneralTabChange={setTab}
+      saving={saving}
+    >
             {tab === "persona" && (
               <>
                 <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-card/40 to-violet-500/10 p-4 sm:p-5">
@@ -693,9 +636,6 @@ export function GeneralSettingsPage() {
                 </p>
               </>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+    </SettingsShell>
   );
 }

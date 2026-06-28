@@ -1,26 +1,21 @@
 "use client";
 
-import { LockKeyholeIcon, ShieldCheckIcon, SparklesIcon } from "lucide-react";
+import {
+  FingerprintIcon,
+  LockKeyholeIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
-import { Button } from "@/components/ui/button";
+import { GateNumpad } from "@/components/gate/gate-numpad";
+import { GatePinDisplay } from "@/components/gate/gate-pin-display";
+import { GateScene } from "@/components/gate/gate-scene";
+import { cn } from "@/lib/utils";
+import { motion, useReducedMotion } from "motion/react";
 
 const PIN_LENGTH = 4;
-const KEYS = [
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "clear",
-  "0",
-  "back",
-];
 
 type GateStatus = {
   configured: boolean;
@@ -45,6 +40,7 @@ function GateForm() {
   const wasRevoked =
     searchParams.get("revoked") === "1" || reason === "revoked";
   const sessionExpired = reason === "expired";
+  const reduceMotion = useReducedMotion();
 
   const submitInFlight = useRef(false);
   const [pin, setPin] = useState("");
@@ -184,115 +180,148 @@ function GateForm() {
   }, [locked, loading, pin]);
 
   return (
-    <div className="relative z-10 w-full max-w-xs">
-      <div className="mb-10 flex flex-col items-center text-center">
-        <div className="mb-4 flex size-14 items-center justify-center rounded-2xl border border-border/60 bg-card ring-1 ring-foreground/5">
-          {locked ? (
-            <LockKeyholeIcon className="size-6 text-destructive" />
-          ) : (
-            <SparklesIcon className="size-6 text-foreground/80" />
-          )}
-        </div>
-        <h1 className="font-semibold text-2xl tracking-tight">VANDOR</h1>
-        <p className="mt-2 max-w-xs text-[13px] text-muted-foreground leading-relaxed">
-          {locked
-            ? "Akses diblokir karena 3x percobaan gagal."
-            : "Masukkan PIN 4 digit untuk login"}
-        </p>
-      </div>
-
-      {sessionExpired && !locked && (
-        <div className="mb-5 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-center text-[12px] leading-relaxed text-primary">
-          Sesi tidak valid atau cookie login belum terpasang. Masukkan PIN lagi
-          untuk melanjutkan.
-        </div>
-      )}
-
-      {wasRevoked && !locked && !sessionExpired && (
-        <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-center text-[12px] leading-relaxed text-amber-700 dark:text-amber-300">
-          Akun ini hanya aktif di satu perangkat. Anda login di perangkat lain
-          atau sesi diakhiri — perangkat ini keluar otomatis. Masukkan PIN untuk
-          lanjut di sini.
-        </div>
-      )}
-
-      {locked ? (
-        <div className="mb-6 rounded-2xl border border-destructive/40 bg-destructive/5 p-5 text-center">
-          <p className="text-[11px] uppercase tracking-wider text-destructive/80">
-            Perangkat diblokir
-          </p>
-          <p className="mt-2 font-mono text-3xl font-semibold tabular-nums text-destructive">
-            {formatRemaining(remainingMs)}
-          </p>
-          <p className="mt-2 text-[12px] text-muted-foreground">
-            Coba lagi setelah waktu di atas habis.
-          </p>
-        </div>
-      ) : (
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className="relative z-10 w-full max-w-[22rem]"
+      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-3xl border border-border/50 bg-card/40 p-6 backdrop-blur-xl sm:p-8",
+          success && "ring-2 ring-primary/40"
+        )}
+      >
         <div
-          className={`mb-6 flex justify-center gap-4 ${shake ? "animate-[vandor-shake_0.45s_ease]" : ""}`}
-        >
-          {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-            <div
-              className={`size-3.5 rounded-full border transition-all duration-200 ${
-                i < pin.length
-                  ? "scale-110 border-foreground bg-foreground"
-                  : "border-border/80 bg-transparent"
-              }`}
-              key={i}
-            />
-          ))}
-        </div>
-      )}
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
+        />
 
-      {error && !locked && (
-        <p className="mb-3 text-center text-[12px] text-destructive">{error}</p>
-      )}
-
-      {!locked && (
-        <p className="mb-4 text-center text-[11px] text-muted-foreground/80">
-          Sisa percobaan:{" "}
-          <span className="font-medium text-foreground">{attemptsLeft}</span> /{" "}
-          {status?.maxAttempts ?? 3}
-        </p>
-      )}
-
-      <div className="grid grid-cols-3 gap-2.5">
-        {KEYS.map((key) => (
-          <Button
-            className="h-14 rounded-xl border border-border/40 bg-card/60 text-lg font-medium tabular-nums transition-all hover:bg-accent active:scale-[0.96] disabled:opacity-40"
-            disabled={locked || loading || success}
-            key={key}
-            onClick={() => onKey(key)}
-            type="button"
-            variant="ghost"
+        <div className="mb-8 flex flex-col items-center text-center">
+          <motion.div
+            animate={
+              locked
+                ? { rotate: [0, -8, 8, 0] }
+                : success
+                  ? { scale: [1, 1.08, 1] }
+                  : {}
+            }
+            className={cn(
+              "mb-5 flex size-16 items-center justify-center rounded-2xl border backdrop-blur-sm",
+              locked
+                ? "border-destructive/40 bg-destructive/10"
+                : success
+                  ? "border-primary/50 bg-primary/15"
+                  : "border-border/60 bg-background/50"
+            )}
+            transition={{ duration: 0.4 }}
           >
-            {key === "clear" ? "C" : key === "back" ? "←" : key}
-          </Button>
-        ))}
+            {locked ? (
+              <LockKeyholeIcon className="size-7 text-destructive" />
+            ) : success ? (
+              <ShieldCheckIcon className="size-7 text-primary" />
+            ) : (
+              <FingerprintIcon className="size-7 text-primary" />
+            )}
+          </motion.div>
+          <p className="font-display text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Secure Access
+          </p>
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">
+            VANDOR
+          </h1>
+          <p className="mt-2 max-w-[16rem] text-[13px] leading-relaxed text-muted-foreground">
+            {locked
+              ? "Terlalu banyak percobaan gagal. Tunggu hitung mundur di bawah."
+              : loading
+                ? "Memverifikasi…"
+                : success
+                  ? "Akses diberikan — membuka…"
+                  : "Masukkan PIN 4 digit untuk melanjutkan"}
+          </p>
+        </div>
+
+        {sessionExpired && !locked ? (
+          <div className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-center text-[12px] leading-relaxed text-primary">
+            Sesi berakhir — masukkan PIN lagi untuk melanjutkan.
+          </div>
+        ) : null}
+
+        {wasRevoked && !locked && !sessionExpired ? (
+          <div className="mb-5 rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-center text-[12px] leading-relaxed text-amber-800 dark:text-amber-200">
+            Login di perangkat lain terdeteksi. Masukkan PIN untuk lanjut di
+            sini.
+          </div>
+        ) : null}
+
+        {locked ? (
+          <div className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-destructive/80">
+              Perangkat terkunci
+            </p>
+            <p className="mt-2 font-mono text-4xl font-semibold tabular-nums text-destructive">
+              {formatRemaining(remainingMs)}
+            </p>
+          </div>
+        ) : (
+          <GatePinDisplay
+            filled={pin.length}
+            locked={locked}
+            shake={shake}
+            success={success}
+          />
+        )}
+
+        {error && !locked ? (
+          <p className="mb-4 text-center text-[12px] text-destructive">
+            {error}
+          </p>
+        ) : null}
+
+        {!locked ? (
+          <p className="mb-5 text-center text-[11px] text-muted-foreground">
+            Sisa percobaan{" "}
+            <span className="font-semibold text-foreground">{attemptsLeft}</span>
+            <span className="text-muted-foreground/60">
+              {" "}
+              / {status?.maxAttempts ?? 3}
+            </span>
+          </p>
+        ) : null}
+
+        {!locked ? (
+          <GateNumpad disabled={locked || loading || success} onKey={onKey} />
+        ) : null}
+
+        {loading && !success ? (
+          <div className="mt-4 flex justify-center">
+            <motion.span
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              className="size-1.5 rounded-full bg-primary"
+              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+            />
+          </div>
+        ) : null}
       </div>
 
-      <p className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70">
-        <ShieldCheckIcon className="size-3" />
-        Login PIN · satu perangkat aktif · sesi 30 hari
+      <p className="mt-6 flex items-center justify-center gap-2 text-[11px] text-muted-foreground/75">
+        <SparklesIcon className="size-3.5 text-primary/70" />
+        PIN · satu perangkat · sesi 30 hari
       </p>
-    </div>
+    </motion.div>
   );
 }
 
 export default function GatePage() {
   return (
-    <div className="vandor-gate relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-background px-6">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 50% 0%, oklch(0.55 0.12 220 / 0.15), transparent 55%)",
-        }}
-      />
+    <div className="vandor-gate relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-10">
+      <GateScene />
       <Suspense
-        fallback={<div className="text-muted-foreground text-sm">…</div>}
+        fallback={
+          <div className="relative z-10 text-muted-foreground text-sm">
+            Memuat…
+          </div>
+        }
       >
         <GateForm />
       </Suspense>

@@ -4,6 +4,7 @@ import { sqlClient } from "./db";
 import { createLogger } from "./logger";
 import { runTick } from "./loop";
 import { logNotifyChannelHealth } from "./notify-ping";
+import { sendWorkerStartupPing } from "./proactive-outreach";
 import { acquireLease, releaseLease, renewLease } from "./state";
 
 const log = createLogger("worker");
@@ -102,6 +103,9 @@ async function main(): Promise<void> {
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 
   await logNotifyChannelHealth();
+  await sendWorkerStartupPing().catch(() => {
+    /* non-fatal */
+  });
   await tickSafe();
   scheduleNext();
 }

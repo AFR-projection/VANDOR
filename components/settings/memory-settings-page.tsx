@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  ArrowLeftIcon,
-  BrainIcon,
-  CpuIcon,
-  ImageIcon,
-  Loader2Icon,
-  SettingsIcon,
-} from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
@@ -18,6 +12,8 @@ import type { UserSettings } from "@/lib/settings/types";
 import { MemoryBrainHero } from "./memory-brain-hero";
 import { MemoryManager } from "./memory-manager";
 import { SettingSlider, SettingToggle } from "./setting-row";
+import { SettingsShell } from "./settings-shell";
+import type { MemoryTabId } from "./settings-nav-config";
 import { TokenUsagePanel } from "./token-usage-panel";
 
 import { apiBasePath } from "@/lib/app-url";
@@ -40,14 +36,12 @@ async function fetchSettings(): Promise<SettingsPayload> {
   return res.json();
 }
 
-const tabs = [
-  { id: "memory", label: "Memori", icon: BrainIcon },
-  { id: "visual", label: "Visual Memory", icon: ImageIcon },
-  { id: "advanced", label: "Lanjutan", icon: CpuIcon },
-  { id: "manage", label: "Kelola Memori", icon: BrainIcon },
-] as const;
-
-type TabId = (typeof tabs)[number]["id"];
+const validMemoryTabs: MemoryTabId[] = [
+  "memory",
+  "visual",
+  "advanced",
+  "manage",
+];
 
 const categoryLabels: Record<MemoryCategory, string> = {
   fact: "Fakta",
@@ -59,12 +53,24 @@ const categoryLabels: Record<MemoryCategory, string> = {
 };
 
 export function MemorySettingsPage() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
   const { data, mutate, isLoading } = useSWR("user-settings-memory", fetchSettings, {
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
   });
-  const [tab, setTab] = useState<TabId>("memory");
+  const [tab, setTab] = useState<MemoryTabId>(() =>
+    validMemoryTabs.includes(tabParam as MemoryTabId)
+      ? (tabParam as MemoryTabId)
+      : "memory"
+  );
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (tabParam && validMemoryTabs.includes(tabParam as MemoryTabId)) {
+      setTab(tabParam as MemoryTabId);
+    }
+  }, [tabParam]);
 
   const patch = useCallback(
     async (partial: Partial<UserSettings>) => {
@@ -107,64 +113,13 @@ export function MemorySettingsPage() {
   const a = settings.advanced;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <header className="flex shrink-0 items-center gap-3 border-b border-border/40 px-4 py-3 sm:px-6">
-        <Button asChild size="icon-sm" type="button" variant="ghost">
-          <Link href="/">
-            <ArrowLeftIcon className="size-4" />
-            <span className="sr-only">Kembali ke chat</span>
-          </Link>
-        </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-semibold tracking-tight">
-            Pengaturan Memori
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Database ingatan, visual memory, retrieval, dan kelola memori
-          </p>
-        </div>
-        <Button asChild size="sm" type="button" variant="outline">
-          <Link href={`${base()}/settings`}>
-            <SettingsIcon className="size-3.5" />
-            Pengaturan
-          </Link>
-        </Button>
-        {saving && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2Icon className="size-3 animate-spin" />
-            Menyimpan…
-          </span>
-        )}
-      </header>
-
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <nav className="flex shrink-0 gap-1 overflow-x-auto border-b border-border/40 p-2 md:w-52 md:flex-col md:border-b-0 md:border-r md:p-3">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            return (
-              <button
-                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                  tab === t.id
-                    ? "bg-primary/10 font-medium text-primary"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                }`}
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                type="button"
-              >
-                <Icon className="size-4 shrink-0" />
-                {t.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="mx-auto max-w-2xl space-y-4">
-            <MemoryBrainHero
-              memoryEnabled={m.enabled}
-              visualEnabled={v.enabled}
-            />
+    <SettingsShell
+      area="memory"
+      memoryTab={tab}
+      onMemoryTabChange={setTab}
+      saving={saving}
+    >
+      <MemoryBrainHero memoryEnabled={m.enabled} visualEnabled={v.enabled} />
             {tab === "memory" && (
               <>
                 <section className="space-y-3">
@@ -469,9 +424,6 @@ export function MemorySettingsPage() {
                 <MemoryManager />
               </>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+    </SettingsShell>
   );
 }

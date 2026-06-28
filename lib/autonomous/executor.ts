@@ -1,4 +1,4 @@
-import { analyzeCodeScan } from "./coding-agent/analyze";
+import { runCodeAutoFixPipeline } from "./auto-fix";
 import { runCodeScan } from "./coding-agent/scan";
 import { runStatusSnapshot } from "./cli/runner";
 import { recordAgentAction } from "./audit";
@@ -160,44 +160,45 @@ async function runTaskByType(
           message: scan.summary,
           payload: { sessionId: scan.sessionId, steps: scan.steps },
         });
+        if (
+          autonomousConfig.autoFixEnabled &&
+          (task.payload as { autoFix?: boolean })?.autoFix !== false
+        ) {
+          const fix = await runCodeAutoFixPipeline({
+            taskId: task.id,
+            fullBuild: fullBuild,
+          });
+          if (fix.ok) {
+            return { scan, autoFix: fix };
+          }
+        }
         await notify({
           title: "Code scan gagal",
-          body: `${scan.summary}\n\nLihat Terminal di Operator (session ${scan.sessionId.slice(0, 8)}).`,
+          body: `${scan.summary}\n\nAuto-fix sedang dicoba otomatis.\nLihat Terminal di Operator (session ${scan.sessionId.slice(0, 8)}).`,
           level: "error",
         });
       }
       return scan;
     }
-    case "code_fix": {
-      const scan = await runCodeScan({ taskId: task.id, echo: false });
-      const analysis = await analyzeCodeScan(scan);
+    case "code_fix":
+    case "code_fix_auto": {
+      const fullBuild = Boolean(
+        (task.payload as { fullBuild?: boolean })?.fullBuild
+      );
+      const fix = await runCodeAutoFixPipeline({
+        taskId: task.id,
+        fullBuild,
+      });
       await recordAgentAction({
         taskId: task.id,
         tool: "coding-agent",
-        action: "code_fix_analyze",
-        output: analysis,
-        status: analysis.ok ? "ok" : "error",
+        action: task.type,
+        output: fix,
+        status: fix.ok ? "ok" : "error",
         riskLevel: "moderate",
-        reason: analysis.diagnosis.slice(0, 500),
+        reason: fix.diagnosis.slice(0, 500),
       });
-      if (analysis.suggestedCommands.length > 0) {
-        for (const command of analysis.suggestedCommands) {
-          // biome-ignore lint/nursery/noAwaitInLoop: approval per command
-          await createApproval({
-            taskId: task.id,
-            actionType: "code_fix",
-            summary: `Coding fix: ${command.slice(0, 200)}`,
-            payload: { command, sessionId: scan.sessionId },
-            riskLevel: "moderate",
-          });
-        }
-        await notify({
-          title: "Coding agent — perlu approval",
-          body: `${analysis.diagnosis.slice(0, 400)}\n\n${analysis.suggestedCommands.length} perintah menunggu SETUJU.`,
-          level: "warn",
-        });
-      }
-      return analysis;
+      return fix;
     }
     case "vps_status": {
       const snap = await runStatusSnapshot({ taskId: task.id, echo: false });

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { agentRule } from "@/lib/db/schema";
 import { db } from "./db";
+import { autonomousConfig } from "./config";
 import type { RiskLevel } from "./types";
 
 export type Decision = "allow" | "deny" | "require_approval";
@@ -65,6 +66,23 @@ const READONLY: Record<string, RegExp | true> = {
   journalctl: true,
   dmesg: true,
 };
+
+/** Perintah perbaikan otomatis — boleh dijalankan tanpa approval owner. */
+const AUTO_FIX_PATTERNS: RegExp[] = [
+  /^npm run fix\b/i,
+  /^npx ultracite fix\b/i,
+  /^npm run check\b/i,
+  /^npx tsc --noEmit/i,
+  /^npm run build\b/i,
+  /^npm run db:migrate\b/i,
+  /^npm install\b/i,
+  /^pnpm install\b/i,
+  /^journalctl --vacuum-time=\d+[dhm]\b/i,
+  /^pm2 restart (vandor|vandor-agent)\b/i,
+  /^pm2 reload (vandor|vandor-agent)\b/i,
+  /^pm2 restart (vandor|vandor-agent)( --update-env)?\b/i,
+  /^cd [^\s;&|]+ && npm run (fix|check|build)\b/i,
+];
 
 /** Binary mutasi → butuh approval (mode konservatif). */
 const MUTATING: Record<string, RiskLevel> = {
@@ -189,14 +207,44 @@ export async function evaluateCommand(command: string): Promise<RuleVerdict> {
   return applyDbRules(command, base);
 }
 
+/** Apakah perintah masuk whitelist auto-fix (tanpa approval owner). */
+export function canAutoFixCommand(command: string): boolean {
+  const cmd = command.trim();
+  if (!cmd) {
+    return false;
+  }
+  for (const re of HARD_DENY) {
+    if (re.test(cmd)) {
+      return false;
+    }
+  }
+  if (AUTO_FIX_PATTERNS.some((re) => re.test(cmd))) {
+    return true;
+  }
+  const pm2Names = autonomousConfig.pm2Processes
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  if (pm2Names.length > 0) {
+    const pm2Restart = new RegExp(`^pm2 restart (${pm2Names})\\b`, "i");
+    const pm2Reload = new RegExp(`^pm2 reload (${pm2Names})\\b`, "i");
+    if (pm2Restart.test(cmd) || pm2Reload.test(cmd)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Verdict untuk aksi non-shell berdasarkan mode & risiko.
- * Mode konservatif: hanya `safe` yang auto, sisanya butuh approval.
+ * Perintah auto-fix whitelist selalu allow.
  */
 export function evaluateActionByMode(
   risk: RiskLevel,
-  _autonomous: boolean
+  _autonomous: boolean,
+  command?: string
 ): Decision {
-  // Postur konservatif: hanya aksi `safe` yang otomatis; selebihnya approval.
+  if (command && canAutoFixCommand(command)) {
+    return "allow";
+  }
   return risk === "safe" ? "allow" : "require_approval";
 }

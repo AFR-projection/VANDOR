@@ -1,9 +1,12 @@
 import { recordAgentAction } from "../audit";
+import { autonomousConfig } from "../config";
 import { emitEvent } from "../events";
 import { notify, notifyApprovalRequest } from "../notify";
 import { recordOperatorIncident } from "../operator-memory";
 import { createApproval } from "../permission";
+import { canAutoFixCommand } from "../rule-engine";
 import { resolveOwnerUserId } from "../owner";
+import type { AutoFixResult } from "../auto-fix";
 import type { Issue } from "./detectors";
 
 const severityToAgentEvent = {
@@ -12,22 +15,49 @@ const severityToAgentEvent = {
   critical: "critical",
 } as const;
 
+function fixedIssueKeys(autoFix: AutoFixResult | undefined): Set<string> {
+  const keys = new Set<string>();
+  if (!autoFix) {
+    return keys;
+  }
+  for (const d of autoFix.details) {
+    if (d.ok) {
+      keys.add(d.issueKey);
+    }
+  }
+  return keys;
+}
+
 /**
- * Tangani daftar isu. Postur KONSERVATIF:
- * - Isu dengan remediasi → buat permintaan approval (tidak auto-eksekusi).
- * - Isu critical/error → kirim notifikasi WhatsApp ke owner.
- * - Semua isu → catat sebagai event.
+ * Tangani daftar isu setelah auto-fix.
+ * - Isu sudah auto-fixed → skip approval, catat event saja.
+ * - Isu dengan remediasi non-auto-fix → approval (deploy/systemctl dll).
+ * - Isu critical/error → notifikasi WA proaktif ke owner.
  */
-export async function handleIssues(issues: Issue[]): Promise<{
+export async function handleIssues(
+  issues: Issue[],
+  options?: {
+    autonomous?: boolean;
+    autoFix?: AutoFixResult;
+  }
+): Promise<{
   approvalsCreated: number;
   notified: number;
 }> {
   let approvalsCreated = 0;
   let notified = 0;
   const ownerUserId = await resolveOwnerUserId();
+  const alreadyFixed = fixedIssueKeys(options?.autoFix);
+  const autoFixOn =
+    autonomousConfig.autoFixEnabled &&
+    (options?.autonomous || autonomousConfig.autoFixWithoutAutonomousMode);
 
   await Promise.all(
     issues.map(async (issue) => {
+      if (alreadyFixed.has(issue.key)) {
+        return;
+      }
+
       await recordOperatorIncident({
         userId: ownerUserId,
         issue,
@@ -42,16 +72,20 @@ export async function handleIssues(issues: Issue[]): Promise<{
         payload: { key: issue.key, remediation: issue.remediation ?? null },
       });
 
-      if (issue.remediation?.command) {
+      const command = issue.remediation?.command?.trim();
+      const skipApproval =
+        autoFixOn && command && canAutoFixCommand(command);
+
+      if (command && !skipApproval) {
         const { id, deduped } = await createApproval({
           actionType: "remediation",
-          summary: `${issue.title}: ${issue.remediation.description} (\`${issue.remediation.command}\`)`,
+          summary: `${issue.title}: ${issue.remediation?.description} (\`${command}\`)`,
           payload: {
             issueKey: issue.key,
-            command: issue.remediation.command,
-            description: issue.remediation.description,
+            command,
+            description: issue.remediation?.description,
           },
-          riskLevel: issue.remediation.risk,
+          riskLevel: issue.remediation?.risk ?? "moderate",
         });
         if (!deduped) {
           approvalsCreated += 1;
@@ -59,34 +93,35 @@ export async function handleIssues(issues: Issue[]): Promise<{
             userId: ownerUserId,
             issue,
             outcome: "approval_requested",
-            command: issue.remediation.command,
+            command,
           });
           await recordAgentAction({
             tool: "healing",
             action: "create-approval",
             input: { issue: issue.key },
-            output: { command: issue.remediation.command },
+            output: { command },
             status: "pending",
-            riskLevel: issue.remediation.risk,
-            reason: issue.remediation.description,
+            riskLevel: issue.remediation?.risk ?? "moderate",
+            reason: issue.remediation?.description,
           });
           await notifyApprovalRequest({
             id,
-            summary: issue.remediation.description,
-            riskLevel: issue.remediation.risk,
+            summary: issue.remediation?.description ?? issue.title,
+            riskLevel: issue.remediation?.risk ?? "moderate",
           });
         }
       }
 
-      if (issue.severity === "critical" || issue.severity === "error") {
+      if (
+        issue.severity === "warn" &&
+        command &&
+        !skipApproval &&
+        !autoFixOn
+      ) {
         await notify({
           title: issue.title,
-          body: `${issue.detail}${
-            issue.remediation
-              ? `\n\nSaran: ${issue.remediation.description}${issue.remediation.command ? `\nBalas SETUJU/TOLAK di WhatsApp atau approve di dashboard Operator.` : ""}`
-              : "\n\nButuh perhatian manual."
-          }`,
-          level: severityToAgentEvent[issue.severity],
+          body: `${issue.detail}\n\nSaran: ${issue.remediation?.description ?? "—"}`,
+          level: "warn",
         });
         notified += 1;
       }

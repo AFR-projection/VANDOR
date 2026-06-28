@@ -95,6 +95,19 @@ export const autonomousConfig = {
 
   /** Secret webhook alert eksternal (Datadog/Sentry/UptimeRobot). */
   webhookSecret: process.env.VANDOR_AGENT_WEBHOOK_SECRET ?? "",
+
+  /** Auto-fix bug/error tanpa approval (default aktif). */
+  autoFixEnabled: process.env.VANDOR_AGENT_AUTO_FIX !== "false",
+  /** Auto-fix juga jalan walau mode manual. */
+  autoFixWithoutAutonomousMode:
+    process.env.VANDOR_AGENT_AUTO_FIX_ALWAYS === "true",
+
+  /** Interval check-in proaktif ke owner via WA (ms). Default 4 jam. */
+  proactiveCheckInMs: envInt("VANDOR_AGENT_CHECKIN_MS", 4 * 60 * 60_000),
+  /** Cooldown alert isu baru ke WA (ms). Default 15 menit. */
+  proactiveAlertMs: envInt("VANDOR_AGENT_ALERT_MS", 15 * 60_000),
+  /** Pakai LLM untuk pesan check-in natural. */
+  proactiveUseLlm: process.env.VANDOR_AGENT_PROACTIVE_LLM !== "false",
 } as const;
 
 export type AutonomousConfig = typeof autonomousConfig;

@@ -13,6 +13,7 @@ import { listPendingApprovals } from "./permission";
 import { listRules } from "./rules";
 import { listSchedules } from "./schedules-manage";
 import { getAgentState, setKillSwitch, setMode } from "./state";
+import { getLatestHeartbeat } from "./heartbeat";
 import { listTerminalLogs } from "./terminal-log";
 import { listRecentTasks } from "./tasks";
 
@@ -29,6 +30,7 @@ export async function getOverview() {
     rules,
     schedules,
     terminal,
+    heartbeat,
   ] = await Promise.all([
     getAgentState(),
     db
@@ -49,6 +51,7 @@ export async function getOverview() {
     listRules(),
     listSchedules(),
     listTerminalLogs({ limit: 120 }),
+    getLatestHeartbeat(),
   ]);
 
   const series = [...metricsRows].reverse();
@@ -62,6 +65,7 @@ export async function getOverview() {
 
   return {
     state,
+    heartbeat,
     metrics: { latest, series },
     tasks,
     actions,
