@@ -526,7 +526,7 @@ export function ApiIntegrationsPanel({
               onPatchIntegrations({ whatsappModel: int.whatsappModel })
             }
             onChange={(v) => onIntegrationsFieldChange({ whatsappModel: v })}
-            placeholder="meta-llama/llama-3.3-70b-instruct:free"
+            placeholder="Kosong = tier chat (Seimbang: x-ai/grok-4.3)"
             value={int.whatsappModel}
           />
         </section>

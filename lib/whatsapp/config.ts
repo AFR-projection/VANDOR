@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 
 import { getIntegrationRuntimeConfig } from "@/lib/settings/integration-runtime";
 import { getUserSettings } from "@/lib/settings/queries";
+import { resolveIntegrationModels } from "@/lib/ai/integration-models";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
 import {
   isLikelyDialablePhone,
@@ -98,7 +99,7 @@ export async function getBridgeSecret(): Promise<string | null> {
   return secret && secret.length >= 8 ? secret : null;
 }
 
-/** Concrete model used for WhatsApp turns (overridable, defaults to free tools-capable). */
+/** Model WhatsApp — UI override → tier chat → env → Grok (Seimbang default). */
 export async function getWhatsappModelId(): Promise<string> {
   const owner = await resolveDeploymentOwnerUser();
   if (owner) {
@@ -107,11 +108,17 @@ export async function getWhatsappModelId(): Promise<string> {
     if (fromUi) {
       return fromUi;
     }
+    const tierModels = resolveIntegrationModels(settings.integrations);
+    const fromTier = tierModels.chatModel?.trim();
+    if (fromTier && !fromTier.endsWith(":free") && fromTier !== "openrouter/free") {
+      return fromTier;
+    }
   }
-  return (
-    process.env.WHATSAPP_MODEL?.trim() ||
-    "meta-llama/llama-3.3-70b-instruct:free"
-  );
+  const fromEnv = process.env.WHATSAPP_MODEL?.trim();
+  if (fromEnv && !fromEnv.endsWith(":free")) {
+    return fromEnv;
+  }
+  return "x-ai/grok-4.3";
 }
 
 /**

@@ -277,6 +277,17 @@ export async function runWhatsappAgentTurn({
         : undefined
     );
     modelId = attemptModelIds[0] ?? modelId;
+  } else if (openRouterCtx) {
+    extraFallbacks = [
+      openRouterCtx.models.chatModel,
+      openRouterCtx.models.reasoningModel,
+    ].filter(
+      (id, index, arr) =>
+        id &&
+        !id.endsWith(":free") &&
+        id !== modelId &&
+        arr.indexOf(id) === index
+    );
   }
 
   const extractedFiles = buildExtractedFiles(processedMedia);
