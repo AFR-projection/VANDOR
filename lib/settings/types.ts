@@ -32,10 +32,10 @@ export const integrationsSettingsSchema = z.object({
   /** OpenRouter embedding model for memory */
   memoryEmbeddingModel: z.string().max(128),
 
-  /** Comma-separated owner numbers (digits / +62…) */
+  /** Comma-separated owner numbers (digits, any country code) */
   whatsappOwnerNumbers: z.string().max(512),
 
-  /** Nomor owner utama — alert Operator & approve via WA (628…). */
+  /** Nomor owner utama — alert Operator & approve via WA (international E.164 digits). */
   whatsappPrimaryOwner: z.string().max(32),
 
   whatsappModel: z.string().max(128),

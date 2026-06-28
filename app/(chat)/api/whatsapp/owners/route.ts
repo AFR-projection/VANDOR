@@ -3,7 +3,11 @@ import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
-import { getActiveOwners, revokeWhatsappOwner } from "@/lib/whatsapp/queries";
+import {
+  cleanupOrphanLidOwners,
+  getActiveOwnersForDisplay,
+  revokeWhatsappOwner,
+} from "@/lib/whatsapp/queries";
 
 export const maxDuration = 15;
 
@@ -26,7 +30,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const owners = await getActiveOwners(ownerUser.id);
+  await cleanupOrphanLidOwners(ownerUser.id);
+  const owners = await getActiveOwnersForDisplay(ownerUser.id);
   return NextResponse.json({ owners });
 }
 

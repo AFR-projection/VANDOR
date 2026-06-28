@@ -17,8 +17,10 @@ import {
 import {
   addWhatsappOwner,
   getActiveOwnerPhones,
+  revokeWhatsappOwner,
   validateAndConsumeCode,
 } from "./queries";
+import { sendTextToPhone } from "./jid";
 import { runWhatsappAgentTurn } from "./run-agent-turn";
 import { formatWaAgentError } from "./format-agent-error";
 import { deliverWhatsappMediaDownload } from "./media-delivery";
@@ -155,9 +157,7 @@ export async function sendSystemWhatsappNotification(
 
   const sock = m.sock;
   const results = await Promise.allSettled(
-    targets.map((phone) =>
-      sock.sendMessage(`${phone}@s.whatsapp.net`, { text })
-    )
+    targets.map((phone) => sendTextToPhone(sock, phone, text))
   );
   const sentTo = results.filter((r) => r.status === "fulfilled").length;
   return {
@@ -200,9 +200,7 @@ export async function sendWhatsappToOwner(
 
   const sock = m.sock;
   const results = await Promise.allSettled(
-    list.map((phone) =>
-      sock.sendMessage(`${phone}@s.whatsapp.net`, { text })
-    )
+    list.map((phone) => sendTextToPhone(sock, phone, text))
   );
   const sentTo = results.filter((r) => r.status === "fulfilled").length;
   return {
@@ -276,8 +274,16 @@ async function registerOwnerKeys(
   userId: string,
   identity: SenderIdentity
 ): Promise<void> {
-  for (const key of senderOwnerKeys(identity)) {
-    await addWhatsappOwner(userId, key);
+  if (identity.phone) {
+    const label = identity.lid ? `lid:${identity.lid}` : undefined;
+    await addWhatsappOwner(userId, identity.phone, label);
+    if (identity.lid) {
+      await revokeWhatsappOwner(userId, identity.lid).catch(() => {
+        /* LID row mungkin belum ada */
+      });
+    }
+  } else if (identity.lid) {
+    await addWhatsappOwner(userId, identity.lid, "whatsapp-lid-only");
   }
 }
 

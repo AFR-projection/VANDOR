@@ -5,6 +5,7 @@ import {
   decideApproval,
   findPendingApprovalByShortId,
   listPendingApprovals,
+  resumeApprovedTask,
 } from "@/lib/autonomous/permission";
 import {
   getPrimaryWhatsappOwner,
@@ -29,9 +30,11 @@ async function canUseOperatorCommands(
 ): Promise<boolean> {
   const primary = await getPrimaryWhatsappOwner();
   if (primary) {
-    return isPrimaryWhatsappSender(identity.phone);
+    return isPrimaryWhatsappSender({
+      phone: identity.phone,
+      lid: identity.lid,
+    });
   }
-  // Tanpa primary: semua owner terverifikasi boleh (caller sudah cek isOwner).
   return true;
 }
 
@@ -134,6 +137,10 @@ async function resolveDecision(
       handled: true,
       reply: "❌ Persetujuan tidak ditemukan atau sudah diproses.",
     };
+  }
+
+  if (decision === "approved") {
+    await resumeApprovedTask(approval.id);
   }
 
   const emoji = decision === "approved" ? "✅" : "❌";

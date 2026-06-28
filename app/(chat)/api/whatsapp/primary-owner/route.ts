@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
-import { normalizeWhatsappNumber } from "@/lib/whatsapp/config";
+import { normalizeWhatsappNumber, validateGlobalPhoneInput } from "@/lib/whatsapp/phone";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
 
 export const maxDuration = 15;
@@ -68,13 +68,11 @@ export async function PATCH(request: Request) {
   }
 
   const settings = await getUserSettings(ownerUser.id);
-  const normalized = normalizeWhatsappNumber(body.phone);
-  if (body.phone.trim() && normalized.length < 8) {
-    return NextResponse.json(
-      { error: "Nomor tidak valid. Contoh: 6281234567890" },
-      { status: 400 }
-    );
+  const validated = validateGlobalPhoneInput(body.phone);
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: 400 });
   }
+  const normalized = validated.normalized;
 
   await updateUserSettings(ownerUser.id, {
     integrations: {

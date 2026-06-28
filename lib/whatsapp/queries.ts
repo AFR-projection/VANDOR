@@ -8,6 +8,11 @@ import {
   whatsappVerifCode,
   whatsappVerifLog,
 } from "@/lib/db/schema";
+import {
+  isLikelyDialablePhone,
+  isWhatsappLidDigits,
+  normalizeWhatsappNumber,
+} from "@/lib/whatsapp/phone";
 
 const client = postgres(process.env.POSTGRES_URL ?? "");
 const db = drizzle(client);
@@ -121,11 +126,12 @@ export async function addWhatsappOwner(
   phone: string,
   label?: string
 ) {
+  const normalized = normalizeWhatsappNumber(phone);
   await db
     .insert(whatsappOwner)
     .values({
       userId,
-      phone,
+      phone: normalized,
       label: label ?? null,
       verifiedAt: new Date(),
       revokedAt: null,
@@ -137,7 +143,7 @@ export async function addWhatsappOwner(
 
   await writeLog({
     userId,
-    phone,
+    phone: normalized,
     event: "owner_added",
     meta: { label: label ?? null },
   });
@@ -164,10 +170,48 @@ export async function getActiveOwners(userId: string) {
     .orderBy(desc(whatsappOwner.verifiedAt));
 }
 
-/** Returns all active owner phone numbers for this userId (for checking incoming messages). */
+/** Owner untuk UI — sembunyikan baris LID (@lid privacy ID, bukan nomor telepon). */
+export async function getActiveOwnersForDisplay(userId: string) {
+  const rows = await getActiveOwners(userId);
+  return rows.filter(
+    (r) =>
+      r.label !== "whatsapp-lid-only" && !isWhatsappLidDigits(r.phone)
+  );
+}
+
+/** Cabut baris LID orphan (bukan nomor telepon yang bisa dihubungi). */
+export async function cleanupOrphanLidOwners(userId: string): Promise<number> {
+  const rows = await getActiveOwners(userId);
+  const dialable = rows.filter((r) => isLikelyDialablePhone(r.phone));
+  let revoked = 0;
+  for (const row of rows) {
+    const isLidRow =
+      row.label === "whatsapp-lid-only" || isWhatsappLidDigits(row.phone);
+    if (isLidRow && dialable.length > 0) {
+      await revokeWhatsappOwner(userId, row.phone);
+      revoked += 1;
+    }
+  }
+  return revoked;
+}
+
+/** Returns all identifiers for matching incoming messages (phone + linked LID). */
 export async function getActiveOwnerPhones(userId: string): Promise<string[]> {
   const rows = await getActiveOwners(userId);
-  return rows.map((r) => r.phone);
+  const keys = new Set<string>();
+  for (const r of rows) {
+    if (r.label !== "whatsapp-lid-only" && isLikelyDialablePhone(r.phone)) {
+      keys.add(r.phone);
+    }
+    const lidMatch = r.label?.match(/^lid:(\d+)$/);
+    if (lidMatch?.[1]) {
+      keys.add(lidMatch[1]);
+    }
+    if (r.label === "whatsapp-lid-only") {
+      keys.add(r.phone);
+    }
+  }
+  return [...keys];
 }
 
 // ─── Log helpers ─────────────────────────────────────────────────────────────

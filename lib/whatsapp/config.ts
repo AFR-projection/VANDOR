@@ -5,19 +5,12 @@ import { createHash } from "node:crypto";
 import { getIntegrationRuntimeConfig } from "@/lib/settings/integration-runtime";
 import { getUserSettings } from "@/lib/settings/queries";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
+import {
+  isLikelyDialablePhone,
+  normalizeWhatsappNumber,
+} from "@/lib/whatsapp/phone";
 
-/**
- * WhatsApp bridge configuration helpers.
- *
- * The bridge (Baileys) runs on an always-on host and forwards owner messages to
- * VANDOR. We only ever act on whitelisted owner numbers and require a shared
- * bearer secret so the public ingest endpoint can't be abused.
- */
-
-/** Strip everything except digits — "+62 812-3456 7890" -> "6281234567890". */
-export function normalizeWhatsappNumber(input: string): string {
-  return (input || "").replace(/\D/g, "");
-}
+export { normalizeWhatsappNumber } from "@/lib/whatsapp/phone";
 
 async function ownerNumbersRaw(): Promise<string> {
   const owner = await resolveDeploymentOwnerUser();
@@ -49,20 +42,31 @@ export async function getPrimaryWhatsappOwner(): Promise<string | null> {
   return fromEnv.length >= 6 ? fromEnv : null;
 }
 
-/** True jika pengirim adalah owner utama (untuk perintah approve via WA). */
-export async function isPrimaryWhatsappSender(
-  phone: string | null
-): Promise<boolean> {
+/** True jika pengirim adalah owner utama (nomor atau LID terkait). */
+export async function isPrimaryWhatsappSender(input: {
+  phone?: string | null;
+  lid?: string | null;
+}): Promise<boolean> {
   const primary = await getPrimaryWhatsappOwner();
-  if (!primary || !phone) {
+  if (!primary) {
     return false;
   }
-  const normalized = normalizeWhatsappNumber(phone);
-  return (
-    normalized === primary ||
-    normalized.endsWith(primary) ||
-    primary.endsWith(normalized)
-  );
+  const keys = new Set<string>();
+  if (input.phone) {
+    keys.add(normalizeWhatsappNumber(input.phone));
+  }
+  if (input.lid) {
+    keys.add(normalizeWhatsappNumber(input.lid));
+  }
+  for (const k of keys) {
+    if (!k) {
+      continue;
+    }
+    if (k === primary || k.endsWith(primary) || primary.endsWith(k)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Allowed owner numbers (comma separated), normalized to digits. */
@@ -71,7 +75,7 @@ export async function getOwnerWhatsappNumbers(): Promise<string[]> {
   return raw
     .split(",")
     .map((n) => normalizeWhatsappNumber(n))
-    .filter((n) => n.length >= 6);
+    .filter((n) => isLikelyDialablePhone(n));
 }
 
 export async function isOwnerWhatsappNumber(input: string): Promise<boolean> {

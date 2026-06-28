@@ -306,11 +306,13 @@ function PrimaryOwnerCard({
   primaryOwner,
   owners,
   onSave,
+  onTestAlert,
   busy,
 }: {
   primaryOwner: string;
   owners: Owner[];
   onSave: (phone: string) => void;
+  onTestAlert: () => void;
   busy: boolean;
 }) {
   const [draft, setDraft] = useState(primaryOwner);
@@ -336,16 +338,16 @@ function PrimaryOwnerCard({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1">
           <label className="text-xs font-medium" htmlFor="wa-primary-owner">
-            Nomor WhatsApp (628…)
+            Nomor WhatsApp (kode negara + nomor)
           </label>
           <Input
             className="font-mono text-sm"
             id="wa-primary-owner"
-            inputMode="numeric"
+            inputMode="tel"
             onChange={(e) =>
               setDraft(e.target.value.replace(/[^\d+]/g, ""))
             }
-            placeholder="6281234567890"
+            placeholder="85568541476 atau 6281234567890"
             value={draft}
           />
         </div>
@@ -360,6 +362,18 @@ function PrimaryOwnerCard({
           ) : null}
           Simpan
         </Button>
+        {primaryOwner ? (
+          <Button
+            disabled={busy}
+            onClick={() => onTestAlert()}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <BellIcon className="size-3.5" />
+            Test alert
+          </Button>
+        ) : null}
       </div>
 
       {owners.length > 0 ? (
@@ -432,6 +446,11 @@ function OwnersCard({
           <p>Generate kode di atas lalu kirim dari HP yang ingin didaftarkan.</p>
         </div>
       ) : (
+        <>
+          <p className="text-[10px] text-muted-foreground">
+            Satu verifikasi = satu nomor. ID internal WhatsApp (@lid) tidak
+            ditampilkan sebagai owner terpisah.
+          </p>
         <ul className="space-y-2">
           {owners.map((o) => (
             <li
@@ -459,6 +478,7 @@ function OwnersCard({
             </li>
           ))}
         </ul>
+        </>
       )}
     </section>
   );
@@ -675,6 +695,32 @@ export function WhatsappPanel() {
     []
   );
 
+  const testAlert = useCallback(async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`${base()}/api/whatsapp/test-alert`, {
+        method: "POST",
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string; target?: string };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? "Gagal kirim test alert");
+      }
+      toast({
+        type: "success",
+        description: json.target
+          ? `Test alert dikirim ke +${json.target}`
+          : "Test alert terkirim",
+      });
+    } catch (e) {
+      toast({
+        type: "error",
+        description: e instanceof Error ? e.message : "Gagal test alert",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
   const status = waState?.status ?? "idle";
   const connected = status === "connected";
   const showQr = status === "qr" && waState?.qr;
@@ -815,6 +861,7 @@ export function WhatsappPanel() {
       <PrimaryOwnerCard
         busy={busy}
         onSave={savePrimary}
+        onTestAlert={testAlert}
         owners={owners}
         primaryOwner={primaryOwner}
       />
