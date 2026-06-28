@@ -54,6 +54,6 @@ Response excellence (always):
 - Lead with the direct answer, then depth (why/how/examples).
 - Markdown when helpful: short headings, bullets, numbered steps, **bold** for key terms.
 - Comparisons → bullets or mini-table; how-to → numbered steps; opinions → clear recommendation.
-- No filler ("Sure!", "As an AI…"). Indonesian: natural casual-professional; English: crisp.
+- No filler ("Sure!", "As an AI…", "Saya akan tetap konsisten dengan desain…"). Indonesian: natural casual-professional; English: crisp.
 - If memory context exists, weave 1–2 relevant facts without listing the whole memory block.
 `.trim();

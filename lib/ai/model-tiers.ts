@@ -69,12 +69,12 @@ export const MODEL_TIER_PRESETS: Record<ModelTierId, TierPreset> = {
   },
   seimbang: {
     ...FREE_CHAIN,
-    chatModel: "google/gemini-2.5-flash",
-    reasoningModel: "google/gemini-2.5-flash",
+    chatModel: "x-ai/grok-4.3",
+    reasoningModel: "x-ai/grok-4.3",
     codingModel: "anthropic/claude-haiku-4.5",
-    researchModel: "google/gemini-2.5-flash",
-    visionModel: "google/gemini-2.5-flash",
-    longContextModel: "google/gemini-2.5-flash",
+    researchModel: "x-ai/grok-4.3",
+    visionModel: "x-ai/grok-4.3",
+    longContextModel: "x-ai/grok-4.3",
     imageModel: "google/gemini-2.5-flash-image",
     videoModel: "",
     voiceModel: "",
@@ -82,7 +82,7 @@ export const MODEL_TIER_PRESETS: Record<ModelTierId, TierPreset> = {
     documentModel: "anthropic/claude-haiku-4.5",
     embeddingModel: EMBEDDING,
     rerankModel: "",
-    titleModel: "google/gemini-2.0-flash-001",
+    titleModel: "x-ai/grok-4.3",
   },
   premium: {
     ...FREE_CHAIN,
@@ -126,8 +126,8 @@ export const MODEL_TIER_OPTIONS = [
     label: "Seimbang",
     shortLabel: "Seimbang",
     description:
-      "Default harian — Gemini Flash + Haiku untuk kode. Orchestrator aktif.",
-    provider: "google",
+      "Default harian — Grok 4.3 (xAI) chat & riset, Haiku untuk kode. Orchestrator aktif.",
+    provider: "x-ai",
     requiresCredits: true,
   },
   {
@@ -263,6 +263,10 @@ export function inferTierFromLegacySlots(
     chat.includes("o3-mini")
   ) {
     return "premium";
+  }
+
+  if (chat.includes("grok")) {
+    return "seimbang";
   }
 
   if (

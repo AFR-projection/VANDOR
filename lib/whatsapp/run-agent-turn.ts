@@ -6,6 +6,7 @@ import { getCapabilities } from "@/lib/ai/models";
 import { buildGratisRotationChain } from "@/lib/ai/free-models";
 import { getOpenRouterContextForUser } from "@/lib/ai/integration-models";
 import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
+import { buildOwnerConversationFreedomBlock } from "@/lib/ai/system-security-fence";
 import {
   formatOpenRouterUserError,
   openRouterErrorMessage,
@@ -358,6 +359,10 @@ export async function runWhatsappAgentTurn({
     ownerEmail: deploymentOwner?.email,
     whatsappOwner: true,
   });
+  const ownerFreedomBlock = buildOwnerConversationFreedomBlock({
+    isDeploymentOwner: deploymentOwner?.id === userId,
+    whatsappOwner: true,
+  });
 
   const system = systemPrompt({
     requestHints: {
@@ -372,6 +377,7 @@ export async function runWhatsappAgentTurn({
     responseMode: "enhanced",
     activeTools: activeTools ? [...activeTools] : undefined,
     ownerAuthorityBlock,
+    ownerFreedomBlock,
   });
 
   const assistantTools = makeAssistantTools(userId, chatId);

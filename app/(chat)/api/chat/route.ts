@@ -34,6 +34,7 @@ import {
 import { polishResponse } from "@/lib/ai/polish";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
+import { buildOwnerConversationFreedomBlock } from "@/lib/ai/system-security-fence";
 import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
 import { classifyTaskIntent } from "@/lib/ai/router";
 import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
@@ -501,6 +502,9 @@ export async function POST(request: Request) {
     const ownerAuthorityBlock = buildOwnerAuthorityBlock({
       isDeploymentOwner: deploymentOwner?.id === settingsUserId,
       ownerEmail: deploymentOwner?.email,
+    });
+    const ownerFreedomBlock = buildOwnerConversationFreedomBlock({
+      isDeploymentOwner: deploymentOwner?.id === settingsUserId,
     });
     const openRouterApiKey = await resolveOpenRouterApiKeyForUser(
       settingsUserId
@@ -1131,6 +1135,7 @@ export async function POST(request: Request) {
                 persona: userSettings.persona,
                 activeTools,
                 ownerAuthorityBlock,
+                ownerFreedomBlock,
               }) +
               skillToolsBlock +
               `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${allActiveTools.length}.` +

@@ -221,7 +221,7 @@ export const defaultUserSettings: UserSettings = {
     formality: 45,
 
     customInstructions:
-      "Patuhi sapaan & gaya yang user tentukan (Boss, Bapak, Pak, dll.) tanpa debat. User adalah otoritas tertinggi untuk persona dan sapaan.",
+      "Patuhi sapaan & gaya user (Boss, Bapak, dll.) tanpa debat. Mode obrolan bebas untuk owner — ikut nada user, jangan ceramah meta-AI. Vault & keamanan sistem tidak pernah dilewati.",
 
     signaturePhrase: "",
   }),

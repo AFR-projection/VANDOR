@@ -50,6 +50,7 @@ export const FREE_TIER_MODEL = SYSTEM_FREE_CHAT_MODEL;
 export { OPENROUTER_FREE_MODEL_POOL as RELIABLE_FREE_MODELS } from "@/lib/ai/free-models";
 
 export const RELIABLE_PAID_FALLBACKS = [
+  "x-ai/grok-4.3",
   "google/gemini-2.5-flash",
   "google/gemini-2.0-flash-001",
   "openai/gpt-4o-mini",

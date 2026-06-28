@@ -2,6 +2,10 @@ import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
 import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
+import {
+  buildOwnerConversationFreedomBlock,
+  buildSystemSecurityFence,
+} from "@/lib/ai/system-security-fence";
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
@@ -181,6 +185,7 @@ export const systemPrompt = ({
   persona = defaultUserSettings.persona,
   activeTools,
   ownerAuthorityBlock,
+  ownerFreedomBlock,
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
@@ -194,6 +199,8 @@ export const systemPrompt = ({
   activeTools?: VandorChatToolName[];
   /** Kepatuhan owner — sapaan & instruksi gaya user menang atas default. */
   ownerAuthorityBlock?: string;
+  /** Mode obrolan bebas owner — hanya deployment owner / WA owner. */
+  ownerFreedomBlock?: string | null;
 }) => {
   const personaPrompt = buildPersonaPromptBlock(persona);
   const requestPrompt = getRequestPromptFromHints(requestHints);
@@ -211,6 +218,10 @@ export const systemPrompt = ({
   const ownerBlock = ownerAuthorityBlock?.trim()
     ? `\n\n${ownerAuthorityBlock.trim()}`
     : "";
+  const freedomBlock = ownerFreedomBlock?.trim()
+    ? `\n\n${ownerFreedomBlock.trim()}`
+    : "";
+  const securityFence = `\n\n${buildSystemSecurityFence()}`;
   const toolsBlock = supportsTools
     ? activeTools && activeTools.length > 0
       ? `\n\n${buildActiveToolsPrompt(activeTools)}${
@@ -223,7 +234,7 @@ export const systemPrompt = ({
       : `\n\n${vandorToolsPrompt}\n\n${artifactsPrompt}`
     : "";
 
-  return `${personaPrompt}\n\n${generalAnswerQualityInstructions}${ownerBlock}\n\n${requestPrompt}${memoryBlock}${filesBlock}${webBlock}${modeBlock}${toolsBlock}`;
+  return `${personaPrompt}\n\n${generalAnswerQualityInstructions}${ownerBlock}${freedomBlock}\n\n${requestPrompt}${memoryBlock}${filesBlock}${webBlock}${modeBlock}${toolsBlock}${securityFence}`;
 };
 
 export const codePrompt = `
