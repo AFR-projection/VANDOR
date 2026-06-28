@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { agentSchedule } from "@/lib/db/schema";
+import { isCronDue } from "./cron";
 import { db } from "./db";
 import { enqueueTask } from "./tasks";
 
@@ -42,6 +43,9 @@ function isDue(
   expression: string,
   lastRunAt: Date | null
 ): boolean {
+  if (kind === "cron") {
+    return isCronDue(expression, lastRunAt);
+  }
   if (kind !== "interval") {
     return false;
   }

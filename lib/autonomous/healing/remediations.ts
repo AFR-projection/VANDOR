@@ -1,7 +1,9 @@
 import { recordAgentAction } from "../audit";
 import { emitEvent } from "../events";
 import { notify, notifyApprovalRequest } from "../notify";
+import { recordOperatorIncident } from "../operator-memory";
 import { createApproval } from "../permission";
+import { resolveOwnerUserId } from "../owner";
 import type { Issue } from "./detectors";
 
 const severityToAgentEvent = {
@@ -22,9 +24,16 @@ export async function handleIssues(issues: Issue[]): Promise<{
 }> {
   let approvalsCreated = 0;
   let notified = 0;
+  const ownerUserId = await resolveOwnerUserId();
 
   await Promise.all(
     issues.map(async (issue) => {
+      await recordOperatorIncident({
+        userId: ownerUserId,
+        issue,
+        outcome: "detected",
+      });
+
       await emitEvent({
         type: "issue",
         severity: severityToAgentEvent[issue.severity],
@@ -46,6 +55,12 @@ export async function handleIssues(issues: Issue[]): Promise<{
         });
         if (!deduped) {
           approvalsCreated += 1;
+          await recordOperatorIncident({
+            userId: ownerUserId,
+            issue,
+            outcome: "approval_requested",
+            command: issue.remediation.command,
+          });
           await recordAgentAction({
             tool: "healing",
             action: "create-approval",

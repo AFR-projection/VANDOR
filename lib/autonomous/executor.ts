@@ -1,25 +1,81 @@
 import { recordAgentAction } from "./audit";
 import { autonomousConfig } from "./config";
+import {
+  buildDeployApprovalSummary,
+  buildDeployCommands,
+  buildRollbackCommand,
+} from "./deploy";
 import { emitEvent } from "./events";
 import { scanLogs } from "./logs";
 import { collectMetrics } from "./metrics";
 import { notify } from "./notify";
 import {
+  createApproval,
   listApprovedPendingExecution,
   markApprovalConsumed,
 } from "./permission";
+import { runRemoteHealthChecks } from "./remote-hosts";
 import { collectServiceHealth } from "./services";
 import {
   claimReadyTasks,
   completeTask,
   failTask,
   markTaskRunning,
+  setTaskAwaitingApproval,
 } from "./tasks";
 import { execApprovedCommand } from "./tools/shell";
 import { runTool } from "./tools";
 import type { AgentTask } from "@/lib/db/schema";
 import type { ToolContext } from "./types";
 import { checkUrls } from "./uptime";
+
+async function runDeploySteps(_ctx: ToolContext): Promise<DeployStepResult> {
+  const commands = buildDeployCommands();
+  const steps: DeployStepResult["steps"] = [];
+  let previousCommit = "";
+
+  for (const command of commands) {
+    // biome-ignore lint/nursery/noAwaitInLoop: deploy berurutan
+    const result = await execApprovedCommand(command);
+    if (command.includes("git rev-parse") && result.ok && result.data) {
+      previousCommit = String(result.data).trim().slice(0, 40);
+    }
+    steps.push({
+      command,
+      ok: result.ok,
+      output: result.data ? String(result.data).slice(0, 500) : undefined,
+      error: result.error,
+    });
+    if (!result.ok) {
+      return {
+        ok: false,
+        steps,
+        rollbackHint: previousCommit
+          ? buildRollbackCommand(previousCommit)
+          : undefined,
+      };
+    }
+  }
+
+  await notify({
+    title: "Deploy selesai",
+    body: `VANDOR berhasil di-deploy dari ${autonomousConfig.deployPath}`,
+    level: "info",
+  });
+
+  return { ok: true, steps };
+}
+
+type DeployStepResult = {
+  ok: boolean;
+  steps: Array<{
+    command: string;
+    ok: boolean;
+    output?: string;
+    error?: string;
+  }>;
+  rollbackHint?: string;
+};
 
 async function runTaskByType(
   task: AgentTask,
@@ -70,6 +126,35 @@ async function runTaskByType(
     }
     case "monitor":
       return runTool("monitor.metrics", {}, ctx);
+    case "remote_health": {
+      const down = await runRemoteHealthChecks();
+      return { hostsChecked: true, down };
+    }
+    case "deploy": {
+      const payload = task.payload as { approved?: boolean } | null;
+      if (!payload?.approved) {
+        const { id, deduped } = await createApproval({
+          taskId: task.id,
+          actionType: "deploy",
+          summary: buildDeployApprovalSummary(),
+          payload: {
+            taskId: task.id,
+            commands: buildDeployCommands(),
+          },
+          riskLevel: "dangerous",
+        });
+        if (!deduped) {
+          await notify({
+            title: "Deploy menunggu approval",
+            body: `${buildDeployApprovalSummary()}\n\nSetujui di Operator atau balas SETUJU di WhatsApp.`,
+            level: "warn",
+          });
+        }
+        await setTaskAwaitingApproval(task.id);
+        return { awaitingApproval: true, approvalId: id };
+      }
+      return runDeploySteps(ctx);
+    }
     default:
       throw new Error(`Tipe task tidak dikenal: ${task.type}`);
   }

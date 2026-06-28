@@ -69,6 +69,7 @@ export type DirectCommand =
   | { kind: "task_list" }
   | { kind: "task_create"; title: string }
   | { kind: "memory_save"; content: string }
+  | { kind: "agent_status" }
   | { kind: "cari"; query: string }
   | { kind: "ringkas"; chatId: string }
   | { kind: "vault_enter" }
@@ -300,6 +301,13 @@ export function parseDirectCommand(
   }
 
   if (
+    /^\/?(?:agent|status|operator)\s*$/i.test(trimmed) ||
+    /status\s+(?:agent|operator|server|vps)/i.test(trimmed)
+  ) {
+    return { kind: "agent_status" };
+  }
+
+  if (
     /^\/?todo\s*$/i.test(trimmed) ||
     /daftar\s+(?:task|tugas|todo)/i.test(trimmed)
   ) {
@@ -454,6 +462,12 @@ export async function executeDirectCommand(
         text: `**${r.day}** — ${r.formatted} (${r.timezone})`,
         instantLabel: "Waktu",
       };
+    }
+
+    case "agent_status": {
+      const { formatAgentStatus } = await import("@/lib/autonomous/status");
+      const text = await formatAgentStatus();
+      return { text, instantLabel: "Operator" };
     }
 
     case "task_list": {

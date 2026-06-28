@@ -67,7 +67,7 @@ export const autonomousConfig = {
     "redis-server",
   ]),
   /** Proses PM2 yang dipantau (selalu sertakan worker & app). */
-  pm2Processes: envList("VANDOR_AGENT_PM2", ["vandor"]),
+  pm2Processes: envList("VANDOR_AGENT_PM2", ["vandor", "vandor-agent"]),
   /** Container Docker yang dipantau (kosong = semua). */
   dockerContainers: envList("VANDOR_AGENT_DOCKER", []),
   /** Target uptime HTTP yang dicek. */
@@ -82,6 +82,13 @@ export const autonomousConfig = {
 
   /** Berapa banyak tick antar snapshot metrik tersimpan (hemat baris). */
   metricEveryTicks: envInt("VANDOR_AGENT_METRIC_EVERY", 2),
+
+  /** Path deploy produksi (git pull + build + pm2). */
+  deployPath: process.env.VANDOR_DEPLOY_PATH ?? "/var/www/vandor",
+  deployBranch: process.env.VANDOR_DEPLOY_BRANCH ?? "main",
+
+  /** Secret webhook alert eksternal (Datadog/Sentry/UptimeRobot). */
+  webhookSecret: process.env.VANDOR_AGENT_WEBHOOK_SECRET ?? "",
 } as const;
 
 export type AutonomousConfig = typeof autonomousConfig;

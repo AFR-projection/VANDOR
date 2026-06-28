@@ -1,5 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
-import { decideApproval } from "@/lib/autonomous/permission";
+import { decideApproval, resumeApprovedTask } from "@/lib/autonomous/permission";
 import { requireClientAccess } from "@/lib/security/client-access";
 
 export async function POST(request: Request) {
@@ -42,6 +42,9 @@ export async function POST(request: Request) {
       { error: "Approval tidak ditemukan atau sudah diputuskan" },
       { status: 404 }
     );
+  }
+  if (decision === "approved") {
+    await resumeApprovedTask(id);
   }
   return Response.json({ ok: true });
 }

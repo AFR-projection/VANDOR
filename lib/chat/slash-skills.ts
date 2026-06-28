@@ -58,6 +58,12 @@ export const SLASH_SKILLS: SlashSkillDef[] = [
     sendText: "/ringkas",
   },
   {
+    name: "agent",
+    description: "Status VANDOR Operator (CPU, approval, goals)",
+    kind: "send",
+    sendText: "/agent",
+  },
+  {
     name: "tt",
     description: "Unduh video TikTok (MP4)",
     kind: "insert",

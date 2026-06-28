@@ -7,7 +7,10 @@ import {
 import { listAgentActions } from "./audit";
 import { db } from "./db";
 import { listRecentEvents } from "./events";
+import { listGoals } from "./goals";
 import { listPendingApprovals } from "./permission";
+import { listRules } from "./rules";
+import { listSchedules } from "./schedules-manage";
 import { getAgentState, setKillSwitch, setMode } from "./state";
 import { listRecentTasks } from "./tasks";
 
@@ -20,13 +23,16 @@ export async function getOverview() {
     approvals,
     events,
     notifications,
+    goals,
+    rules,
+    schedules,
   ] = await Promise.all([
     getAgentState(),
     db
       .select()
       .from(systemMetric)
       .orderBy(desc(systemMetric.createdAt))
-      .limit(80),
+      .limit(240),
     listRecentTasks(25),
     listAgentActions(40),
     listPendingApprovals(50),
@@ -36,6 +42,9 @@ export async function getOverview() {
       .from(agentNotification)
       .orderBy(desc(agentNotification.createdAt))
       .limit(20),
+    listGoals(30),
+    listRules(),
+    listSchedules(),
   ]);
 
   const series = [...metricsRows].reverse();
@@ -49,6 +58,9 @@ export async function getOverview() {
     approvals,
     events,
     notifications,
+    goals,
+    rules,
+    schedules,
   };
 }
 

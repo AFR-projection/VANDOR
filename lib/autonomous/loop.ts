@@ -10,8 +10,12 @@ import { createLogger } from "./logger";
 import { scanLogs } from "./logs";
 import { collectMetrics } from "./metrics";
 import { assessSystem } from "./planner";
+import { planAndActFromAssessment } from "./planner-act";
+import { processActiveGoals } from "./planner-goals";
 import { expireOldApprovals } from "./permission";
+import { ensureDefaultRules } from "./rules";
 import { ensureDefaultSchedules, runDueSchedules } from "./schedules";
+import { scheduleRemoteChecksIfConfigured } from "./remote-hosts";
 import { collectServiceHealth } from "./services";
 import { resolveOwnerUserId } from "./owner";
 import { getAgentState, recordHeartbeat } from "./state";
@@ -34,6 +38,7 @@ async function bootstrap(): Promise<void> {
   registerMonitorTools();
   registerShellTools();
   await ensureDefaultSchedules();
+  await ensureDefaultRules();
   bootstrapped = true;
   log.info("Bootstrap selesai — tools & schedules siap.");
 }
@@ -95,13 +100,26 @@ export async function runTick(): Promise<void> {
     remediation = await handleIssues(issues);
   }
 
+  // 3b. Planner→Act dari penilaian LLM (task observasi aman)
+  let plannedSteps = 0;
+  if (assessment) {
+    plannedSteps = await planAndActFromAssessment({ assessment, issues });
+  }
+
+  // 3c. Goal planning — pecah goal aktif jadi task (setiap 10 tick)
+  let goalTasks = 0;
+  if (tickCounter === 1 || tickCounter % 10 === 0) {
+    goalTasks = await processActiveGoals(2);
+    await scheduleRemoteChecksIfConfigured();
+  }
+
   // 4. ACT: scheduler → task queue → remediasi yang sudah disetujui
   const scheduled = await runDueSchedules();
   const tasksDone = await processTaskQueue(ctx);
   const executed = await executeApprovedRemediations();
 
   // 5. EVALUATE + LEARN
-  if (issues.length > 0 || executed > 0 || scheduled > 0) {
+  if (issues.length > 0 || executed > 0 || scheduled > 0 || plannedSteps > 0 || goalTasks > 0) {
     await emitEvent({
       type: "tick-summary",
       severity: issues.some((i) => i.severity === "critical")
@@ -117,6 +135,8 @@ export async function runTick(): Promise<void> {
         issues: issues.map((i) => i.key),
         recommendations: assessment?.recommendations ?? [],
         scheduled,
+        plannedSteps,
+        goalTasks,
       },
     });
   }

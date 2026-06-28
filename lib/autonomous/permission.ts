@@ -2,6 +2,7 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import {
   type AgentRiskLevel,
   agentApproval,
+  agentTask,
 } from "@/lib/db/schema";
 import { db } from "./db";
 
@@ -142,4 +143,26 @@ export async function markApprovalConsumed(id: string): Promise<void> {
     .update(agentApproval)
     .set({ status: "executed" })
     .where(eq(agentApproval.id, id));
+}
+
+/** Setelah approval deploy/task — lanjutkan task antrian. */
+export async function resumeApprovedTask(approvalId: string): Promise<void> {
+  const row = await getApproval(approvalId);
+  if (!row || row.status !== "approved" || !row.taskId) {
+    return;
+  }
+
+  const payload =
+    row.payload && typeof row.payload === "object"
+      ? { ...(row.payload as Record<string, unknown>), approved: true }
+      : { approved: true };
+
+  await db
+    .update(agentTask)
+    .set({
+      status: "queued",
+      payload: payload as never,
+      updatedAt: new Date(),
+    })
+    .where(eq(agentTask.id, row.taskId));
 }
