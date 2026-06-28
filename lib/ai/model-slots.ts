@@ -171,8 +171,8 @@ export const MODEL_SLOT_DEFINITIONS: ModelSlotDefinition[] = [
   {
     key: "transcriptionModel",
     label: "Transkripsi audio",
-    description: "Tool transcribeAudio. Kosongkan jika tidak dipakai.",
-    placeholder: "",
+    description: "Tool transcribeAudio & input mikrofon web. Kosong = pakai Vision/Chat Agent.",
+    placeholder: "google/gemini-2.5-flash",
     group: "generate",
   },
   {
@@ -220,7 +220,7 @@ export const DEFAULT_MODEL_SLOTS: Record<ModelSlotKey, string> = {
   imageModel: "google/gemini-2.5-flash-image",
   videoModel: "",
   voiceModel: "",
-  transcriptionModel: "",
+  transcriptionModel: "google/gemini-2.5-flash",
   documentModel: "",
   embeddingModel: "openai/text-embedding-3-small",
   rerankModel: "",

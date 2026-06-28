@@ -84,3 +84,23 @@ export function pickModel(
   if (chosen) return chosen;
   return ctx.models[slot];
 }
+
+/** Model transkripsi audio — slot khusus, lalu vision/chat sebagai fallback. */
+export function resolveTranscriptionModel(
+  ctx: OpenRouterUserContext,
+  override?: string | null
+): string {
+  const chosen = normalizeModelId(override ?? "");
+  if (chosen) {
+    return chosen;
+  }
+  const dedicated = normalizeModelId(ctx.models.transcriptionModel);
+  if (dedicated) {
+    return dedicated;
+  }
+  const vision = normalizeModelId(ctx.models.visionModel);
+  if (vision) {
+    return vision;
+  }
+  return normalizeModelId(ctx.models.chatModel);
+}

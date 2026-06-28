@@ -44,6 +44,7 @@ import {
   preExtractUserMemories,
 } from "@/lib/memory/extract";
 import { generateUUID } from "@/lib/utils";
+import { transcribeAudioBuffer } from "@/lib/voice/transcribe";
 import { emitChatUpdated } from "./chat-push";
 import { getWhatsappModelId } from "./config";
 import {
@@ -107,6 +108,7 @@ function buildMultimodalUserContent(
   media: WhatsappInboundMedia[]
 ): UserContent {
   const parts: UserContent = [];
+  const transcriptLines: string[] = [];
 
   for (const item of media) {
     if (item.kind === "image" && item.buffer.byteLength <= MAX_INLINE_IMAGE_BYTES) {
@@ -114,6 +116,11 @@ function buildMultimodalUserContent(
         type: "image",
         image: `data:${item.mime};base64,${item.buffer.toString("base64")}`,
       });
+      continue;
+    }
+
+    if (item.kind === "audio" && item.extractedText?.trim()) {
+      transcriptLines.push(`[Pesan suara]: ${item.extractedText.trim()}`);
       continue;
     }
 
@@ -127,8 +134,39 @@ function buildMultimodalUserContent(
     }
   }
 
-  parts.push({ type: "text", text: userText });
+  let text = userText;
+  if (transcriptLines.length > 0) {
+    const joined = transcriptLines.join("\n");
+    text = userText ? `${userText}\n\n${joined}` : joined;
+  }
+
+  parts.push({ type: "text", text });
   return parts;
+}
+
+async function transcribeInboundAudio(
+  userId: string,
+  media: WhatsappInboundMedia[]
+): Promise<WhatsappInboundMedia[]> {
+  const out: WhatsappInboundMedia[] = [];
+  for (const item of media) {
+    if (item.kind !== "audio") {
+      out.push(item);
+      continue;
+    }
+    const result = await transcribeAudioBuffer({
+      userId,
+      buffer: item.buffer,
+      contentType: item.mime,
+    });
+    out.push({
+      ...item,
+      extractedText: result.ok
+        ? result.text
+        : `[Transkripsi gagal: ${result.error}]`,
+    });
+  }
+  return out;
 }
 
 /**
@@ -155,6 +193,10 @@ export async function runWhatsappAgentTurn({
 
   const userText =
     trimmed || (hasMedia ? defaultPromptForMedia(media) : "");
+
+  const processedMedia = hasMedia
+    ? await transcribeInboundAudio(userId, media)
+    : media;
 
   const apiKey =
     (await resolveOpenRouterApiKeyForUser(userId)) ??
@@ -192,7 +234,7 @@ export async function runWhatsappAgentTurn({
   if (hasMedia) {
     modelMessages.push({
       role: "user",
-      content: buildMultimodalUserContent(userText, media),
+      content: buildMultimodalUserContent(userText, processedMedia),
     });
   } else {
     modelMessages.push({ role: "user", content: userText });
@@ -224,9 +266,9 @@ export async function runWhatsappAgentTurn({
     modelId = attemptModelIds[0] ?? modelId;
   }
 
-  const extractedFiles = buildExtractedFiles(media);
+  const extractedFiles = buildExtractedFiles(processedMedia);
   const filesBlock = buildFilesContextBlock(extractedFiles);
-  const attachmentKinds: FileKind[] = media.map((m) => m.kind);
+  const attachmentKinds: FileKind[] = processedMedia.map((m) => m.kind);
   const contextChars = filesBlock.length + userText.length;
 
   if (hasMedia) {
@@ -259,13 +301,22 @@ export async function runWhatsappAgentTurn({
   const capabilities = await getCapabilities();
   const supportsTools = capabilities[modelId]?.tools !== false;
 
+  const memoryQuery = [
+    userText,
+    ...processedMedia
+      .filter((m) => m.kind === "audio" && m.extractedText?.trim())
+      .map((m) => m.extractedText?.trim() ?? ""),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const memoryContext = await buildMemoryContext({
     userId,
-    query: userText,
+    query: memoryQuery || userText,
     chatId,
   }).catch(() => "");
 
-  const imageUrls = media
+  const imageUrls = processedMedia
     .filter((m) => m.kind === "image")
     .map((m) => m.url);
 
@@ -391,16 +442,24 @@ export async function runWhatsappAgentTurn({
   }
 
   const now = new Date();
+  const audioLines = processedMedia
+    .filter((m) => m.kind === "audio" && m.extractedText?.trim())
+    .map((m) => `[Pesan suara]: ${m.extractedText?.trim() ?? ""}`);
+  const persistedUserText =
+    audioLines.length > 0
+      ? [userText, ...audioLines].filter(Boolean).join("\n\n")
+      : userText;
+
   const userParts: Array<
     | { type: "text"; text: string }
     | { type: "file"; url: string; mediaType: string; name: string }
-  > = media.map((m) => ({
+  > = processedMedia.map((m) => ({
     type: "file" as const,
     url: m.url,
     mediaType: m.mime,
     name: m.filename,
   }));
-  userParts.push({ type: "text", text: userText });
+  userParts.push({ type: "text", text: persistedUserText });
 
   await saveMessages({
     messages: [

@@ -5,9 +5,11 @@ import { z } from "zod";
 import {
   getOpenRouterContextForUser,
   pickModel,
+  resolveTranscriptionModel,
 } from "@/lib/ai/integration-models";
 import { openRouterFetch } from "@/lib/ai/openrouter-http";
 import { putFile } from "@/lib/storage/blob";
+import { transcribeAudioBuffer } from "@/lib/voice/transcribe";
 
 type OpenRouterImage = {
   image_url?: { url?: string };
@@ -350,38 +352,51 @@ export function makeGenerateVoiceTool(userId: string) {
 export function makeTranscribeAudioTool(userId: string) {
   return tool({
     description:
-      "Transcribe audio to text. Provide a public URL to an audio file (mp3, wav, m4a).",
+      "Transcribe audio to text. Provide a public URL to an audio file (mp3, wav, m4a, ogg).",
     inputSchema: z.object({
       audioUrl: z.string().url(),
       model: z.string().optional(),
     }),
     execute: async ({ audioUrl, model }) => {
       const ctx = await getOpenRouterContextForUser(userId);
-      const chosen = pickModel(ctx, "transcriptionModel", model);
+      const chosen = resolveTranscriptionModel(ctx, model);
       if (!chosen.trim()) {
         return {
           ok: false as const,
           error:
-            "Model transkripsi belum diatur. Isi di Pengaturan → API & integrasi → Transkripsi.",
+            "Model transkripsi belum diatur. Isi di Pengaturan → Model & AI → Transkripsi audio.",
           model: "",
         };
       }
 
-      const result = await openRouterFetch<OpenRouterResponse>({
-        ctx,
-        path: "/chat/completions",
-        body: {
+      let buffer: Buffer;
+      let contentType = "audio/mpeg";
+      try {
+        const resp = await fetch(audioUrl);
+        if (!resp.ok) {
+          return {
+            ok: false as const,
+            error: `Gagal unduh audio: HTTP ${resp.status}`,
+            model: chosen,
+          };
+        }
+        contentType =
+          resp.headers.get("content-type")?.split(";")[0]?.trim() ??
+          contentType;
+        buffer = Buffer.from(await resp.arrayBuffer());
+      } catch (err) {
+        return {
+          ok: false as const,
+          error:
+            err instanceof Error ? err.message : "Gagal unduh file audio",
           model: chosen,
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: "Transcribe this audio accurately." },
-                { type: "input_audio", input_audio: { url: audioUrl } },
-              ],
-            },
-          ],
-        },
+        };
+      }
+
+      const result = await transcribeAudioBuffer({
+        userId,
+        buffer,
+        contentType,
       });
 
       if (!result.ok) {
@@ -391,7 +406,7 @@ export function makeTranscribeAudioTool(userId: string) {
       return {
         ok: true as const,
         model: chosen,
-        transcript: result.data.choices?.[0]?.message?.content ?? "",
+        transcript: result.text,
       };
     },
   });
