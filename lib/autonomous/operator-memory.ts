@@ -1,13 +1,11 @@
-import { saveMemory } from "@/lib/memory/queries";
-import type { MemoryMetadata } from "@/lib/memory/metadata";
+import { userMemory } from "@/lib/db/schema";
+import { db } from "./db";
 import type { Issue } from "./healing/detectors";
 
-function operatorMeta(extra: Record<string, string>): MemoryMetadata {
-  return { preExtracted: true, ...extra } as MemoryMetadata;
-}
-
 /**
- * Simpan insiden operator ke memori pgvector owner — hindari lupa konteks remediasi.
+ * Simpan insiden operator ke memori owner.
+ * Worker-safe: tidak impor lib/memory/queries (server-only).
+ * Insert langsung — tanpa embedding (cukup untuk log insiden).
  */
 export async function recordOperatorIncident(input: {
   userId: string | null;
@@ -31,21 +29,29 @@ export async function recordOperatorIncident(input: {
     lines.push(`Status: ${input.outcome}`);
   }
 
-  await saveMemory({
-    userId: input.userId,
-    content: lines.join("\n"),
-    category: "event",
-    importance: input.issue.severity === "critical" ? 9 : 7,
-    metadata: operatorMeta({
-      source: "vandor-operator",
-      issueKey: input.issue.key,
-      outcome: input.outcome ?? "detected",
-    }),
-    mergeSimilar: true,
-  });
+  const content = lines.join("\n").trim();
+  if (!content) {
+    return;
+  }
+
+  try {
+    await db.insert(userMemory).values({
+      userId: input.userId,
+      content: content.slice(0, 4000),
+      category: "event",
+      importance: input.issue.severity === "critical" ? 9 : 7,
+      metadata: {
+        source: "vandor-operator",
+        issueKey: input.issue.key,
+        outcome: input.outcome ?? "detected",
+        preExtracted: true,
+      },
+    });
+  } catch {
+    /* non-fatal — worker tetap jalan */
+  }
 }
 
-/** Ringkas approval yang sudah pernah ditolak/disetujui untuk issue key sama. */
 export async function recordApprovalDecision(input: {
   userId: string | null;
   issueKey: string;
@@ -55,15 +61,22 @@ export async function recordApprovalDecision(input: {
   if (!input.userId) {
     return;
   }
-  await saveMemory({
-    userId: input.userId,
-    content: `[Operator approval] ${input.issueKey}: ${input.decision} — ${input.summary.slice(0, 400)}`,
-    category: "instruction",
-    importance: 6,
-    metadata: operatorMeta({
-      source: "vandor-operator",
-      issueKey: input.issueKey,
-    }),
-    mergeSimilar: true,
-  });
+
+  const content = `[Operator approval] ${input.issueKey}: ${input.decision} — ${input.summary.slice(0, 400)}`;
+
+  try {
+    await db.insert(userMemory).values({
+      userId: input.userId,
+      content,
+      category: "instruction",
+      importance: 6,
+      metadata: {
+        source: "vandor-operator",
+        issueKey: input.issueKey,
+        preExtracted: true,
+      },
+    });
+  } catch {
+    /* non-fatal */
+  }
 }
