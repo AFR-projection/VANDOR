@@ -1,4 +1,4 @@
-import { sendWhatsappToOwner } from "@/lib/whatsapp/manager";
+import { sendSystemWhatsappNotification } from "@/lib/whatsapp/manager";
 
 const LEVEL_EMOJI: Record<string, string> = {
   info: "ℹ️",
@@ -37,6 +37,6 @@ export async function POST(request: Request) {
   const emoji = LEVEL_EMOJI[body.level ?? "warn"] ?? "⚠️";
   const text = `${emoji} *VANDOR Operator — ${body.title ?? "Notifikasi"}*\n\n${body.body ?? ""}`;
 
-  const result = await sendWhatsappToOwner(text);
+  const result = await sendSystemWhatsappNotification(text);
   return Response.json(result, { status: result.ok ? 200 : 502 });
 }

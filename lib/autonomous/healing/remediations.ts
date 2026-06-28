@@ -1,6 +1,6 @@
 import { recordAgentAction } from "../audit";
 import { emitEvent } from "../events";
-import { notify } from "../notify";
+import { notify, notifyApprovalRequest } from "../notify";
 import { createApproval } from "../permission";
 import type { Issue } from "./detectors";
 
@@ -34,7 +34,7 @@ export async function handleIssues(issues: Issue[]): Promise<{
       });
 
       if (issue.remediation?.command) {
-        const { deduped } = await createApproval({
+        const { id, deduped } = await createApproval({
           actionType: "remediation",
           summary: `${issue.title}: ${issue.remediation.description} (\`${issue.remediation.command}\`)`,
           payload: {
@@ -55,6 +55,11 @@ export async function handleIssues(issues: Issue[]): Promise<{
             riskLevel: issue.remediation.risk,
             reason: issue.remediation.description,
           });
+          await notifyApprovalRequest({
+            id,
+            summary: issue.remediation.description,
+            riskLevel: issue.remediation.risk,
+          });
         }
       }
 
@@ -63,7 +68,7 @@ export async function handleIssues(issues: Issue[]): Promise<{
           title: issue.title,
           body: `${issue.detail}${
             issue.remediation
-              ? `\n\nSaran: ${issue.remediation.description}${issue.remediation.command ? `\nButuh approval di dashboard Operator.` : ""}`
+              ? `\n\nSaran: ${issue.remediation.description}${issue.remediation.command ? `\nBalas SETUJU/TOLAK di WhatsApp atau approve di dashboard Operator.` : ""}`
               : "\n\nButuh perhatian manual."
           }`,
           level: severityToAgentEvent[issue.severity],

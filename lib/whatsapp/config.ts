@@ -31,6 +31,40 @@ async function ownerNumbersRaw(): Promise<string> {
   return process.env.WHATSAPP_OWNER_NUMBERS ?? "";
 }
 
+/** Nomor owner utama untuk alert Operator (UI → env fallback). */
+export async function getPrimaryWhatsappOwner(): Promise<string | null> {
+  const owner = await resolveDeploymentOwnerUser();
+  if (owner) {
+    const settings = await getUserSettings(owner.id);
+    const fromUi = normalizeWhatsappNumber(
+      settings.integrations.whatsappPrimaryOwner
+    );
+    if (fromUi.length >= 6) {
+      return fromUi;
+    }
+  }
+  const fromEnv = normalizeWhatsappNumber(
+    process.env.WHATSAPP_PRIMARY_OWNER ?? ""
+  );
+  return fromEnv.length >= 6 ? fromEnv : null;
+}
+
+/** True jika pengirim adalah owner utama (untuk perintah approve via WA). */
+export async function isPrimaryWhatsappSender(
+  phone: string | null
+): Promise<boolean> {
+  const primary = await getPrimaryWhatsappOwner();
+  if (!primary || !phone) {
+    return false;
+  }
+  const normalized = normalizeWhatsappNumber(phone);
+  return (
+    normalized === primary ||
+    normalized.endsWith(primary) ||
+    primary.endsWith(normalized)
+  );
+}
+
 /** Allowed owner numbers (comma separated), normalized to digits. */
 export async function getOwnerWhatsappNumbers(): Promise<string[]> {
   const raw = await ownerNumbersRaw();

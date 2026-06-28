@@ -93,3 +93,22 @@ async function deliver(
     clearTimeout(timer);
   }
 }
+
+/** Notifikasi permintaan approval baru ke owner utama via WhatsApp. */
+export async function notifyApprovalRequest(input: {
+  id: string;
+  summary: string;
+  riskLevel: string;
+}): Promise<void> {
+  const short = input.id.replace(/-/g, "").slice(0, 8).toLowerCase();
+  await notify({
+    title: "Perlu persetujuan",
+    body:
+      `[${input.riskLevel.toUpperCase()}] ${input.summary}\n\n` +
+      `Balas dari WhatsApp:\n` +
+      `✅ *SETUJU ${short}*\n` +
+      `❌ *TOLAK ${short}*\n\n` +
+      `Atau buka Pengaturan → Operator.`,
+    level: "warn",
+  });
+}

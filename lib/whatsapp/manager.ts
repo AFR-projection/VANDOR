@@ -11,6 +11,7 @@ import { resolveDeploymentOwnerUser } from "./deployment-owner";
 import {
   deriveWhatsappChatId,
   getOwnerWhatsappNumbers,
+  getPrimaryWhatsappOwner,
   normalizeWhatsappNumber,
 } from "./config";
 import {
@@ -109,8 +110,66 @@ export function getWhatsappState(): WhatsappState {
 }
 
 /**
- * Kirim pesan teks ke nomor owner via koneksi WhatsApp aktif.
- * Dipakai oleh worker otonom (lewat endpoint internal) untuk alert.
+ * Kirim notifikasi sistem Operator ke owner UTAMA (Pengaturan → WhatsApp).
+ * Fallback ke semua owner jika primary belum diset.
+ */
+export async function sendSystemWhatsappNotification(
+  text: string
+): Promise<{ ok: boolean; error?: string; sentTo: number; target?: string }> {
+  const m = getManager();
+  if (!m.sock || m.state.status !== "connected") {
+    return {
+      ok: false,
+      error: `WhatsApp belum tersambung (status: ${m.state.status})`,
+      sentTo: 0,
+    };
+  }
+
+  const primary = await getPrimaryWhatsappOwner();
+  let targets: string[] = [];
+
+  if (primary) {
+    targets = [primary];
+  } else {
+    const ownerUser = await resolveDeploymentOwnerUser();
+    const phones = new Set<string>();
+    if (ownerUser) {
+      for (const p of await getActiveOwnerPhones(ownerUser.id)) {
+        phones.add(normalizeWhatsappNumber(p));
+      }
+    }
+    for (const p of await getOwnerWhatsappNumbers()) {
+      phones.add(p);
+    }
+    targets = [...phones].filter((p) => p.length >= 6);
+  }
+
+  if (targets.length === 0) {
+    return {
+      ok: false,
+      error:
+        "Owner utama belum diset — buka Pengaturan → WhatsApp → Owner Utama",
+      sentTo: 0,
+    };
+  }
+
+  const sock = m.sock;
+  const results = await Promise.allSettled(
+    targets.map((phone) =>
+      sock.sendMessage(`${phone}@s.whatsapp.net`, { text })
+    )
+  );
+  const sentTo = results.filter((r) => r.status === "fulfilled").length;
+  return {
+    ok: sentTo > 0,
+    sentTo,
+    target: targets[0],
+    error: sentTo === 0 ? "Gagal mengirim notifikasi sistem" : undefined,
+  };
+}
+
+/**
+ * Kirim pesan teks ke semua nomor owner (chat broadcast, bukan alert sistem).
  */
 export async function sendWhatsappToOwner(
   text: string
@@ -346,6 +405,25 @@ async function handleIncoming(
       `[wa] ignoring message from non-owner phone=${identity.phone ?? "-"} lid=${identity.lid ?? "-"}`
     );
     return;
+  }
+
+  // 2b. Perintah Operator (setuju/tolak/antrian) — owner utama.
+  try {
+    const { handleOperatorWhatsappCommand } = await import(
+      "./operator-commands"
+    );
+    const op = await handleOperatorWhatsappCommand(text, identity);
+    if (op.handled && op.reply) {
+      await sock.sendMessage(jid, { text: op.reply }, { quoted: msg });
+      try {
+        await sock.sendPresenceUpdate("paused", jid);
+      } catch {
+        // non-fatal
+      }
+      return;
+    }
+  } catch (err) {
+    console.error("[wa] operator command error:", err);
   }
 
   // 3. Owner terverifikasi → simpan media ke vault (/vault, simpan vault, …).

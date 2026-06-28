@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BellIcon,
   CheckCircle2Icon,
   ClockIcon,
   CopyIcon,
@@ -18,6 +19,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import { apiBasePath } from "@/lib/app-url";
 const base = apiBasePath;
@@ -61,6 +63,27 @@ type LogEntry = {
   meta: Record<string, unknown> | null;
   createdAt: string;
 };
+
+async function fetchPrimaryOwner(): Promise<{ primaryOwner: string }> {
+  const res = await fetch(`${base()}/api/whatsapp/primary-owner`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("Gagal memuat owner utama");
+  return res.json();
+}
+
+async function savePrimaryOwner(phone: string): Promise<{ primaryOwner: string }> {
+  const res = await fetch(`${base()}/api/whatsapp/primary-owner`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone }),
+  });
+  const json = (await res.json()) as { primaryOwner?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(json.error ?? "Gagal menyimpan");
+  }
+  return { primaryOwner: json.primaryOwner ?? "" };
+}
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
@@ -279,6 +302,108 @@ function VerifCodeCard({
   );
 }
 
+function PrimaryOwnerCard({
+  primaryOwner,
+  owners,
+  onSave,
+  busy,
+}: {
+  primaryOwner: string;
+  owners: Owner[];
+  onSave: (phone: string) => void;
+  busy: boolean;
+}) {
+  const [draft, setDraft] = useState(primaryOwner);
+
+  useEffect(() => {
+    setDraft(primaryOwner);
+  }, [primaryOwner]);
+
+  return (
+    <section className="space-y-3 rounded-xl border border-primary/25 bg-primary/5 p-4">
+      <div className="flex items-center gap-2">
+        <BellIcon className="size-4 text-primary" />
+        <h2 className="text-sm font-semibold">Owner Utama (Operator)</h2>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Semua alert sistem (service down, error, persetujuan remediasi) dikirim
+        ke nomor ini. Kamu bisa balas{" "}
+        <span className="font-mono text-foreground">SETUJU abc12345</span> atau{" "}
+        <span className="font-mono text-foreground">TOLAK abc12345</span> langsung
+        dari WhatsApp.
+      </p>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1 space-y-1">
+          <label className="text-xs font-medium" htmlFor="wa-primary-owner">
+            Nomor WhatsApp (628…)
+          </label>
+          <Input
+            className="font-mono text-sm"
+            id="wa-primary-owner"
+            inputMode="numeric"
+            onChange={(e) =>
+              setDraft(e.target.value.replace(/[^\d+]/g, ""))
+            }
+            placeholder="6281234567890"
+            value={draft}
+          />
+        </div>
+        <Button
+          disabled={busy}
+          onClick={() => onSave(draft)}
+          size="sm"
+          type="button"
+        >
+          {busy ? (
+            <Loader2Icon className="size-3.5 animate-spin" />
+          ) : null}
+          Simpan
+        </Button>
+      </div>
+
+      {owners.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[10px] text-muted-foreground">Pilih cepat:</span>
+          {owners.map((o) => (
+            <button
+              className="rounded-md border border-border/40 bg-background/60 px-2 py-0.5 font-mono text-[10px] hover:border-primary/40"
+              key={o.phone}
+              onClick={() => setDraft(o.phone)}
+              type="button"
+            >
+              +{o.phone}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {primaryOwner ? (
+        <p className="rounded-md bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-400">
+          Aktif: alert sistem →{" "}
+          <span className="font-mono font-medium">+{primaryOwner}</span>
+        </p>
+      ) : (
+        <p className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+          Belum diset — alert dikirim ke semua owner terverifikasi (fallback).
+        </p>
+      )}
+
+      <ul className="space-y-0.5 text-[10px] text-muted-foreground">
+        <li>
+          <span className="font-mono">ANTIRIAN</span> — lihat daftar persetujuan
+        </li>
+        <li>
+          <span className="font-mono">SETUJU &lt;kode&gt;</span> — approve aksi
+        </li>
+        <li>
+          <span className="font-mono">TOLAK &lt;kode&gt;</span> — tolak aksi
+        </li>
+      </ul>
+    </section>
+  );
+}
+
 function OwnersCard({
   owners,
   onRevoke,
@@ -409,20 +534,23 @@ export function WhatsappPanel() {
   const [activeCode, setActiveCode] = useState<VerifCode | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
+  const [primaryOwner, setPrimaryOwner] = useState("");
   const [busy, setBusy] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshAll = useCallback(async () => {
     try {
-      const [stateRes, codeRes, ownersRes] = await Promise.all([
+      const [stateRes, codeRes, ownersRes, primaryRes] = await Promise.all([
         fetchState(),
         fetchCodeData(),
         fetchOwners(),
+        fetchPrimaryOwner(),
       ]);
       setWaState((prev) => mergePollState(prev, stateRes));
       setActiveCode(codeRes.active);
       setLogs(codeRes.logs);
       setOwners(ownersRes.owners);
+      setPrimaryOwner(primaryRes.primaryOwner);
     } catch {
       // keep last state
     }
@@ -521,6 +649,30 @@ export function WhatsappPanel() {
       }
     },
     [refreshAll]
+  );
+
+  const savePrimary = useCallback(
+    async (phone: string) => {
+      setBusy(true);
+      try {
+        const res = await savePrimaryOwner(phone);
+        setPrimaryOwner(res.primaryOwner);
+        toast({
+          type: "success",
+          description: res.primaryOwner
+            ? `Owner utama: +${res.primaryOwner}`
+            : "Owner utama dihapus",
+        });
+      } catch (e) {
+        toast({
+          type: "error",
+          description: e instanceof Error ? e.message : "Gagal menyimpan",
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    []
   );
 
   const status = waState?.status ?? "idle";
@@ -658,6 +810,14 @@ export function WhatsappPanel() {
           </p>
         ) : null}
       </section>
+
+      {/* ── Owner utama (alert Operator) ── */}
+      <PrimaryOwnerCard
+        busy={busy}
+        onSave={savePrimary}
+        owners={owners}
+        primaryOwner={primaryOwner}
+      />
 
       {/* ── Verification code ── */}
       <VerifCodeCard

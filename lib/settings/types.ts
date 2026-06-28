@@ -35,6 +35,9 @@ export const integrationsSettingsSchema = z.object({
   /** Comma-separated owner numbers (digits / +62…) */
   whatsappOwnerNumbers: z.string().max(512),
 
+  /** Nomor owner utama — alert Operator & approve via WA (628…). */
+  whatsappPrimaryOwner: z.string().max(32),
+
   whatsappModel: z.string().max(128),
 });
 
@@ -243,6 +246,8 @@ export const defaultUserSettings: UserSettings = {
 
     whatsappOwnerNumbers: "",
 
+    whatsappPrimaryOwner: "",
+
     whatsappModel: "",
   },
 };
@@ -311,6 +316,11 @@ function migrateIntegrations(
     whatsappOwnerNumbers:
       typeof raw.whatsappOwnerNumbers === "string"
         ? raw.whatsappOwnerNumbers.trim().slice(0, 512)
+        : "",
+
+    whatsappPrimaryOwner:
+      typeof raw.whatsappPrimaryOwner === "string"
+        ? raw.whatsappPrimaryOwner.trim().slice(0, 32)
         : "",
 
     whatsappModel:

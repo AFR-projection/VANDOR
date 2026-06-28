@@ -14,6 +14,30 @@ export type CreateApprovalInput = {
   expiresInMinutes?: number;
 };
 
+/** 8 karakter pendek dari UUID — dipakai perintah approve via WhatsApp. */
+export function approvalShortId(id: string): string {
+  return id.replace(/-/g, "").slice(0, 8).toLowerCase();
+}
+
+/** Cari approval pending dari kode pendek (prefix UUID). */
+export async function findPendingApprovalByShortId(shortId: string) {
+  const normalized = shortId.toLowerCase().replace(/[^a-f0-9]/g, "");
+  if (normalized.length < 4) {
+    return null;
+  }
+  const pending = await listPendingApprovals(50);
+  const matches = pending.filter((row) =>
+    approvalShortId(row.id).startsWith(normalized)
+  );
+  if (matches.length === 1) {
+    return matches[0];
+  }
+  if (matches.length > 1) {
+    return matches.find((row) => approvalShortId(row.id) === normalized) ?? null;
+  }
+  return null;
+}
+
 /** Buat permintaan approval baru (status pending). Hindari duplikat aktif. */
 export async function createApproval(
   input: CreateApprovalInput
