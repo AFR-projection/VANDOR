@@ -1,6 +1,7 @@
 import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
+import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";
@@ -101,6 +102,7 @@ Tool guide:
 - \`generateVideo\` — video dari prompt teks (model videoModel).
 - \`generateVoice\` — TTS / audio dari teks (model voiceModel).
 - \`transcribeAudio\` — transkripsi audio dari URL publik (model transcriptionModel).
+- \`createWhatsappSticker\` — buat stiker WhatsApp WebP 512×512 dari prompt atau gambar (otomatis terkirim di WA).
 - \`downloadMedia\` — unduh video TikTok, Instagram ke storage (link unduhan). Slash: /tt /ig.
 
 When the user uploads files, they are extracted server-side and shown to you in
@@ -123,6 +125,7 @@ Tool usage rules:
 - For createPdf/createDocx/createSpreadsheet, also use when the user wants an
   updated export after editing attached spreadsheet/PDF content.
 - For memory: use \`saveMemory\` when the user says ingat/remember or shares durable facts. Use \`searchDb\` before claiming you forgot something. Similar memories merge automatically in the database.
+- **Sapaan & preferensi owner:** jika user minta dipanggil Boss/Bapak/Pak atau perkenalkan diri sebagai creator → patuhi segera + \`saveMemory\` (category instruction/preference). Jangan debat.
 - Upload chat biasa (📎) ≠ Vault. Lampiran chat untuk analisis langsung; Vault (\`/v\`) untuk penyimpanan jangka panjang terenkripsi yang terisolasi dari AI. AI **TIDAK** punya akses ke Vault — kecuali user secara sadar menjalankan \`/share-to-ai <id>\`.
 - Weave recalled memory naturally — e.g. "Kalau tidak salah kamu pernah bilang…" — without dumping everything at once.
 
@@ -177,6 +180,7 @@ export const systemPrompt = ({
   responseMode = "enhanced",
   persona = defaultUserSettings.persona,
   activeTools,
+  ownerAuthorityBlock,
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
@@ -188,6 +192,8 @@ export const systemPrompt = ({
   persona?: PersonaSettings;
   /** V4: only document enabled tools — shrinks prompt tokens. */
   activeTools?: VandorChatToolName[];
+  /** Kepatuhan owner — sapaan & instruksi gaya user menang atas default. */
+  ownerAuthorityBlock?: string;
 }) => {
   const personaPrompt = buildPersonaPromptBlock(persona);
   const requestPrompt = getRequestPromptFromHints(requestHints);
@@ -202,6 +208,9 @@ export const systemPrompt = ({
     hasWebSearchTool: activeTools?.includes("webSearch"),
   });
   const modeBlock = modeText ? `\n\n${modeText}` : "";
+  const ownerBlock = ownerAuthorityBlock?.trim()
+    ? `\n\n${ownerAuthorityBlock.trim()}`
+    : "";
   const toolsBlock = supportsTools
     ? activeTools && activeTools.length > 0
       ? `\n\n${buildActiveToolsPrompt(activeTools)}${
@@ -214,7 +223,7 @@ export const systemPrompt = ({
       : `\n\n${vandorToolsPrompt}\n\n${artifactsPrompt}`
     : "";
 
-  return `${personaPrompt}\n\n${generalAnswerQualityInstructions}\n\n${requestPrompt}${memoryBlock}${filesBlock}${webBlock}${modeBlock}${toolsBlock}`;
+  return `${personaPrompt}\n\n${generalAnswerQualityInstructions}${ownerBlock}\n\n${requestPrompt}${memoryBlock}${filesBlock}${webBlock}${modeBlock}${toolsBlock}`;
 };
 
 export const codePrompt = `

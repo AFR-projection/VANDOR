@@ -23,6 +23,7 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   generateVideo: "video dari prompt",
   generateVoice: "TTS",
   transcribeAudio: "transkripsi audio",
+  createWhatsappSticker: "stiker WhatsApp",
   downloadMedia: "unduh TT/IG",
 };
 

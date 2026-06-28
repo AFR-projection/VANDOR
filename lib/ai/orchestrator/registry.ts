@@ -52,7 +52,7 @@ export const SPECIALIST_AGENTS: AgentSpec[] = [
     id: "vision",
     name: "Vision Agent",
     description: "Gambar, video, audio — multimodal understanding.",
-    tools: ["saveMemory", "generateImage", "editImage", "transcribeAudio"],
+    tools: ["saveMemory", "generateImage", "editImage", "transcribeAudio", "createWhatsappSticker"],
     memoryScope: "long-term",
     modelSlot: "visionModel",
   },

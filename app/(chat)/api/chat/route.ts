@@ -33,6 +33,7 @@ import {
 } from "@/lib/ai/orchestrator";
 import { polishResponse } from "@/lib/ai/polish";
 import { systemPrompt } from "@/lib/ai/prompts";
+import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
 import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
 import { classifyTaskIntent } from "@/lib/ai/router";
 import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
@@ -47,6 +48,7 @@ import { getCurrentTime } from "@/lib/ai/tools/get-current-time";
 import { makeGetLocation } from "@/lib/ai/tools/get-location";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import {
+  makeCreateWhatsappStickerTool,
   makeEditImageTool,
   makeGenerateImageTool,
   makeGenerateVideoTool,
@@ -124,6 +126,7 @@ import { requireClientAccess } from "@/lib/security/client-access";
 import { resolveClientGeo } from "@/lib/security/geo";
 import { getUserSettings } from "@/lib/settings/queries";
 import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
+import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
 import type { ChatMessage } from "@/lib/types";
 import {
   convertToUIMessages,
@@ -494,6 +497,11 @@ export async function POST(request: Request) {
 
     const settingsUserId = await resolveSettingsUserId(session.user.id);
     const userSettings = await getUserSettings(settingsUserId);
+    const deploymentOwner = await resolveDeploymentOwnerUser();
+    const ownerAuthorityBlock = buildOwnerAuthorityBlock({
+      isDeploymentOwner: deploymentOwner?.id === settingsUserId,
+      ownerEmail: deploymentOwner?.email,
+    });
     const openRouterApiKey = await resolveOpenRouterApiKeyForUser(
       settingsUserId
     );
@@ -1122,6 +1130,7 @@ export async function POST(request: Request) {
                 responseMode,
                 persona: userSettings.persona,
                 activeTools,
+                ownerAuthorityBlock,
               }) +
               skillToolsBlock +
               `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${allActiveTools.length}.` +
@@ -1179,6 +1188,9 @@ export async function POST(request: Request) {
               generateVideo: makeGenerateVideoTool(session.user.id),
               generateVoice: makeGenerateVoiceTool(session.user.id),
               transcribeAudio: makeTranscribeAudioTool(session.user.id),
+              createWhatsappSticker: makeCreateWhatsappStickerTool(
+                session.user.id
+              ),
             },
             experimental_telemetry: {
               isEnabled: isProductionEnvironment,

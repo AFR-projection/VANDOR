@@ -28,6 +28,7 @@ export const VANDOR_CHAT_TOOLS = [
   "generateVideo",
   "generateVoice",
   "transcribeAudio",
+  "createWhatsappSticker",
   "downloadMedia",
 ] as const;
 

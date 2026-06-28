@@ -5,6 +5,7 @@ import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
 import { getCapabilities } from "@/lib/ai/models";
 import { buildGratisRotationChain } from "@/lib/ai/free-models";
 import { getOpenRouterContextForUser } from "@/lib/ai/integration-models";
+import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
 import {
   formatOpenRouterUserError,
   openRouterErrorMessage,
@@ -21,6 +22,7 @@ import { getCurrentTime } from "@/lib/ai/tools/get-current-time";
 import { makeGetLocation } from "@/lib/ai/tools/get-location";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import {
+  makeCreateWhatsappStickerTool,
   makeEditImageTool,
   makeGenerateImageTool,
   makeGenerateVideoTool,
@@ -47,6 +49,7 @@ import { generateUUID } from "@/lib/utils";
 import { transcribeAudioBuffer } from "@/lib/voice/transcribe";
 import { emitChatUpdated } from "./chat-push";
 import { getWhatsappModelId } from "./config";
+import { resolveDeploymentOwnerUser } from "./deployment-owner";
 import {
   defaultPromptForMedia,
   type WhatsappInboundMedia,
@@ -111,16 +114,25 @@ function buildMultimodalUserContent(
   const transcriptLines: string[] = [];
 
   for (const item of media) {
-    if (item.kind === "image" && item.buffer.byteLength <= MAX_INLINE_IMAGE_BYTES) {
+    if (
+      item.kind === "image" &&
+      item.buffer.byteLength <= MAX_INLINE_IMAGE_BYTES
+    ) {
       parts.push({
         type: "image",
         image: `data:${item.mime};base64,${item.buffer.toString("base64")}`,
       });
+      if (item.waType === "stickerMessage") {
+        transcriptLines.push(
+          "[User mengirim stiker WhatsApp — lihat gambar di atas]"
+        );
+      }
       continue;
     }
 
     if (item.kind === "audio" && item.extractedText?.trim()) {
-      transcriptLines.push(`[Pesan suara]: ${item.extractedText.trim()}`);
+      const label = item.isVoiceNote ? "Pesan suara" : "Audio";
+      transcriptLines.push(`[${label}]: ${item.extractedText.trim()}`);
       continue;
     }
 
@@ -336,8 +348,16 @@ export async function runWhatsappAgentTurn({
         "generateVideo",
         "generateVoice",
         "transcribeAudio",
+        "createWhatsappSticker",
       ] as const)
     : undefined;
+
+  const deploymentOwner = await resolveDeploymentOwnerUser();
+  const ownerAuthorityBlock = buildOwnerAuthorityBlock({
+    isDeploymentOwner: deploymentOwner?.id === userId,
+    ownerEmail: deploymentOwner?.email,
+    whatsappOwner: true,
+  });
 
   const system = systemPrompt({
     requestHints: {
@@ -351,6 +371,7 @@ export async function runWhatsappAgentTurn({
     memoryContext,
     responseMode: "enhanced",
     activeTools: activeTools ? [...activeTools] : undefined,
+    ownerAuthorityBlock,
   });
 
   const assistantTools = makeAssistantTools(userId, chatId);
@@ -371,6 +392,7 @@ export async function runWhatsappAgentTurn({
         generateVideo: makeGenerateVideoTool(userId),
         generateVoice: makeGenerateVoiceTool(userId),
         transcribeAudio: makeTranscribeAudioTool(userId),
+        createWhatsappSticker: makeCreateWhatsappStickerTool(userId),
         saveMemory: assistantTools.saveMemory,
         getMemory: assistantTools.getMemory,
         searchDb: assistantTools.searchDb,
@@ -393,10 +415,16 @@ export async function runWhatsappAgentTurn({
     "Untuk showMap, sertakan link OSM di jawaban.",
     "Kalau perlu data live, panggil webSearch.",
     hasMedia
-      ? "User mengirim media (gambar/dokumen/suara/video). Analisis isinya — jangan bilang kamu tidak menerima file."
+      ? "User mengirim media (gambar/dokumen/suara/stiker/video). Analisis isinya — jangan bilang kamu tidak menerima file."
+      : null,
+    processedMedia.some((m) => m.waType === "stickerMessage")
+      ? "User mengirim STIKER — deskripsikan & reaksikan natural (boleh santai/lucu)."
+      : null,
+    processedMedia.some((m) => m.isVoiceNote)
+      ? "Pesan suara sudah ditranskrip ke teks — balas isinya, jangan minta user mengetik ulang."
       : null,
     supportsTools
-      ? "Kamu bisa generate gambar (generateImage), edit foto (editImage), PDF/DOCX/spreadsheet, video, suara, dan transkripsi audio. Hasil file akan otomatis dikirim ke WhatsApp user."
+      ? "Kamu bisa generate gambar, stiker WA (createWhatsappSticker), edit foto, PDF/DOCX/spreadsheet, video, suara, dan transkripsi. Hasil file otomatis dikirim ke WhatsApp."
       : null,
   ]
     .filter(Boolean)

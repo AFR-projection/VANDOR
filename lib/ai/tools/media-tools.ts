@@ -9,6 +9,7 @@ import {
 } from "@/lib/ai/integration-models";
 import { openRouterFetch } from "@/lib/ai/openrouter-http";
 import { putFile } from "@/lib/storage/blob";
+import { formatWhatsappSticker } from "@/lib/whatsapp/sticker-format";
 import { transcribeAudioBuffer } from "@/lib/voice/transcribe";
 
 type OpenRouterImage = {
@@ -407,6 +408,130 @@ export function makeTranscribeAudioTool(userId: string) {
         ok: true as const,
         model: chosen,
         transcript: result.text,
+      };
+    },
+  });
+}
+
+async function imageBufferFromPrompt(
+  userId: string,
+  prompt: string,
+  model?: string
+): Promise<
+  { ok: true; buffer: Buffer; model: string } | { ok: false; error: string }
+> {
+  const ctx = await getOpenRouterContextForUser(userId);
+  const chosen = resolveImageGenModel(
+    pickModel(ctx, "imageModel", model) || DEFAULT_IMAGE_GEN_MODEL
+  );
+  const { result } = await callImageModel({
+    ctx,
+    model: chosen,
+    aspectRatio: "1:1",
+    messages: [
+      {
+        role: "user",
+        content: `Create a fun WhatsApp sticker illustration: ${prompt}. Simple, bold, expressive, suitable as a chat sticker. No text unless user asked for text.`,
+      },
+    ],
+  });
+
+  if (!result.ok) {
+    return { ok: false, error: result.error };
+  }
+
+  const images = result.data.choices?.[0]?.message?.images;
+  const imageUrl = images?.[0]?.image_url?.url;
+  if (!imageUrl) {
+    return { ok: false, error: "Model tidak mengembalikan gambar." };
+  }
+
+  const { buf } = dataUrlToBuffer(imageUrl);
+  return { ok: true, buffer: buf, model: chosen };
+}
+
+export function makeCreateWhatsappStickerTool(userId: string) {
+  return tool({
+    description:
+      "Buat stiker WhatsApp (WebP 512×512) dari prompt teks atau konversi gambar dari URL. Hasil otomatis dikirim sebagai stiker di WhatsApp.",
+    inputSchema: z.object({
+      prompt: z
+        .string()
+        .optional()
+        .describe("Deskripsi stiker yang ingin dibuat (wajib jika tanpa imageUrl)."),
+      imageUrl: z
+        .string()
+        .url()
+        .optional()
+        .describe("URL gambar sumber untuk dijadikan stiker."),
+      model: z.string().optional(),
+    }),
+    execute: async ({ prompt, imageUrl, model }) => {
+      if (!prompt?.trim() && !imageUrl) {
+        return {
+          ok: false as const,
+          error: "Isi prompt atau imageUrl untuk membuat stiker.",
+        };
+      }
+
+      let source: Buffer;
+      let usedModel = model ?? "";
+
+      if (imageUrl) {
+        try {
+          const resp = await fetch(imageUrl, { redirect: "follow" });
+          if (!resp.ok) {
+            return {
+              ok: false as const,
+              error: `Gagal unduh gambar: HTTP ${resp.status}`,
+            };
+          }
+          source = Buffer.from(await resp.arrayBuffer());
+        } catch (err) {
+          return {
+            ok: false as const,
+            error:
+              err instanceof Error ? err.message : "Gagal unduh gambar sumber",
+          };
+        }
+      } else {
+        const generated = await imageBufferFromPrompt(
+          userId,
+          prompt?.trim() ?? "",
+          model
+        );
+        if (!generated.ok) {
+          return { ok: false as const, error: generated.error };
+        }
+        source = generated.buffer;
+        usedModel = generated.model;
+      }
+
+      let stickerBuf: Buffer;
+      try {
+        stickerBuf = await formatWhatsappSticker(source);
+      } catch (err) {
+        return {
+          ok: false as const,
+          error:
+            err instanceof Error ? err.message : "Gagal format stiker WebP",
+        };
+      }
+
+      const stored = await putFile(`sticker-${Date.now()}.webp`, stickerBuf, {
+        contentType: "image/webp",
+        addRandomSuffix: true,
+      });
+
+      return {
+        ok: true as const,
+        kind: "sticker" as const,
+        url: stored.url,
+        mime: "image/webp",
+        filename: "sticker.webp",
+        bytes: stickerBuf.byteLength,
+        prompt: prompt?.trim(),
+        model: usedModel || undefined,
       };
     },
   });

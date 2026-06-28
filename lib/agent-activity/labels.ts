@@ -16,6 +16,7 @@ const TOOL_LABELS: Record<string, string> = {
   generateVideo: "Menghasilkan video",
   generateVoice: "Menghasilkan suara",
   transcribeAudio: "Mentranskripsi audio",
+  createWhatsappSticker: "Membuat stiker WhatsApp",
   downloadMedia: "Mengunduh media",
   saveMemory: "Menyimpan memori",
   getMemory: "Mengambil memori",

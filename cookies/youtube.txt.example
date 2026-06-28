@@ -1,5 +1,0 @@
-# Netscape HTTP Cookie File
-# Salin file ini jadi youtube.txt, lalu paste export dari extension Get cookies.txt LOCALLY
-# Jangan commit youtube.txt — sudah di .gitignore
-
-.youtube.com	TRUE	/	TRUE	0	EXAMPLE_NAME	ganti_dengan_export_asli

@@ -15,6 +15,13 @@ import { putFile } from "@/lib/storage/blob";
 const MAX_BYTES = 16 * 1024 * 1024;
 const SILENT_LOGGER = pino({ level: "silent" });
 
+export type WhatsappMediaWaType =
+  | "imageMessage"
+  | "videoMessage"
+  | "audioMessage"
+  | "documentMessage"
+  | "stickerMessage";
+
 export type WhatsappInboundMedia = {
   kind: FileKind;
   mime: string;
@@ -23,6 +30,10 @@ export type WhatsappInboundMedia = {
   url: string;
   caption?: string;
   extractedText?: string;
+  /** Tipe pesan WA asli (untuk prompt khusus stiker / voice). */
+  waType: WhatsappMediaWaType;
+  /** PTT voice note (bukan file audio biasa). */
+  isVoiceNote: boolean;
 };
 
 const MEDIA_TYPES = new Set([
@@ -99,14 +110,24 @@ function captionFromMessage(
 }
 
 export function defaultPromptForMedia(media: WhatsappInboundMedia[]): string {
-  const kind = media[0]?.kind;
-  switch (kind) {
+  const first = media[0];
+  if (!first) {
+    return "Analisis file yang dikirim user dan bantu sesuai isinya.";
+  }
+
+  if (first.waType === "stickerMessage") {
+    return "User mengirim stiker WhatsApp. Deskripsikan stiker ini dan tanggapi dengan natural — bisa santai atau lucu sesuai konteks.";
+  }
+
+  if (first.isVoiceNote || first.kind === "audio") {
+    return "User mengirim pesan suara. Baca transkripsinya di bawah dan balas isinya dengan jelas.";
+  }
+
+  switch (first.kind) {
     case "image":
       return "Apa isi gambar ini? Jelaskan secara detail.";
     case "video":
       return "User mengirim video. Jelaskan apa yang kamu bisa bantu terkait video ini.";
-    case "audio":
-      return "Transkripsikan dan tanggapi pesan suara ini.";
     case "pdf":
     case "docx":
     case "xlsx":
@@ -162,6 +183,9 @@ export async function extractInboundMedia(
   const filename = filenameFromMessage(normalized, type);
   const kind = classify(mime, filename);
   const caption = captionFromMessage(normalized, type);
+  const waType = type as WhatsappMediaWaType;
+  const isVoiceNote =
+    waType === "audioMessage" && Boolean(normalized.audioMessage?.ptt);
 
   let url: string;
   try {
@@ -191,5 +215,7 @@ export async function extractInboundMedia(
     url,
     caption,
     extractedText,
+    waType,
+    isVoiceNote,
   };
 }

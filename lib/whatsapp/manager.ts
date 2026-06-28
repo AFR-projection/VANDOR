@@ -339,11 +339,12 @@ async function handleIncoming(
   }
 
   const text = extractText(msg.message);
-  const inboundMedia = hasInboundMedia(msg.message)
+  const mediaAttached = hasInboundMedia(msg.message);
+  const inboundMedia = mediaAttached
     ? await extractInboundMedia(sock, msg)
     : null;
 
-  if (!text && !inboundMedia) {
+  if (!text && !mediaAttached) {
     return;
   }
 
@@ -491,6 +492,22 @@ async function handleIncoming(
   }
 
   // 5. Owner terverifikasi → jalankan agent turn.
+  if (mediaAttached && !inboundMedia) {
+    await sock.sendMessage(
+      jid,
+      {
+        text: "⚠️ Gagal memproses media (suara/stiker/gambar). Coba kirim ulang ya — pastikan koneksi stabil.",
+      },
+      { quoted: msg }
+    );
+    try {
+      await sock.sendPresenceUpdate("paused", jid);
+    } catch {
+      // non-fatal
+    }
+    return;
+  }
+
   let reply = "Maaf, ada error saat memproses pesan. Coba lagi ya.";
   let outbound: Awaited<
     ReturnType<typeof runWhatsappAgentTurn>

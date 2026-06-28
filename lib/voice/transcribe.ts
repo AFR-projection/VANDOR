@@ -138,10 +138,11 @@ export async function transcribeAudioBuffer({
   }
 
   const base64 = buffer.toString("base64");
-  const format = audioFormatFromMime(contentType || "audio/webm");
+  const cleanMime = (contentType || "audio/webm").split(";")[0]?.trim() ?? "";
+  const format = audioFormatFromMime(cleanMime);
 
-  // Browser mic records webm — multimodal chat often rejects it; try Whisper STT first.
-  if (format === "webm") {
+  // webm (mic browser) & ogg (voice note WA) — Whisper STT lebih andal.
+  if (format === "webm" || format === "ogg") {
     const sttFirst = await transcribeViaStt(ctx, base64, format);
     if (sttFirst.ok) {
       return sttFirst;

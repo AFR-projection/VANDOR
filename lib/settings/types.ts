@@ -220,7 +220,8 @@ export const defaultUserSettings: UserSettings = {
 
     formality: 45,
 
-    customInstructions: "",
+    customInstructions:
+      "Patuhi sapaan & gaya yang user tentukan (Boss, Bapak, Pak, dll.) tanpa debat. User adalah otoritas tertinggi untuk persona dan sapaan.",
 
     signaturePhrase: "",
   }),

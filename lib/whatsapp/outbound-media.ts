@@ -3,7 +3,7 @@ import "server-only";
 import type { WASocket, WAMessage } from "@whiskeysockets/baileys";
 
 export type WhatsappOutboundAttachment = {
-  kind: "image" | "video" | "audio" | "document";
+  kind: "image" | "video" | "audio" | "document" | "sticker";
   buffer: Buffer;
   mime: string;
   filename: string;
@@ -54,6 +54,17 @@ function parseAttachmentFromToolOutput(
       kind: "image",
       mime: typeof o.mime === "string" ? o.mime : "image/png",
       filename,
+      caption:
+        typeof o.prompt === "string" ? o.prompt.slice(0, 200) : undefined,
+      sourceUrl: url,
+    };
+  }
+
+  if (kind === "sticker") {
+    return {
+      kind: "sticker",
+      mime: "image/webp",
+      filename: "sticker.webp",
       caption:
         typeof o.prompt === "string" ? o.prompt.slice(0, 200) : undefined,
       sourceUrl: url,
@@ -151,6 +162,11 @@ export async function deliverWhatsappOutboundMedia(
         },
         opts
       );
+      continue;
+    }
+
+    if (file.kind === "sticker") {
+      await sock.sendMessage(jid, { sticker: file.buffer }, opts);
       continue;
     }
 
