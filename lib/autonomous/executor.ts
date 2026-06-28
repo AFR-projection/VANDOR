@@ -1,3 +1,6 @@
+import { analyzeCodeScan } from "./coding-agent/analyze";
+import { runCodeScan } from "./coding-agent/scan";
+import { runStatusSnapshot } from "./cli/runner";
 import { recordAgentAction } from "./audit";
 import { autonomousConfig } from "./config";
 import {
@@ -129,6 +132,76 @@ async function runTaskByType(
     case "remote_health": {
       const down = await runRemoteHealthChecks();
       return { hostsChecked: true, down };
+    }
+    case "code_scan": {
+      const fullBuild = Boolean(
+        (task.payload as { fullBuild?: boolean })?.fullBuild
+      );
+      const scan = await runCodeScan({
+        taskId: task.id,
+        fullBuild,
+        echo: false,
+      });
+      await recordAgentAction({
+        taskId: task.id,
+        tool: "coding-agent",
+        action: "code_scan",
+        input: { fullBuild },
+        output: { sessionId: scan.sessionId, steps: scan.steps.length },
+        status: scan.ok ? "ok" : "error",
+        riskLevel: "safe",
+        reason: scan.summary,
+      });
+      if (!scan.ok) {
+        await emitEvent({
+          type: "code_scan_failed",
+          severity: "error",
+          source: "coding-agent",
+          message: scan.summary,
+          payload: { sessionId: scan.sessionId, steps: scan.steps },
+        });
+        await notify({
+          title: "Code scan gagal",
+          body: `${scan.summary}\n\nLihat Terminal di Operator (session ${scan.sessionId.slice(0, 8)}).`,
+          level: "error",
+        });
+      }
+      return scan;
+    }
+    case "code_fix": {
+      const scan = await runCodeScan({ taskId: task.id, echo: false });
+      const analysis = await analyzeCodeScan(scan);
+      await recordAgentAction({
+        taskId: task.id,
+        tool: "coding-agent",
+        action: "code_fix_analyze",
+        output: analysis,
+        status: analysis.ok ? "ok" : "error",
+        riskLevel: "moderate",
+        reason: analysis.diagnosis.slice(0, 500),
+      });
+      if (analysis.suggestedCommands.length > 0) {
+        for (const command of analysis.suggestedCommands) {
+          // biome-ignore lint/nursery/noAwaitInLoop: approval per command
+          await createApproval({
+            taskId: task.id,
+            actionType: "code_fix",
+            summary: `Coding fix: ${command.slice(0, 200)}`,
+            payload: { command, sessionId: scan.sessionId },
+            riskLevel: "moderate",
+          });
+        }
+        await notify({
+          title: "Coding agent — perlu approval",
+          body: `${analysis.diagnosis.slice(0, 400)}\n\n${analysis.suggestedCommands.length} perintah menunggu SETUJU.`,
+          level: "warn",
+        });
+      }
+      return analysis;
+    }
+    case "vps_status": {
+      const snap = await runStatusSnapshot({ taskId: task.id, echo: false });
+      return { sessionId: snap.sessionId, ok: snap.ok };
     }
     case "deploy": {
       const payload = task.payload as { approved?: boolean } | null;

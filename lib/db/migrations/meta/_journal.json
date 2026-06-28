@@ -148,6 +148,13 @@
       "when": 1782000000000,
       "tag": "0024_agent_lease",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782100000000,
+      "tag": "0025_agent_terminal",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import {
   type AgentMode,
   systemMetric,
 } from "@/lib/db/schema";
+import { maybeNotifyPendingApprovals } from "./approval-notify";
 import { listAgentActions } from "./audit";
 import { db } from "./db";
 import { listRecentEvents } from "./events";
@@ -12,6 +13,7 @@ import { listPendingApprovals } from "./permission";
 import { listRules } from "./rules";
 import { listSchedules } from "./schedules-manage";
 import { getAgentState, setKillSwitch, setMode } from "./state";
+import { listTerminalLogs } from "./terminal-log";
 import { listRecentTasks } from "./tasks";
 
 export async function getOverview() {
@@ -26,6 +28,7 @@ export async function getOverview() {
     goals,
     rules,
     schedules,
+    terminal,
   ] = await Promise.all([
     getAgentState(),
     db
@@ -45,10 +48,17 @@ export async function getOverview() {
     listGoals(30),
     listRules(),
     listSchedules(),
+    listTerminalLogs({ limit: 120 }),
   ]);
 
   const series = [...metricsRows].reverse();
   const latest = metricsRows[0] ?? null;
+
+  if (approvals.length > 0) {
+    void maybeNotifyPendingApprovals().catch(() => {
+      /* non-fatal */
+    });
+  }
 
   return {
     state,
@@ -61,6 +71,16 @@ export async function getOverview() {
     goals,
     rules,
     schedules,
+    terminal: terminal.map((row) => ({
+      id: row.id,
+      sessionId: row.sessionId,
+      stream: row.stream,
+      line: row.line,
+      level: row.level,
+      command: row.command,
+      exitCode: row.exitCode,
+      createdAt: row.createdAt?.toISOString() ?? null,
+    })),
   };
 }
 

@@ -14,8 +14,10 @@ import {
   PowerIcon,
   RefreshCwIcon,
   RocketIcon,
+  SendIcon,
   ShieldAlertIcon,
   TargetIcon,
+  TerminalIcon,
   TimerIcon,
   XIcon,
 } from "lucide-react";
@@ -112,6 +114,16 @@ type Overview = {
     taskType: string;
     enabled: boolean;
     lastRunAt: string | null;
+  }[];
+  terminal: {
+    id: string;
+    sessionId: string;
+    stream: string;
+    line: string;
+    level: string;
+    command: string | null;
+    exitCode: number | null;
+    createdAt: string | null;
   }[];
 };
 
@@ -277,6 +289,7 @@ export function OperatorPanel() {
     pattern: "",
     kind: "require_approval",
   });
+  const [cliInput, setCliInput] = useState("");
   const [schedDraft, setSchedDraft] = useState({
     name: "",
     kind: "interval",
@@ -322,6 +335,90 @@ export function OperatorPanel() {
       });
     } catch {
       toast({ type: "error", description: "Gagal memproses approval" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const notifyApprovalsWa = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`${base()}/api/agent/approvals/notify`, {
+        method: "POST",
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        count?: number;
+        error?: string;
+        sentTo?: number;
+      };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? "Gagal kirim ke WhatsApp");
+      }
+      toast({
+        type: "success",
+        description:
+          json.count && json.count > 0
+            ? `Digest ${json.count} persetujuan dikirim ke WA`
+            : "Tidak ada persetujuan pending",
+      });
+    } catch (error) {
+      toast({
+        type: "error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Gagal mengirim persetujuan ke WhatsApp",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const agentCli = async (body: Record<string, unknown>) => {
+    setBusy(true);
+    try {
+      const res = await fetch(`${base()}/api/agent/cli`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        needsApproval?: boolean;
+        reason?: string;
+        summary?: string;
+        sessionId?: string;
+        taskId?: string;
+      };
+      if (json.needsApproval) {
+        toast({
+          type: "error",
+          description: json.reason ?? "Perintah butuh approval",
+        });
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(json.error ?? "CLI gagal");
+      }
+      await mutate();
+      toast({
+        type: "success",
+        description:
+          json.summary ??
+          (json.sessionId
+            ? `Selesai — log session ${json.sessionId.slice(0, 8)}`
+            : json.taskId
+              ? `Task ${json.taskId.slice(0, 8)} diantrikan`
+              : "Perintah dijalankan"),
+      });
+    } catch (error) {
+      toast({
+        type: "error",
+        description:
+          error instanceof Error ? error.message : "Gagal menjalankan CLI",
+      });
     } finally {
       setBusy(false);
     }
@@ -424,7 +521,7 @@ export function OperatorPanel() {
     );
   }
 
-  const { state, metrics, approvals, actions, events, tasks, goals, rules, schedules } =
+  const { state, metrics, approvals, actions, events, tasks, goals, rules, schedules, terminal } =
     data;
   const m = metrics.latest;
 
@@ -796,11 +893,26 @@ export function OperatorPanel() {
 
       {/* Approval pending */}
       <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <ShieldAlertIcon className="size-4 text-amber-400" />
-          <h3 className="font-semibold text-sm">
-            Persetujuan ({approvals.length})
-          </h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ShieldAlertIcon className="size-4 text-amber-400" />
+            <h3 className="font-semibold text-sm">
+              Persetujuan ({approvals.length})
+            </h3>
+          </div>
+          {approvals.length > 0 ? (
+            <Button
+              className="h-7 gap-1.5 text-xs"
+              disabled={busy}
+              onClick={notifyApprovalsWa}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <SendIcon className="size-3.5" />
+              Kirim ke WA
+            </Button>
+          ) : null}
         </div>
         {approvals.length === 0 ? (
           <p className="rounded-lg border border-border/40 bg-card/20 p-3 text-muted-foreground text-xs">
@@ -849,6 +961,98 @@ export function OperatorPanel() {
             ))}
           </ul>
         )}
+      </div>
+
+      {/* Terminal nyata — output CLI tersimpan di DB */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <TerminalIcon className="size-4 text-emerald-400" />
+            <h3 className="font-semibold text-sm">Terminal Agent</h3>
+            <span className="text-[10px] text-muted-foreground">
+              output nyata · refresh 5s
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              className="h-7 text-xs"
+              disabled={busy}
+              onClick={() => agentCli({ action: "enqueue_scan" })}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Scan code
+            </Button>
+            <Button
+              className="h-7 text-xs"
+              disabled={busy}
+              onClick={() => agentCli({ action: "enqueue_scan", fullBuild: true })}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Scan + build
+            </Button>
+            <Button
+              className="h-7 text-xs"
+              disabled={busy}
+              onClick={() => agentCli({ action: "enqueue_fix" })}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Analisis bug
+            </Button>
+          </div>
+        </div>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const cmd = cliInput.trim();
+            if (!cmd) {
+              return;
+            }
+            void agentCli({ command: cmd }).then(() => setCliInput(""));
+          }}
+        >
+          <Input
+            className="h-8 font-mono text-xs"
+            disabled={busy}
+            onChange={(e) => setCliInput(e.target.value)}
+            placeholder="pm2 jlist · git status · df -h"
+            value={cliInput}
+          />
+          <Button className="h-8 shrink-0" disabled={busy || !cliInput.trim()} type="submit">
+            Jalankan
+          </Button>
+        </form>
+        <div className="max-h-72 overflow-y-auto rounded-lg border border-emerald-500/20 bg-black/80 p-3 font-mono text-[11px] leading-relaxed text-emerald-100/90">
+          {terminal.length === 0 ? (
+            <p className="text-muted-foreground">
+              Belum ada log. Jalankan{" "}
+              <code className="text-emerald-400">npm run agent:cli -- status</code>{" "}
+              di VPS atau ketik perintah di atas.
+            </p>
+          ) : (
+            [...terminal].reverse().map((row) => (
+              <div
+                className={cn(
+                  "whitespace-pre-wrap break-all",
+                  row.level === "cmd" && "text-amber-300",
+                  (row.level === "stderr" || row.level === "error") &&
+                    "text-red-400",
+                  row.level === "info" && "text-sky-300/80"
+                )}
+                key={row.id}
+              >
+                {row.level === "cmd" ? "$ " : ""}
+                {row.line}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Event + Audit */}

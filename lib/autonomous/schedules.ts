@@ -23,6 +23,18 @@ const DEFAULT_SCHEDULES = [
     expression: "86400",
     taskType: "daily_report",
   },
+  {
+    name: "code-scan",
+    kind: "interval" as const,
+    expression: "3600",
+    taskType: "code_scan",
+  },
+  {
+    name: "vps-status",
+    kind: "interval" as const,
+    expression: "600",
+    taskType: "vps_status",
+  },
 ];
 
 /** Pastikan jadwal default ada (idempoten). */

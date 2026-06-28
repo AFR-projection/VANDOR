@@ -61,11 +61,8 @@ export const autonomousConfig = {
     diskCrit: envInt("VANDOR_AGENT_DISK_CRIT", 95),
   },
 
-  /** Service yang dipantau (systemd unit). */
-  monitoredServices: envList("VANDOR_AGENT_SERVICES", [
-    "nginx",
-    "redis-server",
-  ]),
+  /** Service systemd yang dipantau. Default kosong — Hostinger/VPS beda-beda; set via env. */
+  monitoredServices: envList("VANDOR_AGENT_SERVICES", []),
   /** Proses PM2 yang dipantau (selalu sertakan worker & app). */
   pm2Processes: envList("VANDOR_AGENT_PM2", ["vandor", "vandor-agent"]),
   /** Container Docker yang dipantau (kosong = semua). */

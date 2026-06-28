@@ -926,3 +926,31 @@ export const agentNotification = pgTable("AgentNotification", {
 });
 
 export type AgentNotification = InferSelectModel<typeof agentNotification>;
+
+export const agentTerminalStreams = [
+  "cli",
+  "coding",
+  "shell",
+  "deploy",
+  "worker",
+] as const;
+export type AgentTerminalStream = (typeof agentTerminalStreams)[number];
+
+/** Transcript terminal nyata — setiap baris output CLI/agent tercatat di DB. */
+export const agentTerminalLog = pgTable("AgentTerminalLog", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  sessionId: uuid("sessionId").notNull(),
+  stream: varchar("stream", { enum: agentTerminalStreams })
+    .notNull()
+    .default("cli"),
+  line: text("line").notNull(),
+  level: varchar("level", { length: 16 }).notNull().default("stdout"),
+  command: text("command"),
+  exitCode: integer("exitCode"),
+  taskId: uuid("taskId").references(() => agentTask.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type AgentTerminalLog = InferSelectModel<typeof agentTerminalLog>;

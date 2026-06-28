@@ -13,6 +13,7 @@ import { assessSystem } from "./planner";
 import { planAndActFromAssessment } from "./planner-act";
 import { processActiveGoals } from "./planner-goals";
 import { expireOldApprovals } from "./permission";
+import { maybeNotifyPendingApprovals } from "./approval-notify";
 import { ensureDefaultRules } from "./rules";
 import { ensureDefaultSchedules, runDueSchedules } from "./schedules";
 import { scheduleRemoteChecksIfConfigured } from "./remote-hosts";
@@ -71,6 +72,7 @@ export async function runTick(): Promise<void> {
   const ctx: ToolContext = { logger: log, ownerUserId, autonomous };
 
   await expireOldApprovals();
+  await maybeNotifyPendingApprovals();
 
   // 1. OBSERVE
   const obs = await observe();

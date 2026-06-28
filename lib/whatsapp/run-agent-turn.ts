@@ -323,7 +323,13 @@ export async function runWhatsappAgentTurn({
   );
 
   const capabilities = await getCapabilities();
-  const supportsTools = capabilities[modelId]?.tools !== false;
+  const cap = capabilities[modelId];
+  const supportsTools =
+    cap?.tools === true ||
+    (!freeMode &&
+      !modelId.endsWith(":free") &&
+      modelId !== "openrouter/free" &&
+      cap?.tools !== false);
 
   const memoryQuery = [
     userText,
@@ -361,6 +367,10 @@ export async function runWhatsappAgentTurn({
         "generateVoice",
         "transcribeAudio",
         "createWhatsappSticker",
+        "saveMemory",
+        "getMemory",
+        "searchDb",
+        "updateTask",
       ] as const)
     : undefined;
 
@@ -427,10 +437,13 @@ export async function runWhatsappAgentTurn({
 
   const waChannelBlock = [
     "=== KANAL WHATSAPP ===",
-    "User sedang chat lewat WhatsApp.",
+    "User sedang chat lewat WhatsApp (owner VANDOR).",
     "Jawab ringkas dan jelas (1–8 kalimat), tanpa markdown berat, tanpa heading, tanpa tabel.",
     "Untuk showMap, sertakan link OSM di jawaban.",
     "Kalau perlu data live, panggil webSearch.",
+    supportsTools
+      ? "MEMORI: pakai searchDb sebelum bilang lupa; saveMemory untuk ingat/jangan lupa; getMemory untuk lihat memori; updateTask untuk todo."
+      : null,
     hasMedia
       ? "User mengirim media (gambar/dokumen/suara/stiker/video). Analisis isinya — jangan bilang kamu tidak menerima file."
       : null,
@@ -441,8 +454,8 @@ export async function runWhatsappAgentTurn({
       ? "Pesan suara sudah ditranskrip ke teks — balas isinya, jangan minta user mengetik ulang."
       : null,
     supportsTools
-      ? "Kamu bisa generate gambar, stiker WA (createWhatsappSticker), edit foto, PDF/DOCX/spreadsheet, video, suara, dan transkripsi. Hasil file otomatis dikirim ke WhatsApp."
-      : null,
+      ? "TOOLS AKTIF: gambar, stiker WA, edit foto, PDF/DOCX/spreadsheet, video, suara, transkripsi, cuaca, peta, unduh media, memori, todo."
+      : "Model tanpa tools — jawab dari pengetahuan & memori konteks saja.",
   ]
     .filter(Boolean)
     .join("\n");

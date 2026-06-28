@@ -2,6 +2,10 @@ import { eq } from "drizzle-orm";
 import { type AgentEventSeverity, agentNotification } from "@/lib/db/schema";
 import { autonomousConfig } from "./config";
 import { db } from "./db";
+import { createLogger } from "./logger";
+import { approvalShortId } from "./permission";
+
+const log = createLogger("notify");
 
 export type NotifyInput = {
   title: string;
@@ -37,6 +41,10 @@ export async function notify(input: NotifyInput): Promise<void> {
   }
 
   const sent = await deliver(input, level);
+
+  if (!sent.ok) {
+    log.warn(`Gagal kirim notifikasi WA: ${sent.error ?? "unknown"}`);
+  }
 
   if (id) {
     await db
@@ -100,7 +108,7 @@ export async function notifyApprovalRequest(input: {
   summary: string;
   riskLevel: string;
 }): Promise<void> {
-  const short = input.id.replace(/-/g, "").slice(0, 8).toLowerCase();
+  const short = approvalShortId(input.id);
   await notify({
     title: "Perlu persetujuan",
     body:

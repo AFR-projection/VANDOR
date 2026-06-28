@@ -12,11 +12,21 @@ export type ServiceStatus = {
 
 export async function checkSystemdService(
   unit: string
-): Promise<ServiceStatus> {
+): Promise<ServiceStatus | null> {
   const res = await execCommand("systemctl", ["is-active", unit], {
     timeoutMs: 6000,
   });
+  const combined = `${res.stdout}\n${res.stderr}`.trim();
   const state = (res.stdout || res.stderr).trim() || "unknown";
+
+  if (
+    combined.includes("could not be found") ||
+    combined.includes("not-found") ||
+    combined.includes("Failed to get unit")
+  ) {
+    return null;
+  }
+
   return {
     name: unit,
     kind: "systemd",
@@ -143,10 +153,20 @@ export async function collectServiceHealth(): Promise<ServiceStatus[]> {
       continue;
     }
     if (Array.isArray(r)) {
-      flat.push(...r);
+      flat.push(...r.filter((s): s is ServiceStatus => s != null));
     } else {
       flat.push(r);
     }
   }
-  return flat;
+
+  const pm2Names = new Set(autonomousConfig.pm2Processes);
+  return flat.filter((svc) => {
+    if (svc.kind !== "pm2") {
+      return true;
+    }
+    if (pm2Names.size === 0) {
+      return true;
+    }
+    return pm2Names.has(svc.name);
+  });
 }

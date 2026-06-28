@@ -20,7 +20,8 @@
     "test": "export PLAYWRIGHT=True && pnpm exec playwright test",
     "test:unit": "npx tsx --test lib/search/detect.test.ts",
     "agent": "tsx lib/autonomous/worker.ts",
-    "agent:once": "tsx lib/autonomous/worker.ts --once"
+    "agent:once": "tsx lib/autonomous/worker.ts --once",
+    "agent:cli": "tsx scripts/vandor-cli.ts"
   },
   "dependencies": {
     "@ai-sdk/provider": "^3.0.3",
