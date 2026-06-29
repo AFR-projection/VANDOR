@@ -67,7 +67,7 @@ async function main(): Promise<void> {
       process.stdout.write(
         `=== Code Scan ${fullBuild ? "(+ build)" : ""} ===\n`
       );
-      const scan = await runCodeScan({ echo, fullBuild });
+      const scan = await runCodeScan({ echo, fullBuild, includeUltracite: true });
       process.stdout.write(`\n${scan.summary}\n`);
       process.stdout.write(`Session: ${scan.sessionId}\n`);
       if (!scan.ok) {

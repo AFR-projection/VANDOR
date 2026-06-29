@@ -1,7 +1,9 @@
 import { autonomousConfig } from "./config";
+import { resolveOpenRouterApiKey } from "./openrouter-key";
 
-export function isLlmConfigured(): boolean {
-  return autonomousConfig.openrouterApiKey.length > 0;
+export async function isLlmConfigured(): Promise<boolean> {
+  const key = await resolveOpenRouterApiKey();
+  return Boolean(key);
 }
 
 type ChatOptions = {
@@ -16,7 +18,8 @@ export async function llmChat(
   prompt: string,
   options: ChatOptions = {}
 ): Promise<string | null> {
-  if (!isLlmConfigured()) {
+  const apiKey = await resolveOpenRouterApiKey();
+  if (!apiKey) {
     return null;
   }
 
@@ -34,7 +37,7 @@ export async function llmChat(
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${autonomousConfig.openrouterApiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           ...(autonomousConfig.appUrl
             ? { "HTTP-Referer": autonomousConfig.appUrl }
             : {}),

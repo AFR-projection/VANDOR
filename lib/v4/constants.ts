@@ -2,7 +2,7 @@
 export const V4_MAX_AGENT_STEPS = 4;
 
 /** Target active tools per request. */
-export const V4_MAX_ACTIVE_TOOLS = 5;
+export const V4_MAX_ACTIVE_TOOLS = 7;
 
 /** Long-term memory block cap (~900–1100 tokens). */
 export const V4_MAX_MEMORY_CONTEXT_CHARS = 4500;

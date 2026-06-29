@@ -1,5 +1,5 @@
-import { asc, eq } from "drizzle-orm";
-import { user } from "@/lib/db/schema";
+import { asc, desc, eq, isNotNull } from "drizzle-orm";
+import { user, userSecrets } from "@/lib/db/schema";
 import { autonomousConfig } from "./config";
 import { db } from "./db";
 
@@ -31,6 +31,17 @@ export async function resolveOwnerUserId(): Promise<string | null> {
     .from(user)
     .orderBy(asc(user.createdAt))
     .limit(1);
-  cachedOwnerId = first[0]?.id ?? null;
+  if (first[0]?.id) {
+    cachedOwnerId = first[0].id;
+    return cachedOwnerId;
+  }
+
+  const withOrKey = await db
+    .select({ userId: userSecrets.userId })
+    .from(userSecrets)
+    .where(isNotNull(userSecrets.openrouterApiKeyEnc))
+    .orderBy(desc(userSecrets.updatedAt))
+    .limit(1);
+  cachedOwnerId = withOrKey[0]?.userId ?? null;
   return cachedOwnerId;
 }

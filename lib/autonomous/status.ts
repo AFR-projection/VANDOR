@@ -21,7 +21,7 @@ export async function formatAgentStatus(): Promise<string> {
 
   const down = services.filter((s) => !s.healthy);
   const lines = [
-    "**VANDOR Operator**",
+    "**VANDOR** — status sistem",
     "",
     `Mode: **${state.mode}** · Status: **${state.killSwitch ? "KILL SWITCH" : state.status}**`,
     `Tick #${state.tickCount} · Heartbeat: ${state.lastHeartbeatAt?.toISOString() ?? "—"}`,

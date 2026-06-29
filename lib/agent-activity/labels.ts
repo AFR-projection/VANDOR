@@ -22,6 +22,8 @@ const TOOL_LABELS: Record<string, string> = {
   getMemory: "Mengambil memori",
   searchDb: "Mencari memori & data",
   updateTask: "Mengelola task",
+  checkSystem: "Memeriksa kesehatan sistem",
+  agentWork: "Menjalankan pekerjaan worker",
   listVaultFiles: "Membuka berangkas",
   openVaultFile: "Membaca berkas berangkas",
   readVaultFile: "Membaca berangkas",
@@ -74,6 +76,7 @@ export const INTENT_LIVE_STATUS: Record<string, string> = {
   image: "Memproses gambar",
   pdf: "Membuat file",
   map: "Memuat peta",
+  operator: "Memeriksa sistem",
   chat_simple: "Memproses permintaan",
   chat_reasoning: "Menganalisis",
 };

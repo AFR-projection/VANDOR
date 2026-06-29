@@ -15,6 +15,8 @@ import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
 import { systemPrompt } from "@/lib/ai/prompts";
 import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
 import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
+import { makeCheckSystemTool } from "@/lib/ai/tools/check-system";
+import { makeAgentWorkTool } from "@/lib/ai/tools/agent-work";
 import { createDocx } from "@/lib/ai/tools/create-docx";
 import { createPdf } from "@/lib/ai/tools/create-pdf";
 import { createSpreadsheet } from "@/lib/ai/tools/create-spreadsheet";
@@ -48,6 +50,10 @@ import {
 } from "@/lib/memory/extract";
 import { generateUUID } from "@/lib/utils";
 import { transcribeAudioBuffer } from "@/lib/voice/transcribe";
+import { buildCachedAwarenessContextBlock } from "@/lib/autonomous/awareness";
+import { buildRecentAlertsContextBlock } from "@/lib/autonomous/recent-alerts";
+import { VANDOR_UNIFIED_IDENTITY_BLOCK } from "@/lib/operator/identity-prompt";
+import { buildWhatsappOwnerToneBlock } from "./wa-tone";
 import { emitChatUpdated } from "./chat-push";
 import { getWhatsappModelId } from "./config";
 import { resolveDeploymentOwnerUser } from "./deployment-owner";
@@ -371,6 +377,8 @@ export async function runWhatsappAgentTurn({
         "getMemory",
         "searchDb",
         "updateTask",
+        "checkSystem",
+        "agentWork",
       ] as const)
     : undefined;
 
@@ -382,8 +390,20 @@ export async function runWhatsappAgentTurn({
   });
   const ownerFreedomBlock = buildOwnerConversationFreedomBlock({
     isDeploymentOwner: deploymentOwner?.id === userId,
-    whatsappOwner: true,
+    whatsappOwner: false,
   });
+
+  let operatorContextBlock = "";
+  let recentAlertsBlock = "";
+  try {
+    [operatorContextBlock, recentAlertsBlock] = await Promise.all([
+      buildCachedAwarenessContextBlock(),
+      buildRecentAlertsContextBlock(4),
+    ]);
+  } catch {
+    operatorContextBlock = "";
+    recentAlertsBlock = "";
+  }
 
   const system = systemPrompt({
     requestHints: {
@@ -398,7 +418,9 @@ export async function runWhatsappAgentTurn({
     responseMode: "enhanced",
     activeTools: activeTools ? [...activeTools] : undefined,
     ownerAuthorityBlock,
-    ownerFreedomBlock,
+    ownerFreedomBlock: deploymentOwner?.id === userId
+      ? ownerFreedomBlock
+      : null,
   });
 
   const assistantTools = makeAssistantTools(userId, chatId);
@@ -424,6 +446,8 @@ export async function runWhatsappAgentTurn({
         getMemory: assistantTools.getMemory,
         searchDb: assistantTools.searchDb,
         updateTask: assistantTools.updateTask,
+        checkSystem: makeCheckSystemTool(),
+        agentWork: makeAgentWorkTool({ userId, chatId }),
       }
     : undefined;
 
@@ -438,7 +462,13 @@ export async function runWhatsappAgentTurn({
   const waChannelBlock = [
     "=== KANAL WHATSAPP ===",
     "User sedang chat lewat WhatsApp (owner VANDOR).",
+    buildWhatsappOwnerToneBlock(),
+    VANDOR_UNIFIED_IDENTITY_BLOCK,
+    recentAlertsBlock || null,
+    operatorContextBlock ? `\n${operatorContextBlock}` : null,
     "Jawab ringkas dan jelas (1–8 kalimat), tanpa markdown berat, tanpa heading, tanpa tabel.",
+    "Pertanyaan aman/status/server/VPS → WAJIB checkSystem dulu, baru jawab.",
+    "Minta scan/fix/log/deploy → agentWork dispatch, lalu status sampai done.",
     "Untuk showMap, sertakan link OSM di jawaban.",
     "Kalau perlu data live, panggil webSearch.",
     supportsTools
@@ -454,7 +484,7 @@ export async function runWhatsappAgentTurn({
       ? "Pesan suara sudah ditranskrip ke teks — balas isinya, jangan minta user mengetik ulang."
       : null,
     supportsTools
-      ? "TOOLS AKTIF: gambar, stiker WA, edit foto, PDF/DOCX/spreadsheet, video, suara, transkripsi, cuaca, peta, unduh media, memori, todo."
+      ? "TOOLS AKTIF: checkSystem, agentWork (worker nyata), gambar, stiker WA, edit foto, PDF/DOCX/spreadsheet, video, suara, transkripsi, cuaca, peta, unduh media, memori, todo."
       : "Model tanpa tools — jawab dari pengetahuan & memori konteks saja.",
   ]
     .filter(Boolean)

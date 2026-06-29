@@ -39,6 +39,8 @@ import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
 import { classifyTaskIntent } from "@/lib/ai/router";
 import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
 import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
+import { makeCheckSystemTool } from "@/lib/ai/tools/check-system";
+import { makeAgentWorkTool } from "@/lib/ai/tools/agent-work";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { createDocx } from "@/lib/ai/tools/create-docx";
 import { createPdf } from "@/lib/ai/tools/create-pdf";
@@ -128,6 +130,8 @@ import { resolveClientGeo } from "@/lib/security/geo";
 import { getUserSettings } from "@/lib/settings/queries";
 import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
+import { buildCachedAwarenessContextBlock } from "@/lib/autonomous/awareness";
+import { VANDOR_UNIFIED_IDENTITY_BLOCK } from "@/lib/operator/identity-prompt";
 import type { ChatMessage } from "@/lib/types";
 import {
   convertToUIMessages,
@@ -135,7 +139,7 @@ import {
   getTextFromMessage,
 } from "@/lib/utils";
 import { executeDirectCommand, parseDirectCommand } from "@/lib/v4/commands";
-import { V4_MAX_AGENT_STEPS } from "@/lib/v4/constants";
+import { V4_MAX_ACTIVE_TOOLS, V4_MAX_AGENT_STEPS } from "@/lib/v4/constants";
 import { createFastTextStreamResponse } from "@/lib/v4/fast-stream";
 import { resolveVandorIntent } from "@/lib/v4/intent";
 import { V4_JARVIS_OS_BLOCK } from "@/lib/v4/jarvis-prompt";
@@ -506,6 +510,15 @@ export async function POST(request: Request) {
     const ownerFreedomBlock = buildOwnerConversationFreedomBlock({
       isDeploymentOwner: deploymentOwner?.id === settingsUserId,
     });
+    const isDeploymentOwner = deploymentOwner?.id === settingsUserId;
+    let operatorContextBlock = "";
+    if (isDeploymentOwner) {
+      try {
+        operatorContextBlock = await buildCachedAwarenessContextBlock();
+      } catch {
+        operatorContextBlock = "";
+      }
+    }
     const openRouterApiKey = await resolveOpenRouterApiKeyForUser(
       settingsUserId
     );
@@ -1031,6 +1044,7 @@ export async function POST(request: Request) {
           image: "Memproses gambar",
           pdf: "Membuat file",
           map: "Memuat peta",
+          operator: "Memeriksa sistem",
           chat_simple: "Memproses",
           chat_reasoning: "Menganalisis",
         };
@@ -1065,6 +1079,22 @@ export async function POST(request: Request) {
 
         if (webSearchToolOff) {
           activeTools = activeTools.filter((t) => t !== "webSearch");
+        }
+
+        if (
+          supportsTools &&
+          isDeploymentOwner &&
+          !activeTools.includes("checkSystem")
+        ) {
+          activeTools = (
+            [
+              "checkSystem",
+              "agentWork",
+              ...activeTools.filter(
+                (t) => t !== "checkSystem" && t !== "agentWork"
+              ),
+            ] as typeof activeTools
+          ).slice(0, V4_MAX_ACTIVE_TOOLS);
         }
 
         let activeSkills: Awaited<ReturnType<typeof listActiveAgentSkills>> =
@@ -1138,6 +1168,10 @@ export async function POST(request: Request) {
                 ownerFreedomBlock,
               }) +
               skillToolsBlock +
+              `\n\n${VANDOR_UNIFIED_IDENTITY_BLOCK}` +
+              (isDeploymentOwner && operatorContextBlock
+                ? `\n\n${operatorContextBlock}`
+                : "") +
               `\n\n${V4_JARVIS_OS_BLOCK}\n\nTools aktif: ${allActiveTools.length}.` +
               (freeModeActive
                 ? `\n\n=== TIER GRATIS ===\nVANDOR mencoba ${freeAttemptChain?.length ?? 15} model :free bergantian (Llama 3.3, GPT-OSS, Nemotron, Kimi, dll.) sampai ada respons.${
@@ -1196,6 +1230,15 @@ export async function POST(request: Request) {
               createWhatsappSticker: makeCreateWhatsappStickerTool(
                 session.user.id
               ),
+              ...(isDeploymentOwner
+                ? {
+                    checkSystem: makeCheckSystemTool(),
+                    agentWork: makeAgentWorkTool({
+                      userId: settingsUserId,
+                      chatId: id,
+                    }),
+                  }
+                : {}),
             },
             experimental_telemetry: {
               isEnabled: isProductionEnvironment,
@@ -1203,6 +1246,9 @@ export async function POST(request: Request) {
             },
             onStepFinish: ({ toolCalls, toolResults }) => {
               for (const call of toolCalls) {
+                if (!call) {
+                  continue;
+                }
                 const name = call.toolName;
                 agentStepStart(
                   dataStream,
@@ -1213,6 +1259,9 @@ export async function POST(request: Request) {
                 agentEvent(dataStream, `${toolActivityLabel(name)}…`, "info");
               }
               for (const result of toolResults) {
+                if (!result) {
+                  continue;
+                }
                 agentStepComplete(dataStream, result.toolCallId);
                 if (result.toolName === "webSearch") {
                   const output = result.output as

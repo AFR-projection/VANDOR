@@ -26,7 +26,7 @@ const DEFAULT_SCHEDULES = [
   {
     name: "code-scan",
     kind: "interval" as const,
-    expression: "3600",
+    expression: "21600",
     taskType: "code_scan",
   },
   {

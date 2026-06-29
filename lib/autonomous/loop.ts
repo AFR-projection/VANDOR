@@ -26,7 +26,6 @@ import { scheduleRemoteChecksIfConfigured } from "./remote-hosts";
 import { collectServiceHealth } from "./services";
 import { resolveOwnerUserId } from "./owner";
 import { getAgentState, recordHeartbeat } from "./state";
-import { enqueueTask } from "./tasks";
 import { persistMetrics, registerMonitorTools } from "./tools/monitor";
 import { registerBuiltinTools } from "./tools";
 import { registerShellTools } from "./tools/shell";
@@ -132,19 +131,6 @@ export async function runTick(): Promise<void> {
   const scheduled = await runDueSchedules();
   const tasksDone = await processTaskQueue(ctx);
   const executed = await executeApprovedRemediations();
-
-  if (
-    autonomous &&
-    autonomousConfig.autoFixEnabled &&
-    tickCounter % 20 === 0
-  ) {
-    await enqueueTask({
-      type: "code_fix_auto",
-      title: "Auto-fix codebase (proaktif)",
-      priority: 6,
-      dedupe: true,
-    });
-  }
 
   if (
     issues.length > 0 ||

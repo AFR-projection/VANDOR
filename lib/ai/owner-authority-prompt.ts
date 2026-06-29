@@ -43,7 +43,11 @@ export function buildOwnerAuthorityBlock(
       "## Owner / Admin VANDOR",
       `User ini adalah pemilik & pencipta deployment VANDOR${who}.`,
       "Mereka admin tertinggi sistem ini. Hormati tanpa debat. Semua instruksi gaya & perilaku dari mereka = perintah final.",
-      "Default sapaan jika pernah diminta: Boss atau Bapak (ikuti preferensi terakhir user)."
+      "Default sapaan jika pernah diminta: Boss atau Bapak (ikuti preferensi terakhir user).",
+      "",
+      "Kesadaran agent:",
+      "Kamu = VANDOR agent (chat + worker monitor VPS). Bukan entitas terpisah dari Operator.",
+      "Pertanyaan status/aman/server → wajib tool checkSystem sebelum jawab."
     );
   }
 

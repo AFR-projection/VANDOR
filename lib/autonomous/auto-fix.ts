@@ -2,6 +2,8 @@ import { recordAgentAction } from "./audit";
 import { autonomousConfig } from "./config";
 import { analyzeCodeScan } from "./coding-agent/analyze";
 import { runCodeScan } from "./coding-agent/scan";
+import { collectSystemAwareness } from "./awareness";
+import { composeOperatorWhatsappMessage } from "./compose-message";
 import { emitEvent } from "./events";
 import type { Issue } from "./healing/detectors";
 import { createLogger } from "./logger";
@@ -15,6 +17,25 @@ import {
 import { execApprovedCommand } from "./tools/shell";
 
 const log = createLogger("auto-fix");
+
+async function notifyCodeFix(
+  kind: "code_fix_ok" | "code_fix_failed",
+  extra: string
+): Promise<void> {
+  const snapshot = await collectSystemAwareness({ live: false });
+  const body =
+    (await composeOperatorWhatsappMessage({ kind, snapshot, extra })) ?? extra;
+  await notify({
+    title: "VANDOR",
+    body,
+    level: kind === "code_fix_ok" ? "info" : "warn",
+    cooldownMs:
+      kind === "code_fix_failed"
+        ? autonomousConfig.codeFixNotifyCooldownMs
+        : undefined,
+    cooldownKey: kind === "code_fix_failed" ? "code-fix-failed" : undefined,
+  });
+}
 
 export type AutoFixResult = {
   attempted: number;
@@ -215,15 +236,10 @@ export async function runCodeAutoFixPipeline(options?: {
         echo: false,
       });
       if (rescan.ok) {
-        await notify({
-          title: "Code auto-fix berhasil",
-          body:
-            `✅ Error codebase diperbaiki otomatis.\n\n` +
-            `Perintah: \`${command}\`\n` +
-            `Session: ${scanBefore.sessionId.slice(0, 8)}\n\n` +
-            `_Scan ulang lulus — tidak perlu approval._`,
-          level: "info",
-        });
+        await notifyCodeFix(
+          "code_fix_ok",
+          `Codebase diperbaiki otomatis dengan \`${command}\`. Session ${scanBefore.sessionId.slice(0, 8)}.`
+        );
         return {
           ok: true,
           sessionId: scanBefore.sessionId,
@@ -252,15 +268,10 @@ export async function runCodeAutoFixPipeline(options?: {
       echo: false,
     });
     if (rescan.ok) {
-      await notify({
-        title: "Code auto-fix berhasil",
-        body:
-          `✅ Error codebase diperbaiki otomatis (LLM).\n\n` +
-          `Diagnosis: ${analysis.diagnosis.slice(0, 350)}\n\n` +
-          `Perintah: \`${command}\`\n\n` +
-          `_Scan ulang lulus._`,
-        level: "info",
-      });
+      await notifyCodeFix(
+        "code_fix_ok",
+        `Codebase diperbaiki (LLM). Perintah: \`${command}\`. Diagnosis: ${analysis.diagnosis.slice(0, 200)}`
+      );
       return {
         ok: true,
         sessionId: scanBefore.sessionId,
@@ -279,14 +290,14 @@ export async function runCodeAutoFixPipeline(options?: {
   });
 
   if (!finalScan.ok) {
-    await notify({
-      title: "Code auto-fix — masih ada error",
-      body:
-        `⚠️ Auto-fix sudah dicoba (${commandsRun.length} perintah) tapi scan masih gagal.\n\n` +
-        `${analysis.diagnosis.slice(0, 400)}\n\n` +
-        `Cek Terminal di Operator (session ${scanBefore.sessionId.slice(0, 8)}).`,
-      level: "warn",
-    });
+    if (!analysis.skipNotify) {
+      await notifyCodeFix(
+        "code_fix_failed",
+        `Auto-fix dicoba ${commandsRun.length} perintah, scan masih gagal. ${analysis.diagnosis.slice(0, 300)} Session ${scanBefore.sessionId.slice(0, 8)}.`
+      );
+    } else {
+      log.info("Auto-fix skip notify — tooling/config only");
+    }
   }
 
   return {

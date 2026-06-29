@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   if (body.action === "scan") {
     const scan = await runCodeScan({
       fullBuild: Boolean(body.fullBuild),
+      includeUltracite: true,
       echo: false,
     });
     return Response.json(scan);
@@ -35,7 +36,10 @@ export async function POST(request: Request) {
     const { id, deduped } = await enqueueTask({
       type: "code_scan",
       title: body.fullBuild ? "Code scan + build" : "Code scan",
-      payload: { fullBuild: Boolean(body.fullBuild) },
+      payload: {
+        fullBuild: Boolean(body.fullBuild),
+        includeUltracite: true,
+      },
       priority: 7,
       dedupe: true,
     });

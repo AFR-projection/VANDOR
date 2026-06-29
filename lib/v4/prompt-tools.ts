@@ -25,6 +25,8 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   transcribeAudio: "transkripsi audio",
   createWhatsappSticker: "stiker WhatsApp",
   downloadMedia: "unduh TT/IG",
+  checkSystem: "cek kesehatan VPS/server live",
+  agentWork: "antre & lacak pekerjaan worker",
 };
 
 const VAULT_ISOLATION_HINT = `

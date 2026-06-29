@@ -108,6 +108,15 @@ export const autonomousConfig = {
   proactiveAlertMs: envInt("VANDOR_AGENT_ALERT_MS", 15 * 60_000),
   /** Pakai LLM untuk pesan check-in natural. */
   proactiveUseLlm: process.env.VANDOR_AGENT_PROACTIVE_LLM !== "false",
+
+  /** Cooldown notifikasi WA gagal auto-fix / scan (ms). Default 24 jam. */
+  codeFixNotifyCooldownMs: envInt(
+    "VANDOR_AGENT_CODE_FIX_NOTIFY_MS",
+    24 * 60 * 60_000
+  ),
+  /** Scheduled code_scan: jalankan auto-fix pipeline (default off — cegah spam). */
+  scheduledCodeScanAutoFix:
+    process.env.VANDOR_AGENT_SCHEDULED_CODE_AUTOFIX === "true",
 } as const;
 
 export type AutonomousConfig = typeof autonomousConfig;

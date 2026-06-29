@@ -18,6 +18,7 @@ import {
   markApprovalConsumed,
 } from "./permission";
 import { runRemoteHealthChecks } from "./remote-hosts";
+import { notifyChatTaskOutcome } from "./chat-task-notify";
 import { collectServiceHealth } from "./services";
 import {
   claimReadyTasks,
@@ -134,12 +135,15 @@ async function runTaskByType(
       return { hostsChecked: true, down };
     }
     case "code_scan": {
-      const fullBuild = Boolean(
-        (task.payload as { fullBuild?: boolean })?.fullBuild
-      );
+      const payload = (task.payload ?? {}) as {
+        fullBuild?: boolean;
+        includeUltracite?: boolean;
+      };
+      const fullBuild = Boolean(payload.fullBuild);
       const scan = await runCodeScan({
         taskId: task.id,
         fullBuild,
+        includeUltracite: Boolean(payload.includeUltracite),
         echo: false,
       });
       await recordAgentAction({
@@ -160,22 +164,29 @@ async function runTaskByType(
           message: scan.summary,
           payload: { sessionId: scan.sessionId, steps: scan.steps },
         });
-        if (
+        const scanPayload = (task.payload ?? {}) as {
+          autoFix?: boolean;
+          requestedBy?: string;
+        };
+        const fromChat = scanPayload.requestedBy === "chat";
+        const shouldAutoFix =
           autonomousConfig.autoFixEnabled &&
-          (task.payload as { autoFix?: boolean })?.autoFix !== false
-        ) {
+          (scanPayload.autoFix === true ||
+            (!fromChat && autonomousConfig.scheduledCodeScanAutoFix));
+
+        if (shouldAutoFix) {
           const fix = await runCodeAutoFixPipeline({
             taskId: task.id,
             fullBuild: fullBuild,
           });
-          if (fix.ok) {
-            return { scan, autoFix: fix };
-          }
+          return { scan, autoFix: fix };
         }
         await notify({
-          title: "Code scan gagal",
-          body: `${scan.summary}\n\nAuto-fix sedang dicoba otomatis.\nLihat Terminal di Operator (session ${scan.sessionId.slice(0, 8)}).`,
+          title: "VANDOR",
+          body: `${scan.summary}\n\nLihat Terminal di Operator (session ${scan.sessionId.slice(0, 8)}).`,
           level: "error",
+          cooldownMs: autonomousConfig.codeFixNotifyCooldownMs,
+          cooldownKey: "code-scan-failed",
         });
       }
       return scan;
@@ -247,11 +258,33 @@ export async function processTaskQueue(ctx: ToolContext): Promise<number> {
       const result = await runTaskByType(task, ctx);
       // biome-ignore lint/nursery/noAwaitInLoop: update status berurutan
       await completeTask(task.id, result);
+      // biome-ignore lint/nursery/noAwaitInLoop: notifikasi chat berurutan
+      await notifyChatTaskOutcome({
+        task: {
+          ...task,
+          status: "done",
+          result: result as never,
+          finishedAt: new Date(),
+        },
+        outcome: "done",
+        result,
+      });
       processed += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       // biome-ignore lint/nursery/noAwaitInLoop: update status berurutan
       await failTask(task.id, message);
+      // biome-ignore lint/nursery/noAwaitInLoop: notifikasi chat berurutan
+      await notifyChatTaskOutcome({
+        task: {
+          ...task,
+          status: "failed",
+          error: message,
+          finishedAt: new Date(),
+        },
+        outcome: "failed",
+        error: message,
+      });
       // biome-ignore lint/nursery/noAwaitInLoop: audit berurutan
       await recordAgentAction({
         taskId: task.id,

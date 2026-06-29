@@ -1,9 +1,10 @@
 import { autonomousConfig } from "./config";
+import { collectSystemAwareness } from "./awareness";
+import { composeOperatorWhatsappMessage } from "./compose-message";
 import type { HeartbeatSnapshot } from "./heartbeat";
 import { getLatestHeartbeat, touchProactiveHeartbeat } from "./heartbeat";
 import type { Issue } from "./healing/detectors";
 import type { ObservationBundle } from "./healing/detectors";
-import { isLlmConfigured, llmChat } from "./llm";
 import { createLogger } from "./logger";
 import { notify } from "./notify";
 
@@ -16,69 +17,25 @@ function msSince(iso: string | null | undefined): number {
   return Date.now() - new Date(iso).getTime();
 }
 
-function formatMetricsLine(obs: ObservationBundle): string {
-  const m = obs.metrics;
-  return `CPU ${m.cpuPct}% · RAM ${m.memUsedPct}% · Disk ${m.diskUsedPct ?? "?"}%`;
-}
-
-function buildHealthyCheckIn(
-  heartbeat: HeartbeatSnapshot | null,
-  obs: ObservationBundle
-): string {
-  const score = heartbeat?.healthScore ?? "?";
-  const lines = [
-    `Halo! VANDOR Operator aktif — skor kesehatan *${score}/100* (${heartbeat?.grade ?? "?"})`,
-    formatMetricsLine(obs),
-    "",
-    "Ada yang perlu kubantu hari ini?",
-    "• Cek server / deploy / log?",
-    "• Scan codebase atau perbaiki error?",
-    "• Pantau uptime atau backup?",
-    "",
-    "Balas bebas (contoh: *scan*, *status*, *cek log*) atau buka Pengaturan → Operator.",
-  ];
-  return lines.join("\n");
-}
-
-function buildIssueAlert(issues: Issue[], obs: ObservationBundle): string {
-  const top = issues.slice(0, 4);
+function fallbackAlert(issues: Issue[], obs: ObservationBundle): string {
+  const top = issues.slice(0, 3);
   const lines = top.map(
-    (i, n) => `${n + 1}. [${i.severity.toUpperCase()}] ${i.title}\n   ${i.detail.slice(0, 120)}`
+    (i, n) => `${n + 1}. [${i.severity}] ${i.title}: ${i.detail.slice(0, 100)}`
   );
+  const m = obs.metrics;
   return (
-    `⚠️ *${issues.length} isu terdeteksi* — VANDOR sudah mulai investigasi.\n\n` +
-    `${lines.join("\n\n")}\n\n` +
-    `${formatMetricsLine(obs)}\n\n` +
-    `Auto-fix aktif bila memungkinkan. Ada yang mau dicek lebih lanjut? Balas *status* atau *scan*.`
+    `Ada ${issues.length} isu — CPU ${m.cpuPct}% RAM ${m.memUsedPct}%.\n\n` +
+    `${lines.join("\n")}\n\nBalas bebas kalau mau kubantu cek lebih lanjut.`
   );
 }
 
-async function buildLlmCheckIn(
-  heartbeat: HeartbeatSnapshot | null,
-  obs: ObservationBundle,
-  issues: Issue[]
-): Promise<string | null> {
-  if (!isLlmConfigured()) {
-    return null;
-  }
-
-  const prompt = `Kamu VANDOR Operator — asisten proaktif owner VPS.
-Tulis pesan WhatsApp singkat (Bahasa Indonesia, max 8 baris) untuk owner utama.
-Tujuan: tanya apa yang perlu dibantu, tawarkan cek yang relevan, terdengar natural (bukan robot).
-Jangan pakai markdown berlebihan. Sertakan 1-2 pertanyaan konkret.
-
-Konteks:
-- Skor kesehatan: ${heartbeat?.healthScore ?? "?"}/100
-- ${formatMetricsLine(obs)}
-- Isu aktif: ${issues.length}
-- Mode: ${heartbeat?.mode ?? "?"}`;
-
-  const text = await llmChat(prompt, {
-    temperature: 0.55,
-    maxTokens: 350,
-    timeoutMs: 20_000,
-  });
-  return text?.trim().slice(0, 900) ?? null;
+function fallbackCheckIn(hb: HeartbeatSnapshot | null, obs: ObservationBundle): string {
+  const m = obs.metrics;
+  return (
+    `Halo! Skor kesehatan ${hb?.healthScore ?? "?"}/100. ` +
+    `CPU ${m.cpuPct}% · RAM ${m.memUsedPct}%.\n\n` +
+    `Ada yang perlu kubantu hari ini?`
+  );
 }
 
 export type ProactiveRunResult = {
@@ -87,8 +44,7 @@ export type ProactiveRunResult = {
 };
 
 /**
- * Outreach proaktif ke owner utama via WA — tanpa menunggu ditanya.
- * Cooldown agar tidak spam; alert isu baru lebih agresif.
+ * Outreach proaktif ke owner utama via WA — pesan dari LLM + data nyata.
  */
 export async function runProactiveOutreach(input: {
   obs: ObservationBundle;
@@ -98,10 +54,10 @@ export async function runProactiveOutreach(input: {
 }): Promise<ProactiveRunResult> {
   const result: ProactiveRunResult = { checkInSent: false, alertSent: false };
 
-  const hb =
-    input.heartbeat ?? (await getLatestHeartbeat());
+  const hb = input.heartbeat ?? (await getLatestHeartbeat());
   const checkInCooldown = autonomousConfig.proactiveCheckInMs;
   const alertCooldown = autonomousConfig.proactiveAlertMs;
+  const snapshot = await collectSystemAwareness({ live: false });
 
   const hasCritical = input.issues.some((i) => i.severity === "critical");
   const hasError = input.issues.some((i) => i.severity === "error");
@@ -111,10 +67,20 @@ export async function runProactiveOutreach(input: {
     (hasCritical || hasError) &&
     msSince(hb?.proactive?.lastAlertAt) >= alertCooldown
   ) {
+    const body =
+      (await composeOperatorWhatsappMessage({
+        kind: "alert",
+        snapshot,
+        obs: input.obs,
+        issues: input.issues,
+      })) ?? fallbackAlert(input.issues, input.obs);
+
     await notify({
-      title: hasCritical ? "Alert Kritis" : "Perhatian Diperlukan",
-      body: buildIssueAlert(input.issues, input.obs),
+      title: "VANDOR",
+      body,
       level: hasCritical ? "critical" : "warn",
+      cooldownMs: alertCooldown,
+      cooldownKey: "proactive-alert",
     });
     await touchProactiveHeartbeat("alert");
     result.alertSent = true;
@@ -125,16 +91,19 @@ export async function runProactiveOutreach(input: {
     msSince(hb?.proactive?.lastCheckInAt) >= checkInCooldown;
 
   if (dueCheckIn && input.issues.length === 0) {
-    let body = buildHealthyCheckIn(hb, input.obs);
-    if (input.autonomous && autonomousConfig.proactiveUseLlm) {
-      const llm = await buildLlmCheckIn(hb, input.obs, input.issues);
-      if (llm) {
-        body = llm;
-      }
-    }
+    let body =
+      input.autonomous && autonomousConfig.proactiveUseLlm
+        ? await composeOperatorWhatsappMessage({
+            kind: "checkin",
+            snapshot,
+            obs: input.obs,
+            issues: input.issues,
+          })
+        : null;
+    body ??= fallbackCheckIn(hb, input.obs);
 
     await notify({
-      title: "Check-in Operator",
+      title: "VANDOR",
       body,
       level: "info",
     });
@@ -150,11 +119,16 @@ export async function runProactiveOutreach(input: {
     msSince(hb?.proactive?.lastCheckInAt) >= checkInCooldown
   ) {
     const body =
-      (await buildLlmCheckIn(hb, input.obs, input.issues)) ??
-      `${buildIssueAlert(input.issues, input.obs)}\n\nAda prioritas khusus yang mau dicek?`;
+      (await composeOperatorWhatsappMessage({
+        kind: "checkin",
+        snapshot,
+        obs: input.obs,
+        issues: input.issues,
+      })) ??
+      `${fallbackAlert(input.issues, input.obs)}\n\nAda prioritas khusus?`;
 
     await notify({
-      title: "Update Operator",
+      title: "VANDOR",
       body,
       level: "warn",
     });
@@ -172,11 +146,17 @@ export async function sendWorkerStartupPing(): Promise<void> {
     return;
   }
 
+  const snapshot = await collectSystemAwareness({ live: false });
+  const body =
+    (await composeOperatorWhatsappMessage({
+      kind: "startup",
+      snapshot,
+    })) ??
+    "Worker aktif — aku memantau sistem 24/7. Balas bebas kalau ada yang perlu dicek.";
+
   await notify({
-    title: "Operator Online",
-    body:
-      "VANDOR Operator worker aktif dan memantau sistem 24/7.\n\n" +
-      "Mau kubantu cek apa? Balas *status*, *scan*, atau tulis kebutuhanmu.",
+    title: "VANDOR",
+    body,
     level: "info",
   });
   await touchProactiveHeartbeat("checkIn");

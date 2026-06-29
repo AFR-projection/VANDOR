@@ -38,7 +38,7 @@ export async function planAndActFromAssessment(input: {
 
   let steps: PlannedStep[] = [];
 
-  if (isLlmConfigured()) {
+  if (await isLlmConfigured()) {
     const compact = {
       status: input.assessment.status,
       summary: input.assessment.summary,

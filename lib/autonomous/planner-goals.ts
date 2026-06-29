@@ -27,7 +27,7 @@ Jawab HANYA JSON: {"tasks":[{"type":"...","title":"...","payload":{},"priority":
 export async function planTasksFromGoal(goal: AgentGoal): Promise<number> {
   let planned: PlannedGoalTask[] = [];
 
-  if (isLlmConfigured()) {
+  if (await isLlmConfigured()) {
     const prompt = `Goal:\nJudul: ${goal.title}\nDeskripsi: ${goal.description ?? "(kosong)"}\nPrioritas: ${goal.priority}\n\nBuat task JSON.`;
     const res = await llmJson<PlanResponse>(prompt, {
       system: SYSTEM,

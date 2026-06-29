@@ -80,3 +80,39 @@ export async function recordApprovalDecision(input: {
     /* non-fatal */
   }
 }
+
+/** Catat hasil pekerjaan worker yang diminta dari chat. */
+export async function recordChatTaskEvent(input: {
+  userId: string;
+  taskType: string;
+  title: string;
+  status: "done" | "failed" | "queued";
+  summary: string;
+  chatId?: string;
+}): Promise<void> {
+  const content = [
+    `[VANDOR ${new Date().toISOString().slice(0, 16)}]`,
+    `Task ${input.status}: ${input.title} (${input.taskType})`,
+    input.summary.slice(0, 800),
+    input.chatId ? `Chat: ${input.chatId.slice(0, 8)}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    await db.insert(userMemory).values({
+      userId: input.userId,
+      content: content.slice(0, 4000),
+      category: "event",
+      importance: input.status === "failed" ? 8 : 6,
+      metadata: {
+        source: "vandor-agent-work",
+        taskType: input.taskType,
+        status: input.status,
+        preExtracted: true,
+      },
+    });
+  } catch {
+    /* non-fatal */
+  }
+}

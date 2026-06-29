@@ -28,6 +28,7 @@ const BY_INTENT: Record<VandorIntent, VandorChatToolName[]> = {
   pdf: ["createPdf", "createDocx", "createSpreadsheet"],
   chat_simple: ["getCurrentTime", "searchDb"],
   chat_reasoning: ["searchDb", "getMemory"],
+  operator: ["checkSystem", "agentWork", "getCurrentTime"],
 };
 
 export function selectActiveTools(input: {

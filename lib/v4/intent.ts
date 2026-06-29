@@ -17,6 +17,7 @@ export type VandorIntent =
   | "code"
   | "image"
   | "pdf"
+  | "operator"
   | "chat_simple"
   | "chat_reasoning";
 
@@ -55,6 +56,12 @@ const IMAGE_RE =
 
 const PDF_RE = /\b(pdf|docx|xlsx|spreadsheet|excel)\b/i;
 
+const OPERATOR_RE =
+  /\b(aman\s+(?:ga|gak|tidak|nggak)?|status\s+(?:server|sistem|vps|agent|operator)|server\s+(?:aman|down|up|sehat)|sistem\s+(?:aman|sehat|gimana|bagaimana)|operator|health\s+score|kesehatan\s+sistem|cek\s+(?:server|sistem|status|vps)|pm2|deploy|cpu|ram\s+(?:penuh|usage)|disk\s+(?:penuh|usage)|vps|uptime|worker\s+(?:agent|online))\b/i;
+
+const AGENT_WORK_RE =
+  /\b(scan\s+(?:code|codebase|repo)|perbaiki\s+(?:error|code|codebase)|cek\s+log|deploy\s+(?:vps|server|prod)?|monitor\s+(?:vps|server)|fix\s+code|auto-?fix)\b/i;
+
 export function resolveVandorIntent(input: {
   userText: string;
   attachmentKinds: FileKind[];
@@ -85,6 +92,14 @@ export function resolveVandorIntent(input: {
 
   if (TIME_RE.test(text) && text.length < 120) {
     return { intent: "time", needsLargeModel: false, bypassLlm: false };
+  }
+
+  if (OPERATOR_RE.test(text) && text.length < 500) {
+    return { intent: "operator", needsLargeModel: false, bypassLlm: false };
+  }
+
+  if (AGENT_WORK_RE.test(text) && text.length < 400) {
+    return { intent: "operator", needsLargeModel: false, bypassLlm: false };
   }
 
   if (TASK_RE.test(text) && text.length < 400) {

@@ -20,6 +20,8 @@ export type CodeScanResult = {
 export type CodeScanOptions = CliRunOptions & {
   /** Jalankan npm run build (lama, ~2-5 menit). Default false untuk scan rutin. */
   fullBuild?: boolean;
+  /** Jalankan npm run check / ultracite. Default false untuk scan rutin agent. */
+  includeUltracite?: boolean;
 };
 
 const TAIL_LINES = 40;
@@ -96,11 +98,13 @@ export async function runCodeScan(
     );
   }
 
-  await runStep(
-    "ultracite",
-    "npm run check 2>&1",
-    120_000
-  );
+  if (options.includeUltracite) {
+    await runStep(
+      "ultracite",
+      "npm run check 2>&1",
+      120_000
+    );
+  }
 
   if (options.fullBuild) {
     await runStep("build", "npm run build 2>&1", 600_000);

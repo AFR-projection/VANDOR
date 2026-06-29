@@ -30,6 +30,8 @@ export const VANDOR_CHAT_TOOLS = [
   "transcribeAudio",
   "createWhatsappSticker",
   "downloadMedia",
+  "checkSystem",
+  "agentWork",
 ] as const;
 
 export type VandorChatToolName = (typeof VANDOR_CHAT_TOOLS)[number];

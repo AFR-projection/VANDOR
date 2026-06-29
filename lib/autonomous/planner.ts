@@ -23,7 +23,7 @@ export async function assessSystem(input: {
   services: ServiceStatus[];
   issues: Issue[];
 }): Promise<Assessment | null> {
-  if (!isLlmConfigured()) {
+  if (!(await isLlmConfigured())) {
     return null;
   }
 

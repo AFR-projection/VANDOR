@@ -1,4 +1,9 @@
 import { isLlmConfigured, llmChat } from "../llm";
+import { describeOpenRouterKeyStatus } from "../openrouter-key";
+import {
+  scanFailureIsToolingOnly,
+  toolingFailureDiagnosis,
+} from "../scan-errors";
 import type { CodeScanResult } from "./scan";
 
 export type CodeFixAnalysis = {
@@ -7,6 +12,7 @@ export type CodeFixAnalysis = {
   diagnosis: string;
   suggestedCommands: string[];
   needsApproval: boolean;
+  skipNotify?: boolean;
 };
 
 const SYSTEM = `Kamu senior engineer VANDOR. Analisis hasil scan build/lint.
@@ -39,20 +45,35 @@ export async function analyzeCodeScan(
     };
   }
 
-  if (!isLlmConfigured()) {
-    const manual = failedSteps
-      .map((s) => `# ${s.name}\n${s.outputTail}`)
-      .join("\n\n");
+  if (scanFailureIsToolingOnly(scan.steps)) {
     return {
       sessionId: scan.sessionId,
       ok: false,
-      diagnosis:
-        `OPENROUTER_API_KEY belum diset — perbaiki manual.\n\n${manual.slice(0, 1500)}`,
+      diagnosis: toolingFailureDiagnosis(scan.steps),
+      suggestedCommands: [],
+      needsApproval: false,
+      skipNotify: true,
+    };
+  }
+
+  const keyStatus = await describeOpenRouterKeyStatus();
+
+  if (!(await isLlmConfigured())) {
+    const manual = failedSteps
+      .map((s) => `# ${s.name}\n${s.outputTail}`)
+      .join("\n\n");
+    const keyHint = keyStatus.configured
+      ? "OpenRouter ada di Settings/env tapi worker tidak bisa memakai (cek AUTH_SECRET sama di web & worker, lalu pm2 reload --update-env)."
+      : "OpenRouter belum tersedia — isi di Pengaturan → Integrasi atau OPENROUTER_API_KEY di .env.local worker.";
+    return {
+      sessionId: scan.sessionId,
+      ok: false,
+      diagnosis: `Scan gagal — ${keyHint}\n\n${manual.slice(0, 1200)}`,
       suggestedCommands: [
-        `cd ${process.env.VANDOR_DEPLOY_PATH ?? "/var/www/vandor"} && npm run fix`,
         `cd ${process.env.VANDOR_DEPLOY_PATH ?? "/var/www/vandor"} && npm run build`,
       ],
       needsApproval: true,
+      skipNotify: scanFailureIsToolingOnly(scan.steps),
     };
   }
 
