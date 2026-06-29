@@ -1,4 +1,4 @@
-import { platformConfig } from "../config";
+import { platformChatMaxSteps, platformConfig } from "../config";
 import {
   requireAgent,
   setAgentRuntimeStatus,
@@ -70,7 +70,8 @@ async function executeAgentStep(input: {
 export async function processWorkflowRun(
   runId: string,
   userId: string,
-  chatId: string | null
+  chatId: string | null,
+  options?: { maxSteps?: number }
 ): Promise<ProcessWorkflowResult> {
   await updateWorkflowRunStatus(runId, "running");
   await publishPlatformEvent({
@@ -81,7 +82,7 @@ export async function processWorkflowRun(
 
   let stepsProcessed = 0;
   let lastError: string | undefined;
-  const maxSteps = platformConfig.maxStepsPerTick;
+  const maxSteps = options?.maxSteps ?? platformConfig.maxStepsPerTick;
 
   while (stepsProcessed < maxSteps) {
     const step = await claimNextRunnableStep(runId);
@@ -196,4 +197,35 @@ export async function processWorkflowRun(
   }
 
   return { runId, status: "running", stepsProcessed };
+}
+
+/** Proses sampai selesai/gagal — dipakai chat sync (Fase 2). */
+export async function processWorkflowRunToCompletion(
+  runId: string,
+  userId: string,
+  chatId: string | null
+): Promise<ProcessWorkflowResult> {
+  const maxSteps = platformChatMaxSteps();
+  let last: ProcessWorkflowResult = {
+    runId,
+    status: "running",
+    stepsProcessed: 0,
+  };
+  let guard = 0;
+  const maxRounds = Math.ceil(maxSteps / platformConfig.maxStepsPerTick) + 2;
+
+  while (guard < maxRounds) {
+    last = await processWorkflowRun(runId, userId, chatId, {
+      maxSteps: platformConfig.maxStepsPerTick,
+    });
+    if (last.status === "completed" || last.status === "failed") {
+      return last;
+    }
+    if (last.stepsProcessed === 0) {
+      return last;
+    }
+    guard += 1;
+  }
+
+  return last;
 }

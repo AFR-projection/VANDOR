@@ -57,6 +57,36 @@ async function orchestratorExecute(
   };
 }
 
+async function monitoringExecute(
+  ctx: AgentExecutionContext
+): Promise<AgentExecutionResult> {
+  const action = String(ctx.input.action ?? "check_system");
+
+  if (action === "check_system") {
+    const tool = await executePlatformTool(
+      "checkSystem",
+      {},
+      {
+        runId: ctx.runId,
+        stepId: ctx.stepId,
+        userId: ctx.userId,
+        agentId: "monitoring",
+        autonomous: false,
+      }
+    );
+    if (!tool.ok) {
+      return { ok: false, error: tool.error };
+    }
+    return {
+      ok: true,
+      output: { system: tool.data, summary: tool.summary ?? "System check OK" },
+      summary: tool.summary ?? "Monitoring: system check selesai",
+    };
+  }
+
+  return stubExecute("monitoring")(ctx);
+}
+
 async function plannerExecute(
   ctx: AgentExecutionContext
 ): Promise<AgentExecutionResult> {
@@ -65,11 +95,11 @@ async function plannerExecute(
     ok: true,
     output: {
       plan: {
-        summary: `Plan for: ${userRequest.slice(0, 200)}`,
-        steps: ctx.input.steps ?? [],
+        summary: `Analisis: ${userRequest.slice(0, 200)}`,
+        notes: "Planner step dalam workflow — rencana utama sudah dibuat di chat dispatch",
       },
     },
-    summary: "Planner produced execution plan (fase 0 passthrough)",
+    summary: "Planner menganalisis permintaan",
   };
 }
 
@@ -210,6 +240,6 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["metrics", "logs", "alerts", "cost"],
     tools: AGENT_TOOL_MAP.monitoring,
     memoryScopes: ["short_term", "knowledge"],
-    execute: stubExecute("monitoring"),
+    execute: monitoringExecute,
   }),
 ];

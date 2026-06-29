@@ -44,5 +44,20 @@ export const platformConfig = {
 } as const;
 
 export function isPlatformV2Enabled(): boolean {
-  return platformConfig.enabled;
+  return process.env.PLATFORM_V2_ENABLED === "true";
+}
+
+export function isPlatformChatWorkflowEnabled(): boolean {
+  return (
+    isPlatformV2Enabled() &&
+    process.env.PLATFORM_V2_CHAT_WORKFLOW !== "false"
+  );
+}
+
+/** Maks step saat workflow diproses sinkron dari chat (bukan worker tick). */
+export function platformChatMaxSteps(): number {
+  return Number.parseInt(
+    process.env.PLATFORM_CHAT_MAX_STEPS ?? "24",
+    10
+  );
 }

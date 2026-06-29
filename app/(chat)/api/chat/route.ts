@@ -142,6 +142,7 @@ import { executeDirectCommand, parseDirectCommand } from "@/lib/v4/commands";
 import { V4_MAX_ACTIVE_TOOLS, V4_MAX_AGENT_STEPS } from "@/lib/v4/constants";
 import { createFastTextStreamResponse } from "@/lib/v4/fast-stream";
 import { resolveVandorIntent } from "@/lib/v4/intent";
+import { tryPlatformChatWorkflow } from "@/lib/platform/chat/dispatch";
 import { V4_JARVIS_OS_BLOCK } from "@/lib/v4/jarvis-prompt";
 import { applyV4ModelBias } from "@/lib/v4/model-pick";
 import {
@@ -592,6 +593,42 @@ export async function POST(request: Request) {
         process.env.OPENROUTER_APP_URL?.trim() ||
         "http://localhost:3000",
     };
+
+    if (
+      !isToolApprovalFlow &&
+      !vaultModeActive &&
+      lastUserText.trim()
+    ) {
+      try {
+        const platformResult = await tryPlatformChatWorkflow({
+          userId: session.user.id,
+          chatId: id,
+          userText: lastUserText,
+          intent: v4Intent.intent,
+          bypassLlm: v4Intent.bypassLlm,
+          attachmentKinds,
+          openRouterApiKey,
+          plannerModelId:
+            integrationModels.reasoningModel || integrationModels.chatModel,
+          openRouterAppUrl: openRouterMeta.appUrl,
+        });
+        if (platformResult) {
+          return createFastTextStreamResponse({
+            chatId: id,
+            instant: {
+              label: platformResult.label,
+              phase: "done",
+            },
+            text: platformResult.text,
+            extraParts: platformResult.extraParts,
+            consumeSseStream,
+          });
+        }
+      } catch {
+        // Fall through to legacy chat on platform errors
+      }
+    }
+
     const memoryExtractionModelId =
       resolveMemoryExtractionModel(integrationModels);
 
