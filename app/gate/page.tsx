@@ -40,6 +40,7 @@ function GateForm() {
   const wasRevoked =
     searchParams.get("revoked") === "1" || reason === "revoked";
   const sessionExpired = reason === "expired";
+  const ipBlocked = reason === "ip_blocked";
   const reduceMotion = useReducedMotion();
 
   const submitInFlight = useRef(false);
@@ -232,7 +233,7 @@ function GateForm() {
           </h1>
           <p className="mt-2 max-w-[16rem] text-[13px] leading-relaxed text-muted-foreground">
             {locked
-              ? "Terlalu banyak percobaan gagal. Tunggu hitung mundur di bawah."
+              ? "IP kamu diblokir 24 jam setelah 3x PIN salah. Tunggu hitung mundur di bawah."
               : loading
                 ? "Memverifikasi…"
                 : success
@@ -240,6 +241,13 @@ function GateForm() {
                   : "Masukkan PIN 4 digit untuk melanjutkan"}
           </p>
         </div>
+
+        {ipBlocked && locked ? (
+          <div className="mb-5 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-center text-[12px] leading-relaxed text-destructive">
+            Akses website diblokir dari IP ini. Tunggu sampai hitung mundur
+            habis.
+          </div>
+        ) : null}
 
         {sessionExpired && !locked ? (
           <div className="mb-5 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-center text-[12px] leading-relaxed text-primary">
@@ -257,7 +265,7 @@ function GateForm() {
         {locked ? (
           <div className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
             <p className="text-[10px] uppercase tracking-wider text-destructive/80">
-              Perangkat terkunci
+              IP diblokir
             </p>
             <p className="mt-2 font-mono text-4xl font-semibold tabular-nums text-destructive">
               {formatRemaining(remainingMs)}

@@ -13,9 +13,9 @@ import {
   GATE_PIN_LENGTH,
   generateDeviceId,
   generateSessionId,
-  getClientId,
   getClientIp,
   getDeviceId,
+  getLockoutKey,
   getLockoutStatus,
   getOwnerCredentials,
   isGateConfigured,
@@ -28,6 +28,7 @@ import {
   buildGateLoginSuccessJsonResponse,
   buildGateLoginSuccessResponse,
 } from "@/lib/security/gate-verify-response";
+import { formatGateBanDuration } from "@/lib/security/gate-edge";
 import { lookupGeoIp } from "@/lib/security/geo-ip";
 
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
@@ -51,16 +52,16 @@ export async function POST(request: Request) {
 
   const deviceId = existingDevice ?? generateDeviceId();
 
-  const clientId = existingDevice ? getClientId(request) : `${ip}:${deviceId}`;
+  const lockoutKey = getLockoutKey(request);
 
   const userAgent = request.headers.get("user-agent");
 
-  const lockout = await getLockoutStatus(clientId);
+  const lockout = await getLockoutStatus(lockoutKey);
 
   if (lockout.locked) {
     return NextResponse.json(
       {
-        error: "Perangkat ini diblokir karena terlalu banyak percobaan",
+        error: `IP diblokir ${formatGateBanDuration()} karena 3x PIN salah`,
 
         locked: true,
 
@@ -120,12 +121,12 @@ export async function POST(request: Request) {
   }
 
   if (!(await verifyNumpadPinForGate(pin))) {
-    const next = await recordFailedAttempt(clientId);
+    const next = await recordFailedAttempt(lockoutKey);
 
     if (next.locked) {
       const failRes = NextResponse.json(
         {
-          error: "3x salah. Perangkat ini diblokir selama 1 jam.",
+          error: `3x salah. IP diblokir ${formatGateBanDuration()}.`,
 
           locked: true,
 
@@ -181,7 +182,7 @@ export async function POST(request: Request) {
     return failRes;
   }
 
-  await clearAttempts(clientId);
+  await clearAttempts(lockoutKey);
 
   const sid = generateSessionId();
 

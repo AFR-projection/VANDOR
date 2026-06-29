@@ -3,6 +3,7 @@ import { getClientAccessSnapshot } from "@/lib/security/client-access";
 import {
   GATE_MAX_ATTEMPTS,
   GATE_PIN_LENGTH,
+  getLockoutKey,
   getLockoutStatus,
   isGateConfigured,
 } from "@/lib/security/gate";
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
   }
 
   const snapshot = await getClientAccessSnapshot(request);
-  const lockout = await getLockoutStatus(snapshot.clientId);
+  const lockout = await getLockoutStatus(getLockoutKey(request));
 
   return NextResponse.json(
     {

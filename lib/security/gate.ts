@@ -38,7 +38,7 @@ export type LoginHistoryRow = {
 };
 
 export async function getLockoutStatus(
-  clientId: string
+  lockoutKey: string
 ): Promise<LockoutStatus> {
   if (!process.env.POSTGRES_URL) {
     return {
@@ -51,7 +51,7 @@ export async function getLockoutStatus(
     const rows = await db
       .select()
       .from(gateLockout)
-      .where(eq(gateLockout.ip, clientId))
+      .where(eq(gateLockout.ip, lockoutKey))
       .limit(1);
     const row = rows[0];
     if (!row) {
@@ -67,6 +67,21 @@ export async function getLockoutStatus(
         locked: true,
         lockedUntil: row.lockedUntil.getTime(),
         attemptsLeft: 0,
+      };
+    }
+    if (row.lockedUntil && row.lockedUntil.getTime() <= now) {
+      await db
+        .update(gateLockout)
+        .set({
+          failedAttempts: 0,
+          lockedUntil: null,
+          lastFailedAt: sql`now()`,
+        })
+        .where(eq(gateLockout.ip, lockoutKey));
+      return {
+        locked: false,
+        lockedUntil: null,
+        attemptsLeft: GATE_MAX_ATTEMPTS,
       };
     }
     return {
@@ -85,7 +100,7 @@ export async function getLockoutStatus(
 }
 
 export async function recordFailedAttempt(
-  clientId: string
+  lockoutKey: string
 ): Promise<LockoutStatus> {
   if (!process.env.POSTGRES_URL) {
     return {
@@ -99,7 +114,7 @@ export async function recordFailedAttempt(
     const maxAttempts = GATE_MAX_ATTEMPTS;
     const rows = await db
       .insert(gateLockout)
-      .values({ ip: clientId, failedAttempts: 1, lockedUntil: null })
+      .values({ ip: lockoutKey, failedAttempts: 1, lockedUntil: null })
       .onConflictDoUpdate({
         target: gateLockout.ip,
         set: {
@@ -136,12 +151,12 @@ export async function recordFailedAttempt(
   }
 }
 
-export async function clearAttempts(clientId: string): Promise<void> {
+export async function clearAttempts(lockoutKey: string): Promise<void> {
   if (!process.env.POSTGRES_URL) {
     return;
   }
   try {
-    await db.delete(gateLockout).where(eq(gateLockout.ip, clientId));
+    await db.delete(gateLockout).where(eq(gateLockout.ip, lockoutKey));
   } catch {
     /* ignore */
   }

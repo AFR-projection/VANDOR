@@ -4,8 +4,29 @@ import type { NextRequest } from "next/server";
 export const GATE_COOKIE_NAME = "vandor_gate";
 export const DEVICE_COOKIE_NAME = "vandor_device";
 export const GATE_PIN_LENGTH = 4;
-export const GATE_MAX_ATTEMPTS = 3;
-export const GATE_BAN_MS = 60 * 60 * 1000;
+const parsedMax = Number.parseInt(
+  process.env.VANDOR_GATE_MAX_ATTEMPTS ?? "3",
+  10
+);
+export const GATE_MAX_ATTEMPTS =
+  Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : 3;
+const parsedBanSec = Number.parseInt(
+  process.env.VANDOR_GATE_BAN_SECONDS ?? "86400",
+  10
+);
+/** Durasi blokir IP setelah max percobaan gagal (default 24 jam). */
+export const GATE_BAN_MS =
+  (Number.isFinite(parsedBanSec) && parsedBanSec > 0 ? parsedBanSec : 86_400) *
+  1000;
+
+export function formatGateBanDuration(): string {
+  const hours = Math.round(GATE_BAN_MS / (60 * 60 * 1000));
+  if (hours >= 24 && hours % 24 === 0) {
+    const days = hours / 24;
+    return days === 1 ? "24 jam" : `${days} hari`;
+  }
+  return hours <= 1 ? "1 jam" : `${hours} jam`;
+}
 export const DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 /** Default 30 days — session stays until logout or expiry. */
@@ -36,6 +57,11 @@ export function getClientIp(request: NextRequest | Request): string {
     return realIp.trim();
   }
   return "local";
+}
+
+/** Kunci lockout gate — berdasarkan IP saja (anti bypass hapus cookie). */
+export function getLockoutKey(request: NextRequest | Request): string {
+  return getClientIp(request);
 }
 
 export function getDeviceId(request: NextRequest | Request): string | null {

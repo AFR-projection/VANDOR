@@ -9,6 +9,7 @@ import {
   hasOwnerCredentials,
   isGateConfigured,
 } from "./lib/security/gate-edge";
+import { getLockoutKey, getLockoutStatus } from "./lib/security/gate";
 
 const PUBLIC_PATHS = [
   "/gate",
@@ -47,6 +48,21 @@ export async function proxy(request: NextRequest) {
 
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });
+  }
+
+  if (isGateConfigured()) {
+    const lockout = await getLockoutStatus(getLockoutKey(request));
+    if (lockout.locked) {
+      const gateAllowed =
+        pathname === "/gate" ||
+        pathname.startsWith("/api/gate/status") ||
+        pathname.startsWith("/api/gate/verify");
+      if (!gateAllowed) {
+        return NextResponse.redirect(
+          new URL(`${base}/gate?reason=ip_blocked`, request.url)
+        );
+      }
+    }
   }
 
   if (
