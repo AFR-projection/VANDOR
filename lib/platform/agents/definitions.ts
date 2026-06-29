@@ -7,6 +7,10 @@ import type {
   PlatformAgentId,
 } from "../core/types";
 import { executePlatformTool } from "../core/tool-registry";
+import {
+  collectSystemAwareness,
+  formatAwarenessForUser,
+} from "@/lib/autonomous/awareness";
 
 function stubExecute(agentId: PlatformAgentId) {
   return async (ctx: AgentExecutionContext): Promise<AgentExecutionResult> => {
@@ -63,24 +67,17 @@ async function monitoringExecute(
   const action = String(ctx.input.action ?? "check_system");
 
   if (action === "check_system") {
-    const tool = await executePlatformTool(
-      "checkSystem",
-      {},
-      {
-        runId: ctx.runId,
-        stepId: ctx.stepId,
-        userId: ctx.userId,
-        agentId: "monitoring",
-        autonomous: false,
-      }
-    );
-    if (!tool.ok) {
-      return { ok: false, error: tool.error };
-    }
+    const snapshot = await collectSystemAwareness({ live: true });
+    const summary = formatAwarenessForUser(snapshot);
     return {
       ok: true,
-      output: { system: tool.data, summary: tool.summary ?? "System check OK" },
-      summary: tool.summary ?? "Monitoring: system check selesai",
+      output: {
+        system: snapshot,
+        summary,
+        healthScore: snapshot.healthScore,
+        grade: snapshot.grade,
+      },
+      summary: `Monitoring: skor ${snapshot.healthScore}/100 (${snapshot.grade})`,
     };
   }
 

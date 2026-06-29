@@ -9,6 +9,9 @@ function step(
   return { stepKey, agentId, input };
 }
 
+const SCAN_CODEBASE_RE =
+  /\b(scan\s+(?:code|codebase|repo)|perbaiki\s+(?:error|code|codebase)|cek\s+log)\b/i;
+
 /** Fallback planner tanpa LLM — intent → agent pipeline deterministik. */
 export function buildHeuristicPlan(input: {
   userText: string;
@@ -16,6 +19,7 @@ export function buildHeuristicPlan(input: {
 }): ExecutionPlan {
   const text = input.userText.trim();
   const base = { userRequest: text, intent: input.intent };
+  const wantsCodeScan = SCAN_CODEBASE_RE.test(text);
 
   switch (input.intent) {
     case "code":
@@ -27,14 +31,28 @@ export function buildHeuristicPlan(input: {
           step("respond", "chat", { message: text, formatWorkflow: true }),
         ],
       };
-    case "operator":
+    case "operator": {
+      const steps = [
+        step("monitor", "monitoring", {
+          action: "check_system",
+          userRequest: text,
+        }),
+      ];
+      if (wantsCodeScan) {
+        steps.push(
+          step("scan", "coding", { ...base, action: "scan_codebase" })
+        );
+      }
+      steps.push(
+        step("respond", "chat", { message: text, formatWorkflow: true })
+      );
       return {
-        summary: "Rencana operator: monitoring sistem live",
-        steps: [
-          step("monitor", "monitoring", { action: "check_system", userRequest: text }),
-          step("respond", "chat", { message: text, formatWorkflow: true }),
-        ],
+        summary: wantsCodeScan
+          ? "Rencana operator: monitoring sistem + scan codebase"
+          : "Rencana operator: monitoring sistem live",
+        steps,
       };
+    }
     case "document":
     case "pdf":
       return {

@@ -12,7 +12,7 @@ export function formatPlatformWorkflowReply(input: {
   const lines: string[] = [];
 
   if (input.processed.status === "completed") {
-    lines.push("Selesai — ini ringkasan dari tim agent di belakang layar:");
+    lines.push("✅ **Multi-Agent Workflow selesai** — ringkasan dari tim agent:");
   } else if (input.processed.status === "waiting") {
     lines.push(
       "Workflow masih berjalan (retry/backoff). Hasil sementara:"

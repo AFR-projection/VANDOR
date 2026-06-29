@@ -302,7 +302,7 @@ export function parseDirectCommand(
 
   if (
     /^\/?(?:agent|status|operator)\s*$/i.test(trimmed) ||
-    /status\s+(?:agent|operator|server|vps)/i.test(trimmed)
+    /^(?:status|cek\s+status)\s+(?:agent|operator|server|sistem|vps)\s*$/i.test(trimmed)
   ) {
     return { kind: "agent_status" };
   }

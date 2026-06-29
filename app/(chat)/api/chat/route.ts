@@ -422,20 +422,6 @@ export async function POST(request: Request) {
       });
     }
 
-    if (directCmd && directCmd.kind !== "media") {
-      const executed = await executeDirectCommand(directCmd, {
-        userId: session.user.id,
-        chatId: id,
-      });
-      return createFastTextStreamResponse({
-        chatId: id,
-        instant: { label: executed.instantLabel, phase: "start" },
-        text: executed.text,
-        extraParts: executed.extraParts,
-        consumeSseStream,
-      });
-    }
-
     // HARD ISOLATION: in Vault session, NO LLM calls, NO memory, NO retrieval.
     // Even if directCmd is null (e.g. user typed random text), reject it.
     if (vaultModeActive && !isToolApprovalFlow) {
@@ -624,9 +610,33 @@ export async function POST(request: Request) {
             consumeSseStream,
           });
         }
-      } catch {
-        // Fall through to legacy chat on platform errors
+      } catch (platformErr) {
+        // Fall through to legacy chat — log supaya mudah debug di VPS
+        if (process.env.NODE_ENV === "production") {
+          const { createLogger } = await import("@/lib/autonomous/logger");
+          createLogger("platform:chat").warn("workflow fallback", {
+            error:
+              platformErr instanceof Error
+                ? platformErr.message
+                : String(platformErr),
+            intent: v4Intent.intent,
+          });
+        }
       }
+    }
+
+    if (directCmd && directCmd.kind !== "media") {
+      const executed = await executeDirectCommand(directCmd, {
+        userId: session.user.id,
+        chatId: id,
+      });
+      return createFastTextStreamResponse({
+        chatId: id,
+        instant: { label: executed.instantLabel, phase: "start" },
+        text: executed.text,
+        extraParts: executed.extraParts,
+        consumeSseStream,
+      });
     }
 
     const memoryExtractionModelId =
