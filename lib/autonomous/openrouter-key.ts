@@ -1,6 +1,6 @@
 import { desc, eq, isNotNull } from "drizzle-orm";
 import { userSecrets } from "@/lib/db/schema";
-import { decryptSecret } from "@/lib/security/crypto";
+import { decryptSecret } from "@/lib/security/crypto-core";
 import { autonomousConfig } from "./config";
 import { db } from "./db";
 import { resolveOwnerUserId } from "./owner";
