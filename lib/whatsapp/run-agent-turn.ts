@@ -467,8 +467,7 @@ export async function runWhatsappAgentTurn({
     recentAlertsBlock || null,
     operatorContextBlock ? `\n${operatorContextBlock}` : null,
     "Jawab ringkas dan jelas (1–8 kalimat), tanpa markdown berat, tanpa heading, tanpa tabel.",
-    "Pertanyaan aman/status/server/VPS → WAJIB checkSystem dulu, baru jawab.",
-    "Minta scan/fix/log/deploy → agentWork dispatch, lalu status sampai done.",
+    "Balas singkat (1–8 kalimat). Jika user *reply* ke pesan/alert sebelumnya, konteks quote sudah ada di teks user — jelaskan alert itu, jangan pura-pura tidak tahu.",
     "Untuk showMap, sertakan link OSM di jawaban.",
     "Kalau perlu data live, panggil webSearch.",
     supportsTools

@@ -28,6 +28,10 @@ import {
   extractInboundMedia,
   hasInboundMedia,
 } from "./inbound-media";
+import {
+  extractPlainText,
+  extractTextWithReplyContext,
+} from "./extract-message-text";
 import { isWhatsappVaultSaveCommand } from "./vault-ingest";
 import { deliverWhatsappOutboundMedia } from "./outbound-media";
 import {
@@ -256,20 +260,6 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-function extractText(message: WAMessage["message"]): string {
-  if (!message) {
-    return "";
-  }
-  return (
-    message.conversation ??
-    message.extendedTextMessage?.text ??
-    message.imageMessage?.caption ??
-    message.videoMessage?.caption ??
-    message.documentMessage?.caption ??
-    ""
-  ).trim();
-}
-
 async function registerOwnerKeys(
   userId: string,
   identity: SenderIdentity
@@ -344,13 +334,14 @@ async function handleIncoming(
     return;
   }
 
-  const text = extractText(msg.message);
+  const rawText = extractPlainText(msg.message);
+  const agentText = extractTextWithReplyContext(msg.message);
   const mediaAttached = hasInboundMedia(msg.message);
   const inboundMedia = mediaAttached
     ? await extractInboundMedia(sock, msg)
     : null;
 
-  if (!text && !mediaAttached) {
+  if (!agentText && !mediaAttached) {
     return;
   }
 
@@ -366,7 +357,7 @@ async function handleIncoming(
   // 1. Coba handle sebagai kode verifikasi (siapapun bisa coba kirim kode).
   let wasCode = false;
   try {
-    wasCode = await tryHandleVerifCode(sock, identity, text, ownerUser, msg);
+    wasCode = await tryHandleVerifCode(sock, identity, rawText, ownerUser, msg);
   } catch (err) {
     console.error("[wa] verif code handler error:", err);
     await sock
@@ -419,7 +410,7 @@ async function handleIncoming(
     const { handleOperatorWhatsappCommand } = await import(
       "./operator-commands"
     );
-    const op = await handleOperatorWhatsappCommand(text, identity);
+    const op = await handleOperatorWhatsappCommand(rawText, identity);
     if (op.handled && op.reply) {
       await sock.sendMessage(jid, { text: op.reply }, { quoted: msg });
       try {
@@ -434,7 +425,7 @@ async function handleIncoming(
   }
 
   // 3. Owner terverifikasi → simpan media ke vault (/vault, simpan vault, …).
-  if (inboundMedia && isWhatsappVaultSaveCommand(text)) {
+  if (inboundMedia && isWhatsappVaultSaveCommand(rawText)) {
     try {
       const { ingestWhatsappMediaToVault, vaultSaveReplyText } = await import(
         "./vault-ingest"
@@ -473,7 +464,7 @@ async function handleIncoming(
     const mediaResult = await deliverWhatsappMediaDownload(
       sock,
       jid,
-      text,
+      rawText,
       msg,
       ownerUser.id
     );
@@ -522,7 +513,7 @@ async function handleIncoming(
     const result = await runWhatsappAgentTurn({
       userId: ownerUser.id,
       chatId: deriveWhatsappChatId(identity.phone ?? identity.lid ?? ""),
-      text,
+      text: agentText,
       senderName: msg.pushName ?? undefined,
       media: inboundMedia ? [inboundMedia] : [],
     });
@@ -672,8 +663,8 @@ async function wireSocket(
           continue; // Skip old history
         }
 
-        const text = extractText(msg.message);
-        console.log(`[wa] incoming from=${msg.key.remoteJid} text="${text.slice(0, 60)}"`);
+        const logText = extractPlainText(msg.message);
+        console.log(`[wa] incoming from=${msg.key.remoteJid} text="${logText.slice(0, 60)}"`);
 
         try {
           await handleIncoming(sock, msg, ownerUser);

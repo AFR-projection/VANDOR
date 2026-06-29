@@ -768,6 +768,8 @@ export const agentTask = pgTable("AgentTask", {
   scheduledFor: timestamp("scheduledFor"),
   startedAt: timestamp("startedAt"),
   finishedAt: timestamp("finishedAt"),
+  workflowRunId: uuid("workflowRunId"),
+  workflowStepId: uuid("workflowStepId"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
@@ -954,3 +956,120 @@ export const agentTerminalLog = pgTable("AgentTerminalLog", {
 });
 
 export type AgentTerminalLog = InferSelectModel<typeof agentTerminalLog>;
+
+/* ---------- Multi-Agent Platform V2 (Fase 0) ---------- */
+
+export const platformWorkflowRunStatuses = [
+  "pending",
+  "running",
+  "waiting",
+  "completed",
+  "failed",
+  "cancelled",
+] as const;
+export type PlatformWorkflowRunStatus =
+  (typeof platformWorkflowRunStatuses)[number];
+
+export const platformWorkflowStepStatuses = [
+  "pending",
+  "queued",
+  "running",
+  "waiting",
+  "completed",
+  "failed",
+  "skipped",
+  "cancelled",
+] as const;
+export type PlatformWorkflowStepStatus =
+  (typeof platformWorkflowStepStatuses)[number];
+
+export const platformLogLevels = [
+  "debug",
+  "info",
+  "warn",
+  "error",
+] as const;
+export type PlatformLogLevel = (typeof platformLogLevels)[number];
+
+/** Satu permintaan user end-to-end (workflow run). */
+export const platformWorkflowRun = pgTable("PlatformWorkflowRun", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  chatId: uuid("chatId").references(() => chat.id, { onDelete: "set null" }),
+  status: varchar("status", { enum: platformWorkflowRunStatuses })
+    .notNull()
+    .default("pending"),
+  planJson: json("planJson"),
+  inputSummary: text("inputSummary"),
+  outputSummary: text("outputSummary"),
+  totalTokens: integer("totalTokens").notNull().default(0),
+  totalCostMicroUsd: integer("totalCostMicroUsd").notNull().default(0),
+  error: text("error"),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type PlatformWorkflowRun = InferSelectModel<typeof platformWorkflowRun>;
+
+/** Satu node agent dalam DAG workflow. */
+export const platformWorkflowStep = pgTable("PlatformWorkflowStep", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  runId: uuid("runId")
+    .notNull()
+    .references(() => platformWorkflowRun.id, { onDelete: "cascade" }),
+  agentId: varchar("agentId", { length: 64 }).notNull(),
+  stepKey: varchar("stepKey", { length: 64 }).notNull(),
+  status: varchar("status", { enum: platformWorkflowStepStatuses })
+    .notNull()
+    .default("pending"),
+  input: json("input"),
+  output: json("output"),
+  attempt: integer("attempt").notNull().default(0),
+  maxAttempts: integer("maxAttempts").notNull().default(3),
+  parentStepId: uuid("parentStepId"),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  error: text("error"),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export type PlatformWorkflowStep = InferSelectModel<typeof platformWorkflowStep>;
+
+/** Event bus platform — persist + SSE feed dashboard. */
+export const platformEvent = pgTable("PlatformEvent", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  runId: uuid("runId").references(() => platformWorkflowRun.id, {
+    onDelete: "cascade",
+  }),
+  stepId: uuid("stepId").references(() => platformWorkflowStep.id, {
+    onDelete: "set null",
+  }),
+  topic: varchar("topic", { length: 64 }).notNull(),
+  agentId: varchar("agentId", { length: 64 }),
+  payload: json("payload"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type PlatformEvent = InferSelectModel<typeof platformEvent>;
+
+/** Live log per agent instance (step). */
+export const platformAgentRunLog = pgTable("PlatformAgentRunLog", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  stepId: uuid("stepId")
+    .notNull()
+    .references(() => platformWorkflowStep.id, { onDelete: "cascade" }),
+  level: varchar("level", { enum: platformLogLevels })
+    .notNull()
+    .default("info"),
+  message: text("message").notNull(),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export type PlatformAgentRunLog = InferSelectModel<typeof platformAgentRunLog>;
