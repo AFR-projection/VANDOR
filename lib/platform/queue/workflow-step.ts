@@ -1,10 +1,9 @@
-import "server-only";
-
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { platformWorkflowStep } from "@/lib/db/schema";
 import type { PlanStep, WorkflowStepStatus } from "../core/types";
 import { getPlatformDb } from "../db";
 import { publishPlatformEvent } from "../events/bus";
+import { retryAfterDate } from "../orchestrator/retry";
 
 export async function createWorkflowSteps(input: {
   runId: string;
@@ -34,17 +33,29 @@ export async function createWorkflowSteps(input: {
   });
 }
 
+function runnableStepFilter(runId: string, now: Date) {
+  return and(
+    eq(platformWorkflowStep.runId, runId),
+    or(
+      inArray(platformWorkflowStep.status, ["queued", "pending"]),
+      and(
+        eq(platformWorkflowStep.status, "waiting"),
+        or(
+          isNull(platformWorkflowStep.retryAfter),
+          lte(platformWorkflowStep.retryAfter, now)
+        )
+      )
+    )
+  );
+}
+
 export async function claimNextRunnableStep(runId: string) {
   const db = getPlatformDb();
+  const now = new Date();
   const rows = await db
     .select()
     .from(platformWorkflowStep)
-    .where(
-      and(
-        eq(platformWorkflowStep.runId, runId),
-        inArray(platformWorkflowStep.status, ["queued", "pending"])
-      )
-    )
+    .where(runnableStepFilter(runId, now))
     .orderBy(asc(platformWorkflowStep.sortOrder))
     .limit(1);
   return rows[0] ?? null;
@@ -58,6 +69,7 @@ export async function markStepRunning(stepId: string): Promise<void> {
     .set({
       status: "running",
       attempt: sql`${platformWorkflowStep.attempt} + 1`,
+      retryAfter: null,
       startedAt: now,
       updatedAt: now,
     })
@@ -96,6 +108,7 @@ export async function completeWorkflowStep(
       status: "completed",
       output: (output ?? null) as never,
       error: null,
+      retryAfter: null,
       completedAt: now,
       updatedAt: now,
     })
@@ -123,7 +136,7 @@ export async function failWorkflowStep(
   stepId: string,
   error: string,
   retryable: boolean
-): Promise<{ willRetry: boolean }> {
+): Promise<{ willRetry: boolean; retryAfter?: Date }> {
   const db = getPlatformDb();
   const rows = await db
     .select()
@@ -137,12 +150,14 @@ export async function failWorkflowStep(
 
   const willRetry = retryable && step.attempt < step.maxAttempts;
   const now = new Date();
+  const nextRetry = willRetry ? retryAfterDate(step.attempt) : null;
 
   await db
     .update(platformWorkflowStep)
     .set({
-      status: willRetry ? "queued" : "failed",
+      status: willRetry ? "waiting" : "failed",
       error: error.slice(0, 2000),
+      retryAfter: nextRetry,
       completedAt: willRetry ? null : now,
       updatedAt: now,
     })
@@ -153,7 +168,12 @@ export async function failWorkflowStep(
     runId: step.runId,
     stepId,
     agentId: step.agentId,
-    payload: { error, attempt: step.attempt, willRetry },
+    payload: {
+      error,
+      attempt: step.attempt,
+      willRetry,
+      retryAfter: nextRetry?.toISOString(),
+    },
   });
 
   if (!willRetry) {
@@ -166,7 +186,7 @@ export async function failWorkflowStep(
     });
   }
 
-  return { willRetry };
+  return { willRetry, retryAfter: nextRetry ?? undefined };
 }
 
 export async function countStepsByStatus(runId: string) {
@@ -204,4 +224,15 @@ export async function allStepsCompleted(runId: string): Promise<boolean> {
   const counts = await countStepsByStatus(runId);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   return total > 0 && counts.completed === total;
+}
+
+export async function hasPendingSteps(runId: string): Promise<boolean> {
+  const counts = await countStepsByStatus(runId);
+  return (
+    counts.pending +
+      counts.queued +
+      counts.running +
+      counts.waiting >
+    0
+  );
 }

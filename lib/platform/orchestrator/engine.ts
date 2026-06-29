@@ -1,11 +1,9 @@
-import "server-only";
-
 import { platformConfig } from "../config";
 import {
   requireAgent,
   setAgentRuntimeStatus,
 } from "../core/agent-registry";
-import type { PlatformAgentId } from "../core/types";
+import type { AgentExecutionResult, PlatformAgentId } from "../core/types";
 import { publishPlatformEvent } from "../events/bus";
 import { appendAgentRunLog } from "../queue/queries";
 import {
@@ -14,18 +12,56 @@ import {
   completeWorkflowStep,
   failWorkflowStep,
   hasFailedSteps,
+  hasPendingSteps,
   markStepRunning,
 } from "../queue/workflow-step";
-import {
-  updateWorkflowRunStatus,
-} from "../queue/workflow-run";
+import { updateWorkflowRunStatus } from "../queue/workflow-run";
+import { StepTimeoutError, withStepTimeout } from "./timeout";
 
 export type ProcessWorkflowResult = {
   runId: string;
-  status: "completed" | "failed" | "running" | "partial";
+  status: "completed" | "failed" | "running" | "waiting";
   stepsProcessed: number;
   lastError?: string;
 };
+
+async function executeAgentStep(input: {
+  runId: string;
+  stepId: string;
+  userId: string;
+  chatId: string | null;
+  agentId: PlatformAgentId;
+  stepInput: Record<string, unknown>;
+  attempt: number;
+}): Promise<AgentExecutionResult> {
+  const agent = requireAgent(input.agentId);
+  const execute = () =>
+    agent.execute({
+      runId: input.runId,
+      stepId: input.stepId,
+      userId: input.userId,
+      chatId: input.chatId,
+      agentId: input.agentId,
+      input: input.stepInput,
+      attempt: input.attempt,
+    });
+
+  try {
+    return await withStepTimeout(
+      execute(),
+      platformConfig.stepTimeoutMs,
+      input.agentId
+    );
+  } catch (error) {
+    if (error instanceof StepTimeoutError) {
+      return { ok: false, error: error.message };
+    }
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
 
 /**
  * Orchestrator engine — menjalankan step workflow secara sequential.
@@ -72,25 +108,15 @@ export async function processWorkflowRun(
       metadata: { stepKey: step.stepKey },
     });
 
-    let result: { ok: boolean; output?: Record<string, unknown>; error?: string; summary?: string };
-
-    try {
-      const agent = requireAgent(agentId);
-      result = await agent.execute({
-        runId,
-        stepId: step.id,
-        userId,
-        chatId,
-        agentId,
-        input: (step.input as Record<string, unknown>) ?? {},
-        attempt: step.attempt + 1,
-      });
-    } catch (error) {
-      result = {
-        ok: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
+    const result = await executeAgentStep({
+      runId,
+      stepId: step.id,
+      userId,
+      chatId,
+      agentId,
+      stepInput: (step.input as Record<string, unknown>) ?? {},
+      attempt: step.attempt + 1,
+    });
 
     if (result.ok) {
       await completeWorkflowStep(step.id, result.output ?? {}, result.summary);
@@ -118,6 +144,9 @@ export async function processWorkflowRun(
         stepId: step.id,
         level: "error",
         message: result.error ?? "Step failed",
+        metadata: fail.retryAfter
+          ? { retryAfter: fail.retryAfter.toISOString() }
+          : undefined,
       });
       setAgentRuntimeStatus(agentId, fail.willRetry ? "waiting" : "error");
       if (!fail.willRetry) {
@@ -130,6 +159,7 @@ export async function processWorkflowRun(
 
   const failed = await hasFailedSteps(runId);
   const done = await allStepsCompleted(runId);
+  const pending = await hasPendingSteps(runId);
 
   if (done) {
     await updateWorkflowRunStatus(runId, "completed", {
@@ -158,6 +188,11 @@ export async function processWorkflowRun(
       stepsProcessed,
       lastError,
     };
+  }
+
+  if (pending) {
+    await updateWorkflowRunStatus(runId, "waiting");
+    return { runId, status: "waiting", stepsProcessed, lastError };
   }
 
   return { runId, status: "running", stepsProcessed };

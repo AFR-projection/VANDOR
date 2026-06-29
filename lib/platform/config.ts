@@ -26,6 +26,21 @@ export const platformConfig = {
 
   /** Poll interval event bus SSE (ms). */
   eventPollMs: Number.parseInt(process.env.PLATFORM_EVENT_POLL_MS ?? "1000", 10),
+
+  /** Maks. workflow run diproses per tick orchestrator. */
+  maxRunsPerTick: Number.parseInt(process.env.PLATFORM_MAX_RUNS_PER_TICK ?? "3", 10),
+
+  /** Retry backoff — base delay (ms). */
+  retryBackoffBaseMs: Number.parseInt(
+    process.env.PLATFORM_RETRY_BASE_MS ?? "2000",
+    10
+  ),
+
+  /** Retry backoff — cap delay (ms). */
+  retryBackoffMaxMs: Number.parseInt(
+    process.env.PLATFORM_RETRY_MAX_MS ?? "120000",
+    10
+  ),
 } as const;
 
 export function isPlatformV2Enabled(): boolean {

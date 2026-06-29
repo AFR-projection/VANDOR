@@ -42,6 +42,7 @@ export async function runPingWorkflow(input: {
     chatId: input.chatId ?? null,
     plan,
     inputSummary: plan.summary,
+    idempotencyKey: `smoke-ping:${input.userId}`,
   });
 
   const processed = await processWorkflowRun(

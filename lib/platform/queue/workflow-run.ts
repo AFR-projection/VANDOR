@@ -1,6 +1,4 @@
-import "server-only";
-
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { platformWorkflowRun } from "@/lib/db/schema";
 import { platformConfig } from "../config";
 import type { ExecutionPlan, WorkflowRunStatus } from "../core/types";
@@ -8,17 +6,51 @@ import { getPlatformDb } from "../db";
 import { publishPlatformEvent } from "../events/bus";
 import { createWorkflowSteps } from "./workflow-step";
 
+const ACTIVE_FOR_IDEMPOTENCY: WorkflowRunStatus[] = [
+  "pending",
+  "running",
+  "waiting",
+];
+
 export type CreateWorkflowRunInput = {
   userId: string;
   chatId?: string | null;
   plan: ExecutionPlan;
   inputSummary?: string;
+  /** Cegah duplikat run aktif dengan key yang sama per user. */
+  idempotencyKey?: string;
+};
+
+export type CreateWorkflowRunResult = {
+  runId: string;
+  deduped: boolean;
 };
 
 export async function createWorkflowRun(
   input: CreateWorkflowRunInput
-): Promise<{ runId: string }> {
+): Promise<CreateWorkflowRunResult> {
   const db = getPlatformDb();
+
+  if (input.idempotencyKey) {
+    const key = input.idempotencyKey.slice(0, 128);
+    const existing = await db
+      .select({ id: platformWorkflowRun.id })
+      .from(platformWorkflowRun)
+      .where(
+        and(
+          eq(platformWorkflowRun.userId, input.userId),
+          eq(platformWorkflowRun.idempotencyKey, key),
+          inArray(platformWorkflowRun.status, ACTIVE_FOR_IDEMPOTENCY)
+        )
+      )
+      .orderBy(desc(platformWorkflowRun.createdAt))
+      .limit(1);
+
+    if (existing[0]) {
+      return { runId: existing[0].id, deduped: true };
+    }
+  }
+
   const inserted = await db
     .insert(platformWorkflowRun)
     .values({
@@ -27,6 +59,7 @@ export async function createWorkflowRun(
       status: "pending",
       planJson: input.plan,
       inputSummary: input.inputSummary ?? input.plan.summary,
+      idempotencyKey: input.idempotencyKey?.slice(0, 128) ?? null,
     })
     .returning({ id: platformWorkflowRun.id });
 
@@ -44,10 +77,11 @@ export async function createWorkflowRun(
     payload: {
       summary: input.plan.summary,
       stepCount: input.plan.steps.length,
+      idempotencyKey: input.idempotencyKey ?? null,
     },
   });
 
-  return { runId };
+  return { runId, deduped: false };
 }
 
 export async function updateWorkflowRunStatus(
@@ -110,12 +144,12 @@ export async function listRecentWorkflowRuns(userId: string, limit = 20) {
     .limit(limit);
 }
 
-export async function listPendingWorkflowRuns(limit = 10) {
+export async function getWorkflowRunByIdFromQueue(runId: string) {
   const db = getPlatformDb();
-  return db
+  const rows = await db
     .select()
     .from(platformWorkflowRun)
-    .where(eq(platformWorkflowRun.status, "pending"))
-    .orderBy(platformWorkflowRun.createdAt)
-    .limit(limit);
+    .where(eq(platformWorkflowRun.id, runId))
+    .limit(1);
+  return rows[0] ?? null;
 }

@@ -1,5 +1,3 @@
-import "server-only";
-
 import { desc, eq, gt } from "drizzle-orm";
 import { platformEvent } from "@/lib/db/schema";
 import { getPlatformDb } from "../db";
