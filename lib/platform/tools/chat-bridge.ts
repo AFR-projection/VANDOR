@@ -166,6 +166,9 @@ export async function executeChatToolForPlatform(
       if (content.length < 3) {
         return { ok: false, error: "content saveMemory terlalu pendek" };
       }
+      const platformScope = String(
+        input.platformScope ?? input.scope ?? ""
+      ).trim();
       const id = await saveMemory({
         userId: ctx.userId,
         content,
@@ -179,6 +182,7 @@ export async function executeChatToolForPlatform(
             | "instruction") ?? "fact",
         importance: Number(input.importance ?? 8),
         sourceChatId: ctx.chatId ?? undefined,
+        metadata: platformScope ? { platformScope } : undefined,
         mergeSimilar: true,
       });
       return {

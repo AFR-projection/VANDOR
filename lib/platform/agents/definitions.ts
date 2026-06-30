@@ -16,7 +16,7 @@ import {
   toolAgentExecute,
 } from "./executors";
 
-/** Definisi 12 agent V2 — Fase 6: live workflow dashboard. */
+/** Definisi 12 agent V2 — Fase 7: memory scopes per agent. */
 export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
   defineAgent({
     id: "chat",

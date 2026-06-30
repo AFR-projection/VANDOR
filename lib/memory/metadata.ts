@@ -3,6 +3,8 @@ export type MemoryMetadata = {
   fileName?: string;
   mime?: string;
   url?: string;
+  /** Platform V2 memory scope tag (Phase 7). */
+  platformScope?: string;
   /** Times this memory was injected into a reply context */
   accessCount?: number;
   lastAccessedAt?: string;

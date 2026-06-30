@@ -15,6 +15,7 @@ import type {
   AgentExecutionContext,
   AgentExecutionResult,
 } from "../core/types";
+import { readAgentMemoryPack } from "../memory/types";
 import { runAgentTool } from "../tools/run-agent-tool";
 
 const SCAN_CODEBASE_RE =
@@ -300,17 +301,34 @@ export async function memoryAgentExecute(
   ctx: AgentExecutionContext
 ): Promise<AgentExecutionResult> {
   const query = String(ctx.input.query ?? ctx.input.userRequest ?? "").trim();
+  const memoryPack = readAgentMemoryPack(ctx.input);
 
   if (ctx.input.action === "save" && ctx.input.content) {
+    const scopeRaw = String(
+      ctx.input.scope ?? ctx.input.platformScope ?? "user"
+    );
     const saved = await runAgentTool(ctx, "saveMemory", {
       content: String(ctx.input.content),
       category: ctx.input.category,
+      platformScope: scopeRaw,
     });
     return {
       ok: saved.ok,
-      output: { saved: saved.data },
-      summary: saved.summary ?? "Memory agent: simpan",
+      output: { saved: saved.data, scope: scopeRaw, memoryPack },
+      summary: saved.summary ?? `Memory agent: simpan (${scopeRaw})`,
       error: saved.error,
+    };
+  }
+
+  if (memoryPack && memoryPack.context.length > 0) {
+    return {
+      ok: true,
+      output: {
+        recall: memoryPack,
+        scopes: memoryPack.scopes,
+        itemCount: memoryPack.itemCount,
+      },
+      summary: `Memory agent: ${memoryPack.itemCount} item dari scope [${memoryPack.scopes.join(", ")}]`,
     };
   }
 

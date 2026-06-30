@@ -2,6 +2,7 @@ import { platformChatMaxSteps, platformConfig } from "../config";
 import { requireAgent, setAgentRuntimeStatus } from "../core/agent-registry";
 import type { AgentExecutionResult, PlatformAgentId } from "../core/types";
 import { publishPlatformEvent } from "../events/bus";
+import { buildAgentMemoryContext } from "../memory/context";
 import { appendAgentRunLog, listStepsForRun } from "../queue/queries";
 import { updateWorkflowRunStatus } from "../queue/workflow-run";
 import {
@@ -48,6 +49,28 @@ async function executeAgentStep(input: {
   }>;
 }): Promise<AgentExecutionResult> {
   const agent = requireAgent(input.agentId);
+  const query = String(
+    input.stepInput.userRequest ??
+      input.stepInput.message ??
+      input.stepInput.query ??
+      ""
+  ).trim();
+
+  const memoryPack = await buildAgentMemoryContext({
+    userId: input.userId,
+    chatId: input.chatId,
+    runId: input.runId,
+    agentId: input.agentId,
+    scopes: agent.memoryScopes,
+    query,
+    priorSteps: input.priorSteps,
+  });
+
+  const stepInputWithMemory = {
+    ...input.stepInput,
+    _platformMemory: memoryPack,
+  };
+
   const execute = () =>
     agent.execute({
       runId: input.runId,
@@ -55,7 +78,7 @@ async function executeAgentStep(input: {
       userId: input.userId,
       chatId: input.chatId,
       agentId: input.agentId,
-      input: input.stepInput,
+      input: stepInputWithMemory,
       attempt: input.attempt,
       priorSteps: input.priorSteps,
     });

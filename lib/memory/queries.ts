@@ -31,6 +31,7 @@ export type MemoryRecord = {
   importance: number;
   similarity?: number;
   metadata?: Record<string, unknown> | null;
+  sourceChatId?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -79,6 +80,7 @@ export async function searchMemories({
         importance: number;
         similarity: number;
         metadata: unknown;
+        sourceChatId: string | null;
         updatedAt: Date;
       }[]
     >`
@@ -88,6 +90,7 @@ export async function searchMemories({
         category,
         importance,
         metadata,
+        "sourceChatId",
         "updatedAt",
         1 - (embedding <=> ${vectorSql}::vector) AS similarity
       FROM "UserMemory"
@@ -117,6 +120,7 @@ export async function searchMemories({
         importance: r.importance,
         similarity: r.similarity,
         metadata: r.metadata as Record<string, unknown> | null,
+        sourceChatId: r.sourceChatId,
         updatedAt: r.updatedAt,
       }));
 
@@ -360,6 +364,7 @@ export async function listRecentMemories({
         category: userMemory.category,
         importance: userMemory.importance,
         metadata: userMemory.metadata,
+        sourceChatId: userMemory.sourceChatId,
         createdAt: userMemory.createdAt,
         updatedAt: userMemory.updatedAt,
       })
@@ -386,6 +391,7 @@ export async function listRecentMemories({
         category: r.category as MemoryCategory,
         importance: r.importance,
         metadata: r.metadata as Record<string, unknown> | null,
+        sourceChatId: r.sourceChatId,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt,
       }));

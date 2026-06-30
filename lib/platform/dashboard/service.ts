@@ -76,6 +76,7 @@ export type PlatformDashboardSnapshot = {
     name: string;
     status: string;
     toolCount: number;
+    memoryScopes: string[];
   }>;
 };
 
@@ -157,6 +158,7 @@ export async function getPlatformDashboardSnapshot(
           name: a.name,
           status: a.runtimeStatus,
           toolCount: a.tools.length,
+          memoryScopes: a.memoryScopes,
         }))
       : [],
   };

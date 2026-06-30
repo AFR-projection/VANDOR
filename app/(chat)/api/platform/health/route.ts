@@ -40,6 +40,7 @@ export async function GET(request: Request) {
           name: a.name,
           status: a.runtimeStatus,
           toolCount: a.tools.length,
+          memoryScopes: a.memoryScopes,
         }))
       : [],
     toolCount: boot.tools,

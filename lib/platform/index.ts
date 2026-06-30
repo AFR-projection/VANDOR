@@ -31,6 +31,8 @@ export {
 } from "./dashboard/service";
 export { onPlatformEvent, publishPlatformEvent } from "./events/bus";
 export { bootstrapPlatformV2, isPlatformBootstrapped } from "./init";
+export type { AgentMemoryPack } from "./memory";
+export { buildAgentMemoryContext } from "./memory";
 export { processWorkflowRun } from "./orchestrator/engine";
 export { computeRetryDelayMs } from "./orchestrator/retry";
 export { runPlatformOrchestratorTick } from "./orchestrator/tick";

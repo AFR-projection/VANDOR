@@ -1,0 +1,318 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> vandor@3.2.0 check C:\Users\User\Documents\VANDOR
+> ultracite check
+
+lib\platform\agents\executors.ts format ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Formatter would have printed the following content:
+  
+    305 305 Γöé   
+    306 306 Γöé     if (ctx.input.action === "save" && ctx.input.content) {
+    307     Γöé - ┬╖┬╖┬╖┬╖const┬╖scopeRaw┬╖=┬╖String(ctx.input.scope┬╖??┬╖ctx.input.platformScope┬╖??┬╖"user");
+        307 Γöé + ┬╖┬╖┬╖┬╖const┬╖scopeRaw┬╖=┬╖String(
+        308 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖ctx.input.scope┬╖??┬╖ctx.input.platformScope┬╖??┬╖"user"
+        309 Γöé + ┬╖┬╖┬╖┬╖);
+    308 310 Γöé       const saved = await runAgentTool(ctx, "saveMemory", {
+    309 311 Γöé         content: String(ctx.input.content),
+  
+
+lib\platform\index.ts:1:1 assist/source/organizeImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Sort these exports.
+  
+   > 1 Γöé export { isPlatformV2Enabled, platformConfig } from "./config";
+       Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   > 2 Γöé export type { AgentDefinition } from "./core/agent-definition";
+   > 3 Γöé export { defineAgent } from "./core/agent-definition";
+   > 4 Γöé export {
+        ...
+  > 38 Γöé export { runPingWorkflow } from "./smoke/ping-workflow";
+  > 39 Γöé export type { AgentMemoryPack } from "./memory";
+  > 40 Γöé export { buildAgentMemoryContext } from "./memory";
+       Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    41 Γöé 
+  
+  i Safe fix: Organize imports and exports (Biome)
+  
+    32 32 Γöé   export { onPlatformEvent, publishPlatformEvent } from "./events/bus";
+    33 33 Γöé   export { bootstrapPlatformV2, isPlatformBootstrapped } from "./init";
+    34    Γöé - export┬╖{┬╖processWorkflowRun┬╖}┬╖from┬╖"./orchestrator/engine";
+    35    Γöé - export┬╖{┬╖computeRetryDelayMs┬╖}┬╖from┬╖"./orchestrator/retry";
+    36    Γöé - export┬╖{┬╖runPlatformOrchestratorTick┬╖}┬╖from┬╖"./orchestrator/tick";
+    37    Γöé - export┬╖{┬╖createWorkflowRun┬╖}┬╖from┬╖"./queue/workflow-run";
+    38    Γöé - export┬╖{┬╖runPingWorkflow┬╖}┬╖from┬╖"./smoke/ping-workflow";
+    39    Γöé - export┬╖type┬╖{┬╖AgentMemoryPack┬╖}┬╖from┬╖"./memory";
+    40    Γöé - export┬╖{┬╖buildAgentMemoryContext┬╖}┬╖from┬╖"./memory";
+       34 Γöé + export┬╖type┬╖{┬╖AgentMemoryPack┬╖}┬╖from┬╖"./memory";
+       35 Γöé + export┬╖{┬╖buildAgentMemoryContext┬╖}┬╖from┬╖"./memory";
+       36 Γöé + export┬╖{┬╖processWorkflowRun┬╖}┬╖from┬╖"./orchestrator/engine";
+       37 Γöé + export┬╖{┬╖computeRetryDelayMs┬╖}┬╖from┬╖"./orchestrator/retry";
+       38 Γöé + export┬╖{┬╖runPlatformOrchestratorTick┬╖}┬╖from┬╖"./orchestrator/tick";
+       39 Γöé + export┬╖{┬╖createWorkflowRun┬╖}┬╖from┬╖"./queue/workflow-run";
+       40 Γöé + export┬╖{┬╖runPingWorkflow┬╖}┬╖from┬╖"./smoke/ping-workflow";
+    41 41 Γöé   
+  
+
+lib\platform\memory\context.ts format ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Formatter would have printed the following content:
+  
+     65  65 Γöé       }
+     66  66 Γöé   
+     67     Γöé - ┬╖┬╖┬╖┬╖const┬╖scoped┬╖=┬╖filterMemoriesForScope(
+     68     Γöé - ┬╖┬╖┬╖┬╖┬╖┬╖userMemories,
+     69     Γöé - ┬╖┬╖┬╖┬╖┬╖┬╖scope,
+     70     Γöé - ┬╖┬╖┬╖┬╖┬╖┬╖input.chatId
+     71     Γöé - ┬╖┬╖┬╖┬╖);
+         67 Γöé + ┬╖┬╖┬╖┬╖const┬╖scoped┬╖=┬╖filterMemoriesForScope(userMemories,┬╖scope,┬╖input.chatId);
+     72  68 Γöé       const text = formatMemoryRecords(scoped, scope === "user" ? 8 : 5);
+     73  69 Γöé       if (text) {
+  
+
+lib\platform\memory\index.ts:1:1 assist/source/organizeImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Sort these exports.
+  
+   > 1 Γöé export type { AgentMemoryPack } from "./types";
+       Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   > 2 Γöé export { readAgentMemoryPack } from "./types";
+   > 3 Γöé export { buildAgentMemoryContext } from "./context";
+   > 4 Γöé export { loadKnowledgeSnippets, loadScopedUserMemories } from "./load";
+        ...
+  > 11 Γöé   readRecordPlatformScope,
+  > 12 Γöé   scopeSectionLabel,
+  > 13 Γöé } from "./scopes";
+       Γöé ^^^^^^^^^^^^^^^^^^
+    14 Γöé 
+  
+  i Safe fix: Organize imports and exports (Biome)
+  
+     1    Γöé - export┬╖type┬╖{┬╖AgentMemoryPack┬╖}┬╖from┬╖"./types";
+     2    Γöé - export┬╖{┬╖readAgentMemoryPack┬╖}┬╖from┬╖"./types";
+     3    Γöé - export┬╖{┬╖buildAgentMemoryContext┬╖}┬╖from┬╖"./context";
+     4    Γöé - export┬╖{┬╖loadKnowledgeSnippets,┬╖loadScopedUserMemories┬╖}┬╖from┬╖"./load";
+     5    Γöé - export┬╖type┬╖{┬╖PriorStepMemory┬╖}┬╖from┬╖"./scopes";
+     6    Γöé - export┬╖{
+     7    Γöé - ┬╖┬╖filterMemoriesForScope,
+     8    Γöé - ┬╖┬╖formatShortTermMemory,
+     9    Γöé - ┬╖┬╖isValidMemoryScope,
+    10    Γöé - ┬╖┬╖memoryRecordMatchesScope,
+    11    Γöé - ┬╖┬╖readRecordPlatformScope,
+    12    Γöé - ┬╖┬╖scopeSectionLabel,
+    13    Γöé - }┬╖from┬╖"./scopes";
+        1 Γöé + export┬╖{┬╖buildAgentMemoryContext┬╖}┬╖from┬╖"./context";
+        2 Γöé + export┬╖{┬╖loadKnowledgeSnippets,┬╖loadScopedUserMemories┬╖}┬╖from┬╖"./load";
+        3 Γöé + export┬╖type┬╖{┬╖PriorStepMemory┬╖}┬╖from┬╖"./scopes";
+        4 Γöé + export┬╖{
+        5 Γöé + ┬╖┬╖filterMemoriesForScope,
+        6 Γöé + ┬╖┬╖formatShortTermMemory,
+        7 Γöé + ┬╖┬╖isValidMemoryScope,
+        8 Γöé + ┬╖┬╖memoryRecordMatchesScope,
+        9 Γöé + ┬╖┬╖readRecordPlatformScope,
+       10 Γöé + ┬╖┬╖scopeSectionLabel,
+       11 Γöé + }┬╖from┬╖"./scopes";
+       12 Γöé + export┬╖type┬╖{┬╖AgentMemoryPack┬╖}┬╖from┬╖"./types";
+       13 Γöé + export┬╖{┬╖readAgentMemoryPack┬╖}┬╖from┬╖"./types";
+    14 14 Γöé   
+  
+
+lib\platform\memory\scopes.ts:1:1 assist/source/organizeImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Sort these imports.
+  
+  > 1 Γöé import type { MemoryRecord } from "@/lib/memory/queries";
+      Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  > 2 Γöé import { parseMemoryMetadata } from "@/lib/memory/metadata";
+      Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    3 Γöé import type { MemoryScope, PlatformAgentId } from "../core/types";
+    4 Γöé import { MEMORY_SCOPES } from "../core/types";
+  
+  i Safe fix: Organize imports and exports (Biome)
+  
+      1     Γöé - import┬╖type┬╖{┬╖MemoryRecord┬╖}┬╖from┬╖"@/lib/memory/queries";
+      2     Γöé - import┬╖{┬╖parseMemoryMetadata┬╖}┬╖from┬╖"@/lib/memory/metadata";
+          1 Γöé + import┬╖{┬╖parseMemoryMetadata┬╖}┬╖from┬╖"@/lib/memory/metadata";
+          2 Γöé + import┬╖type┬╖{┬╖MemoryRecord┬╖}┬╖from┬╖"@/lib/memory/queries";
+      3   3 Γöé   import type { MemoryScope, PlatformAgentId } from "../core/types";
+      4   4 Γöé   import { MEMORY_SCOPES } from "../core/types";
+  
+
+lib\platform\memory\scopes.ts format ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Formatter would have printed the following content:
+  
+     78  78 Γöé   }
+     79  79 Γöé   
+     80     Γöé - export┬╖function┬╖formatMemoryRecords(records:┬╖MemoryRecord[],┬╖maxItems┬╖=┬╖6):┬╖string┬╖{
+         80 Γöé + export┬╖function┬╖formatMemoryRecords(
+         81 Γöé + ┬╖┬╖records:┬╖MemoryRecord[],
+         82 Γöé + ┬╖┬╖maxItems┬╖=┬╖6
+         83 Γöé + ):┬╖string┬╖{
+     81  84 Γöé     if (records.length === 0) {
+     82  85 Γöé       return "";
+  
+
+lib\platform\orchestrator\engine.ts:1:1 assist/source/organizeImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Sort these imports.
+  
+   > 1 Γöé import { platformChatMaxSteps, platformConfig } from "../config";
+       Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   > 2 Γöé import { requireAgent, setAgentRuntimeStatus } from "../core/agent-registry";
+   > 3 Γöé import type { AgentExecutionResult, PlatformAgentId } from "../core/types";
+   > 4 Γöé import { publishPlatformEvent } from "../events/bus";
+        ...
+  > 16 Γöé import { StepTimeoutError, withStepTimeout } from "./timeout";
+  > 17 Γöé import { buildAgentMemoryContext } from "../memory/context";
+       Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    18 Γöé 
+    19 Γöé export type ProcessWorkflowResult = {
+  
+  i Safe fix: Organize imports and exports (Biome)
+  
+      3   3 Γöé   import type { AgentExecutionResult, PlatformAgentId } from "../core/types";
+      4   4 Γöé   import { publishPlatformEvent } from "../events/bus";
+      5     Γöé - import┬╖{┬╖appendAgentRunLog,┬╖listStepsForRun┬╖}┬╖from┬╖"../queue/queries";
+      6     Γöé - import┬╖{┬╖updateWorkflowRunStatus┬╖}┬╖from┬╖"../queue/workflow-run";
+      7     Γöé - import┬╖{
+      8     Γöé - ┬╖┬╖allStepsCompleted,
+      9     Γöé - ┬╖┬╖claimNextRunnableStep,
+     10     Γöé - ┬╖┬╖completeWorkflowStep,
+     11     Γöé - ┬╖┬╖failWorkflowStep,
+     12     Γöé - ┬╖┬╖hasFailedSteps,
+     13     Γöé - ┬╖┬╖hasPendingSteps,
+     14     Γöé - ┬╖┬╖markStepRunning,
+     15     Γöé - }┬╖from┬╖"../queue/workflow-step";
+     16     Γöé - import┬╖{┬╖StepTimeoutError,┬╖withStepTimeout┬╖}┬╖from┬╖"./timeout";
+     17     Γöé - import┬╖{┬╖buildAgentMemoryContext┬╖}┬╖from┬╖"../memory/context";
+          5 Γöé + import┬╖{┬╖buildAgentMemoryContext┬╖}┬╖from┬╖"../memory/context";
+          6 Γöé + import┬╖{┬╖appendAgentRunLog,┬╖listStepsForRun┬╖}┬╖from┬╖"../queue/queries";
+          7 Γöé + import┬╖{┬╖updateWorkflowRunStatus┬╖}┬╖from┬╖"../queue/workflow-run";
+          8 Γöé + import┬╖{
+          9 Γöé + ┬╖┬╖allStepsCompleted,
+         10 Γöé + ┬╖┬╖claimNextRunnableStep,
+         11 Γöé + ┬╖┬╖completeWorkflowStep,
+         12 Γöé + ┬╖┬╖failWorkflowStep,
+         13 Γöé + ┬╖┬╖hasFailedSteps,
+         14 Γöé + ┬╖┬╖hasPendingSteps,
+         15 Γöé + ┬╖┬╖markStepRunning,
+         16 Γöé + }┬╖from┬╖"../queue/workflow-step";
+         17 Γöé + import┬╖{┬╖StepTimeoutError,┬╖withStepTimeout┬╖}┬╖from┬╖"./timeout";
+     18  18 Γöé   
+     19  19 Γöé   export type ProcessWorkflowResult = {
+  
+
+lib\platform\phase7.test.ts:1:1 assist/source/organizeImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Sort these imports.
+  
+   > 1 Γöé import assert from "node:assert/strict";
+       Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   > 2 Γöé import { describe, it } from "node:test";
+   > 3 Γöé import { PLATFORM_AGENT_DEFINITIONS } from "./agents/definitions";
+   > 4 Γöé import {
+        ...
+   > 9 Γöé } from "./memory/scopes";
+  > 10 Γöé import { MEMORY_SCOPES } from "./core/types";
+       Γöé ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    11 Γöé 
+    12 Γöé describe("platform phase 7 ΓÇö memory scopes", () => {
+  
+  i Safe fix: Organize imports and exports (Biome)
+  
+      2   2 Γöé   import { describe, it } from "node:test";
+      3   3 Γöé   import { PLATFORM_AGENT_DEFINITIONS } from "./agents/definitions";
+      4     Γöé - import┬╖{
+      5     Γöé - ┬╖┬╖filterMemoriesForScope,
+      6     Γöé - ┬╖┬╖formatShortTermMemory,
+      7     Γöé - ┬╖┬╖isValidMemoryScope,
+      8     Γöé - ┬╖┬╖memoryRecordMatchesScope,
+      9     Γöé - }┬╖from┬╖"./memory/scopes";
+     10     Γöé - import┬╖{┬╖MEMORY_SCOPES┬╖}┬╖from┬╖"./core/types";
+          4 Γöé + import┬╖{┬╖MEMORY_SCOPES┬╖}┬╖from┬╖"./core/types";
+          5 Γöé + import┬╖{
+Checked 590 files in 375ms. No fixes applied.
+Found 10 errors.
+          6 Γöé + ┬╖┬╖filterMemoriesForScope,
+          7 Γöé + ┬╖┬╖formatShortTermMemory,
+          8 Γöé + ┬╖┬╖isValidMemoryScope,
+          9 Γöé + ┬╖┬╖memoryRecordMatchesScope,
+         10 Γöé + }┬╖from┬╖"./memory/scopes";
+     11  11 Γöé   
+     12  12 Γöé   describe("platform phase 7 ΓÇö memory scopes", () => {
+  
+
+lib\platform\phase7.test.ts format ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Formatter would have printed the following content:
+  
+     91  91 Γöé         assert.ok(agent.memoryScopes.length >= 1, `${agent.id} missing scopes`);
+     92  92 Γöé         for (const scope of agent.memoryScopes) {
+     93     Γöé - ┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖assert.ok(isValidMemoryScope(scope),┬╖`${agent.id}┬╖invalid┬╖scope┬╖${scope}`);
+         93 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖assert.ok(
+         94 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖isValidMemoryScope(scope),
+         95 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖`${agent.id}┬╖invalid┬╖scope┬╖${scope}`
+         96 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖);
+     94  97 Γöé         }
+     95  98 Γöé       }
+  
+
+lib\platform\tools\chat-bridge.ts format ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Formatter would have printed the following content:
+  
+    167 167 Γöé           return { ok: false, error: "content saveMemory terlalu pendek" };
+    168 168 Γöé         }
+    169     Γöé - ┬╖┬╖┬╖┬╖┬╖┬╖const┬╖platformScope┬╖=┬╖String(input.platformScope┬╖??┬╖input.scope┬╖??┬╖"").trim();
+        169 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖const┬╖platformScope┬╖=┬╖String(
+        170 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖┬╖┬╖input.platformScope┬╖??┬╖input.scope┬╖??┬╖""
+        171 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖).trim();
+    170 172 Γöé         const id = await saveMemory({
+    171 173 Γöé           userId: ctx.userId,
+  
+
+check ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Some errors were emitted while running checks.
+  
+
+Error: Lint errors found
+    at file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/ultracite@7.0.11_typescript@5.8.2/node_modules/ultraci
+te/dist/index.js:313:13045
+    at async resolveMiddleware (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescrip
+t@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:221:17)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async procedure (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/
+node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:281:18)
+    at async file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_module
+s/@trpc/server/dist/tracked-D4V22yc5.mjs:298:13
+    at async Command.<anonymous> (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve
+_387680dd8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:355:32)
+    at async Command.parseAsync 
+(C:\Users\User\Documents\VANDOR\node_modules\.pnpm\commander@14.0.2\node_modules\commander\lib\command.js:1122:5)
+    at async Object.run (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve_387680dd
+8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:461:9)
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.
