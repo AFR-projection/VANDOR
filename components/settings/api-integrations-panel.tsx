@@ -486,7 +486,7 @@ export function ApiIntegrationsPanel({
           <SecretKeyField
             clearKey="apiFootballApiKey"
             configured={secrets.apiFootballApiKey}
-            description="Skor live, jadwal, klasemen sepak bola (api-football.com). Fallback env: API_FOOTBALL_KEY."
+            description="Skor live, jadwal, klasemen sepak bola (api-football.com). Key disimpan terenkripsi di akun — tidak perlu env di server."
             label="API-Football key"
             minLength={16}
             onChange={(v) => onDraftChange("apiFootballApiKey", v)}

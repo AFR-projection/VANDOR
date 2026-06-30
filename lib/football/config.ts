@@ -16,18 +16,12 @@ export const FOOTBALL_CACHE_TTL_MS = {
 export async function getApiFootballApiKey(
   userId?: string | null
 ): Promise<string | null> {
-  if (userId) {
-    const extra = await getExtraSecretsDecrypted(userId);
-    const fromDb = extra.apiFootballApiKey?.trim();
-    if (fromDb) {
-      return fromDb;
-    }
+  if (!userId) {
+    return null;
   }
-  return (
-    process.env.API_FOOTBALL_KEY?.trim() ||
-    process.env.APISPORTS_KEY?.trim() ||
-    null
-  );
+  const extra = await getExtraSecretsDecrypted(userId);
+  const fromDb = extra.apiFootballApiKey?.trim();
+  return fromDb || null;
 }
 
 export function isApiFootballConfigured(

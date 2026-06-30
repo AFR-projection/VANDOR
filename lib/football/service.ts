@@ -106,7 +106,7 @@ export async function runFootballLiveScores(
   if (!isApiFootballConfigured(apiKey)) {
     return failResult(
       "live_scores",
-      "API-Football belum dikonfigurasi. Tambahkan API key di Settings → Integrations atau set API_FOOTBALL_KEY."
+      "API-Football belum dikonfigurasi. Tambahkan API key di Settings → Integrations (Cuaca, Olahraga & WhatsApp)."
     );
   }
 

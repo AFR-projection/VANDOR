@@ -195,10 +195,7 @@ export async function getSecretsPublicView(
     extra.openweathermapApiKey,
     process.env.OPENWEATHERMAP_API_KEY
   );
-  const apiFootball = secretFieldFromValues(
-    extra.apiFootballApiKey,
-    process.env.API_FOOTBALL_KEY ?? process.env.APISPORTS_KEY
-  );
+  const apiFootball = secretFieldFromValues(extra.apiFootballApiKey, undefined);
   const bridge = secretFieldFromValues(
     extra.whatsappBridgeSecret,
     process.env.WHATSAPP_BRIDGE_SECRET
