@@ -35,6 +35,14 @@ export const createPdf = tool({
   },
 });
 
+export async function buildPdfFromMarkdown(input: {
+  title: string;
+  body: string;
+  author?: string;
+}) {
+  return buildPdf(input);
+}
+
 async function buildPdf({
   title,
   body,

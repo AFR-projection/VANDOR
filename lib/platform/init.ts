@@ -1,4 +1,6 @@
 import { registerBuiltinTools as registerWorkerBuiltinTools } from "@/lib/autonomous/tools/index";
+import { registerMonitorTools } from "@/lib/autonomous/tools/monitor";
+import { registerShellTools } from "@/lib/autonomous/tools/shell";
 import { registerPlatformAgents } from "./agents";
 import {
   isAgentRegistryBootstrapped,
@@ -27,6 +29,8 @@ export function bootstrapPlatformV2(): {
     registerPlatformAgents();
     registerBuiltinPlatformTools();
     registerWorkerBuiltinTools();
+    registerMonitorTools();
+    registerShellTools();
     bootstrapped = true;
   }
 

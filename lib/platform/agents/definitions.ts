@@ -1,119 +1,21 @@
 import type { AgentDefinition } from "../core/agent-definition";
 import { defineAgent } from "../core/agent-definition";
 import { AGENT_TOOL_MAP } from "../core/tool-catalog";
-import type {
-  AgentExecutionContext,
-  AgentExecutionResult,
-  PlatformAgentId,
-} from "../core/types";
-import { executePlatformTool } from "../core/tool-registry";
 import {
-  collectSystemAwareness,
-  formatAwarenessForUser,
-} from "@/lib/autonomous/awareness";
+  browserAgentExecute,
+  chatAgentExecute,
+  codingAgentExecute,
+  documentAgentExecute,
+  memoryAgentExecute,
+  monitoringAgentExecute,
+  orchestratorAgentExecute,
+  plannerAgentExecute,
+  stubAgentExecute,
+  testingAgentExecute,
+  toolAgentExecute,
+} from "./executors";
 
-function stubExecute(agentId: PlatformAgentId) {
-  return async (ctx: AgentExecutionContext): Promise<AgentExecutionResult> => {
-    return {
-      ok: true,
-      output: {
-        agentId,
-        phase: 0,
-        stub: true,
-        received: ctx.input,
-      },
-      summary: `${agentId} acknowledged (fase 0 stub)`,
-    };
-  };
-}
-
-async function orchestratorExecute(
-  ctx: AgentExecutionContext
-): Promise<AgentExecutionResult> {
-  const action = String(ctx.input.action ?? "ping");
-
-  if (action === "ping") {
-    const tool = await executePlatformTool(
-      "platform.workflow.ping",
-      {},
-      {
-        runId: ctx.runId,
-        stepId: ctx.stepId,
-        userId: ctx.userId,
-        agentId: "orchestrator",
-        autonomous: true,
-      }
-    );
-    if (!tool.ok) {
-      return { ok: false, error: tool.error };
-    }
-    return {
-      ok: true,
-      output: { pong: tool.data, action },
-      summary: "Orchestrator ping OK",
-    };
-  }
-
-  return {
-    ok: true,
-    output: { action, routed: true },
-    summary: `Orchestrator handled action: ${action}`,
-  };
-}
-
-async function monitoringExecute(
-  ctx: AgentExecutionContext
-): Promise<AgentExecutionResult> {
-  const action = String(ctx.input.action ?? "check_system");
-
-  if (action === "check_system") {
-    const snapshot = await collectSystemAwareness({ live: true });
-    const summary = formatAwarenessForUser(snapshot);
-    return {
-      ok: true,
-      output: {
-        system: snapshot,
-        summary,
-        healthScore: snapshot.healthScore,
-        grade: snapshot.grade,
-      },
-      summary: `Monitoring: skor ${snapshot.healthScore}/100 (${snapshot.grade})`,
-    };
-  }
-
-  return stubExecute("monitoring")(ctx);
-}
-
-async function plannerExecute(
-  ctx: AgentExecutionContext
-): Promise<AgentExecutionResult> {
-  const userRequest = String(ctx.input.userRequest ?? ctx.input.summary ?? "");
-  return {
-    ok: true,
-    output: {
-      plan: {
-        summary: `Analisis: ${userRequest.slice(0, 200)}`,
-        notes: "Planner step dalam workflow — rencana utama sudah dibuat di chat dispatch",
-      },
-    },
-    summary: "Planner menganalisis permintaan",
-  };
-}
-
-async function chatExecute(
-  ctx: AgentExecutionContext
-): Promise<AgentExecutionResult> {
-  return {
-    ok: true,
-    output: {
-      message: String(ctx.input.message ?? ctx.input.summary ?? ""),
-      deliverToUser: true,
-    },
-    summary: "Chat agent formatted response",
-  };
-}
-
-/** Definisi 12 agent V2 — fase 0 dengan stub executor (kecuali orchestrator ping). */
+/** Definisi 12 agent V2 — Fase 3: specialist core (fix/deploy/testing penuh = fase 4–5). */
 export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
   defineAgent({
     id: "chat",
@@ -123,7 +25,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["conversation", "intent", "summarize", "deliver"],
     tools: AGENT_TOOL_MAP.chat,
     memoryScopes: ["conversation", "user", "short_term"],
-    execute: chatExecute,
+    execute: chatAgentExecute,
   }),
   defineAgent({
     id: "planner",
@@ -132,7 +34,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["analyze", "decompose", "schedule"],
     tools: AGENT_TOOL_MAP.planner,
     memoryScopes: ["conversation", "project", "user"],
-    execute: plannerExecute,
+    execute: plannerAgentExecute,
   }),
   defineAgent({
     id: "orchestrator",
@@ -149,7 +51,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     ],
     tools: AGENT_TOOL_MAP.orchestrator,
     memoryScopes: ["short_term"],
-    execute: orchestratorExecute,
+    execute: orchestratorAgentExecute,
   }),
   defineAgent({
     id: "coding",
@@ -158,7 +60,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["code", "refactor", "debug", "api", "database"],
     tools: AGENT_TOOL_MAP.coding,
     memoryScopes: ["project", "knowledge", "short_term"],
-    execute: stubExecute("coding"),
+    execute: codingAgentExecute,
   }),
   defineAgent({
     id: "browser",
@@ -167,7 +69,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["search", "research", "crawl", "validate"],
     tools: AGENT_TOOL_MAP.browser,
     memoryScopes: ["knowledge", "short_term"],
-    execute: stubExecute("browser"),
+    execute: browserAgentExecute,
   }),
   defineAgent({
     id: "document",
@@ -176,7 +78,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["pdf", "docx", "xlsx", "ocr", "summarize"],
     tools: AGENT_TOOL_MAP.document,
     memoryScopes: ["project", "knowledge"],
-    execute: stubExecute("document"),
+    execute: documentAgentExecute,
   }),
   defineAgent({
     id: "memory",
@@ -192,7 +94,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
       "user",
       "knowledge",
     ],
-    execute: stubExecute("memory"),
+    execute: memoryAgentExecute,
   }),
   defineAgent({
     id: "tool",
@@ -201,7 +103,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["integrate", "execute", "plugin"],
     tools: AGENT_TOOL_MAP.tool,
     memoryScopes: ["short_term", "user"],
-    execute: stubExecute("tool"),
+    execute: toolAgentExecute,
   }),
   defineAgent({
     id: "testing",
@@ -210,7 +112,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["unit", "integration", "e2e", "security", "performance"],
     tools: AGENT_TOOL_MAP.testing,
     memoryScopes: ["project", "short_term"],
-    execute: stubExecute("testing"),
+    execute: testingAgentExecute,
   }),
   defineAgent({
     id: "fix",
@@ -219,7 +121,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["diagnose", "patch", "verify"],
     tools: AGENT_TOOL_MAP.fix,
     memoryScopes: ["project", "knowledge"],
-    execute: stubExecute("fix"),
+    execute: stubAgentExecute("fix"),
   }),
   defineAgent({
     id: "deploy",
@@ -228,7 +130,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["deploy", "rollback", "backup", "health"],
     tools: AGENT_TOOL_MAP.deploy,
     memoryScopes: ["project", "short_term"],
-    execute: stubExecute("deploy"),
+    execute: stubAgentExecute("deploy"),
   }),
   defineAgent({
     id: "monitoring",
@@ -237,6 +139,6 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["metrics", "logs", "alerts", "cost"],
     tools: AGENT_TOOL_MAP.monitoring,
     memoryScopes: ["short_term", "knowledge"],
-    execute: monitoringExecute,
+    execute: monitoringAgentExecute,
   }),
 ];

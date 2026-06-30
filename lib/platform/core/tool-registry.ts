@@ -134,10 +134,8 @@ export async function executePlatformTool(
   }
 
   if (meta.source === "chat" || meta.source === "skill") {
-    return {
-      ok: false,
-      error: `Tool '${toolName}' (${meta.source}) dieksekusi via chat runtime — fase 2`,
-    };
+    const { executeChatToolForPlatform } = await import("../tools/chat-bridge");
+    return executeChatToolForPlatform(toolName, input, ctx);
   }
 
   return { ok: false, error: `Tool '${toolName}' tidak dapat dieksekusi` };

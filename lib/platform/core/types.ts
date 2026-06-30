@@ -133,6 +133,7 @@ export type PlatformToolContext = {
   runId: string | null;
   stepId: string | null;
   userId: string;
+  chatId?: string | null;
   agentId: PlatformAgentId;
   autonomous: boolean;
 };
