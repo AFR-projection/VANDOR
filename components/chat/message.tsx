@@ -867,8 +867,14 @@ const PurePreviewMessage = ({
     />
   );
 
+  const hasAgentActivityParts = message.parts.some(
+    (part) => (part as { type?: string }).type === "data-agent-activity"
+  );
+
   const showAgentActivity =
-    isAssistant && (isLoading || isThinking) && !showMediaProgressCard;
+    isAssistant &&
+    !showMediaProgressCard &&
+    (isLoading || isThinking || hasAgentActivityParts);
 
   const content = isThinking ? (
     <AgentActivityPanel isLoading message={message} />

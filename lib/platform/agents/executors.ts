@@ -17,6 +17,10 @@ import type {
 } from "../core/types";
 import { readAgentMemoryPack } from "../memory/types";
 import { runAgentTool } from "../tools/run-agent-tool";
+import {
+  summarizeStepOutput,
+  synthesizeChatFromWorkflowSteps,
+} from "../chat/format-response";
 
 const SCAN_CODEBASE_RE =
   /\b(scan\s+(?:code|codebase|repo)|perbaiki\s+(?:error|code|codebase)|cek\s+log)\b/i;
@@ -274,15 +278,27 @@ export async function documentAgentExecute(
   const text = userText(ctx);
   const intent = String(ctx.input.intent ?? "");
 
-  if (/\bpdf\b/i.test(text) || intent === "pdf") {
+  const priorBody = (ctx.priorSteps ?? [])
+    .map((prior) => {
+      const summary = summarizeStepOutput(prior.output);
+      if (!summary) {
+        return "";
+      }
+      return `## ${prior.agentId} / ${prior.stepKey}\n${summary}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (/\bpdf\b/i.test(text) || intent === "pdf" || ctx.input.format === "pdf") {
+    const body = String(ctx.input.body ?? (priorBody || text)).slice(0, 40_000);
     const result = await runAgentTool(ctx, "createPdf", {
-      title: String(ctx.input.title ?? "Ringkasan VANDOR").slice(0, 160),
-      body: String(ctx.input.body ?? text).slice(0, 40_000),
+      title: String(ctx.input.title ?? "Laporan VANDOR").slice(0, 160),
+      body,
     });
     return {
       ok: result.ok,
       output: { document: result.data },
-      summary: result.summary ?? "Document agent: PDF",
+      summary: result.summary ?? "Document agent: PDF dibuat",
       error: result.error,
     };
   }
@@ -290,10 +306,10 @@ export async function documentAgentExecute(
   return {
     ok: true,
     output: {
-      note: "Dokumen non-PDF — gunakan chat dengan lampiran atau minta PDF eksplisit",
+      note: "Format dokumen belum didukung — minta PDF eksplisit",
       userRequest: text.slice(0, 500),
     },
-    summary: "Document agent: analisis permintaan dokumen (PDF via createPdf)",
+    summary: "Document agent: analisis permintaan dokumen",
   };
 }
 
@@ -501,12 +517,22 @@ export async function chatAgentExecute(
   const message = userText(ctx);
   const formatWorkflow = ctx.input.formatWorkflow === true;
 
+  let reply = message;
+  if (formatWorkflow) {
+    reply = synthesizeChatFromWorkflowSteps({
+      userText: message,
+      priorSteps: (ctx.priorSteps ?? []).map((prior) => ({
+        stepKey: prior.stepKey,
+        agentId: prior.agentId,
+        output: prior.output,
+      })),
+    });
+  }
+
   return {
     ok: true,
     output: {
-      message: formatWorkflow
-        ? `Permintaan diproses oleh multi-agent workflow. Detail ada di ringkasan langkah di atas.${message ? `\n\n_Permintaan:_ ${message.slice(0, 300)}` : ""}`
-        : message,
+      message: reply,
       deliverToUser: true,
       formatWorkflow,
     },

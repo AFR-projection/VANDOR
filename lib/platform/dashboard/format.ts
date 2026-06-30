@@ -94,6 +94,7 @@ export function topicLabel(topic: string): string {
     "step.completed": "Step selesai",
     "step.failed": "Step gagal",
     "step.retry": "Step retry",
+    "step.memory": "Memori dimuat",
     "agent.status": "Status agent",
     "agent.log": "Log agent",
     "tool.started": "Tool mulai",

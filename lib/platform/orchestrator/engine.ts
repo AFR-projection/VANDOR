@@ -10,11 +10,36 @@ import {
   claimNextRunnableStep,
   completeWorkflowStep,
   failWorkflowStep,
+  getEarliestStepRetryAt,
   hasFailedSteps,
   hasPendingSteps,
   markStepRunning,
+  updateStepMemorySnapshot,
 } from "../queue/workflow-step";
+import type { WorkflowProgressHandler } from "./progress";
 import { StepTimeoutError, withStepTimeout } from "./timeout";
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function mergeStepInput(
+  stepInput: Record<string, unknown>,
+  userText?: string
+): Record<string, unknown> {
+  if (!userText?.trim()) {
+    return stepInput;
+  }
+  const trimmed = userText.trim();
+  return {
+    ...stepInput,
+    userRequest: String(stepInput.userRequest ?? trimmed),
+    message: String(stepInput.message ?? stepInput.userRequest ?? trimmed),
+    query: String(stepInput.query ?? trimmed),
+  };
+}
 
 export type ProcessWorkflowResult = {
   runId: string;
@@ -83,12 +108,32 @@ async function executeAgentStep(input: {
       priorSteps: input.priorSteps,
     });
 
+  await updateStepMemorySnapshot({
+    stepId: input.stepId,
+    runId: input.runId,
+    agentId: input.agentId,
+    memoryPack,
+  });
+
   try {
-    return await withStepTimeout(
+    const result = await withStepTimeout(
       execute(),
       platformConfig.stepTimeoutMs,
       input.agentId
     );
+    if (!result.ok) {
+      return result;
+    }
+
+    const output: Record<string, unknown> = {
+      ...(result.output ?? {}),
+      _platformMemory: memoryPack,
+    };
+    if (result.summary) {
+      output.summary = result.summary;
+    }
+
+    return { ...result, output };
   } catch (error) {
     if (error instanceof StepTimeoutError) {
       return { ok: false, error: error.message };
@@ -108,7 +153,11 @@ export async function processWorkflowRun(
   runId: string,
   userId: string,
   chatId: string | null,
-  options?: { maxSteps?: number }
+  options?: {
+    maxSteps?: number;
+    userText?: string;
+    onProgress?: WorkflowProgressHandler;
+  }
 ): Promise<ProcessWorkflowResult> {
   await updateWorkflowRunStatus(runId, "running");
   await publishPlatformEvent({
@@ -140,6 +189,13 @@ export async function processWorkflowRun(
 
     await markStepRunning(step.id);
 
+    options?.onProgress?.({
+      type: "step-start",
+      stepKey: step.stepKey,
+      agentId,
+      attempt: step.attempt + 1,
+    });
+
     await appendAgentRunLog({
       stepId: step.id,
       message: `Agent ${agentId} started (attempt ${step.attempt + 1})`,
@@ -154,13 +210,22 @@ export async function processWorkflowRun(
       userId,
       chatId,
       agentId,
-      stepInput: (step.input as Record<string, unknown>) ?? {},
+      stepInput: mergeStepInput(
+        (step.input as Record<string, unknown>) ?? {},
+        options?.userText
+      ),
       attempt: step.attempt + 1,
       priorSteps,
     });
 
     if (result.ok) {
       await completeWorkflowStep(step.id, result.output ?? {}, result.summary);
+      options?.onProgress?.({
+        type: "step-complete",
+        stepKey: step.stepKey,
+        agentId,
+        summary: result.summary,
+      });
       await appendAgentRunLog({
         stepId: step.id,
         message: result.summary ?? "Step completed",
@@ -190,6 +255,13 @@ export async function processWorkflowRun(
           : undefined,
       });
       setAgentRuntimeStatus(agentId, fail.willRetry ? "waiting" : "error");
+      options?.onProgress?.({
+        type: "step-failed",
+        stepKey: step.stepKey,
+        agentId,
+        error: result.error ?? "Unknown error",
+        willRetry: fail.willRetry,
+      });
       if (!fail.willRetry) {
         break;
       }
@@ -243,28 +315,59 @@ export async function processWorkflowRun(
 export async function processWorkflowRunToCompletion(
   runId: string,
   userId: string,
-  chatId: string | null
+  chatId: string | null,
+  options?: {
+    userText?: string;
+    onProgress?: WorkflowProgressHandler;
+  }
 ): Promise<ProcessWorkflowResult> {
   const maxSteps = platformChatMaxSteps();
+  const waitBudgetMs = Number.parseInt(
+    process.env.PLATFORM_CHAT_WAIT_MS ?? "180000",
+    10
+  );
+  const deadline = Date.now() + waitBudgetMs;
+
   let last: ProcessWorkflowResult = {
     runId,
     status: "running",
     stepsProcessed: 0,
   };
-  let guard = 0;
-  const maxRounds = Math.ceil(maxSteps / platformConfig.maxStepsPerTick) + 2;
 
-  while (guard < maxRounds) {
+  while (Date.now() < deadline) {
     last = await processWorkflowRun(runId, userId, chatId, {
       maxSteps: platformConfig.maxStepsPerTick,
+      userText: options?.userText,
+      onProgress: options?.onProgress,
     });
+
     if (last.status === "completed" || last.status === "failed") {
       return last;
     }
+
+    if (await allStepsCompleted(runId)) {
+      await updateWorkflowRunStatus(runId, "completed", {
+        outputSummary: "Workflow completed successfully",
+      });
+      return { runId, status: "completed", stepsProcessed: last.stepsProcessed };
+    }
+
+    const retryAt = await getEarliestStepRetryAt(runId);
+    if (retryAt && retryAt > Date.now()) {
+      const retryInMs = retryAt - Date.now();
+      options?.onProgress?.({ type: "waiting-retry", retryInMs });
+      await sleep(Math.min(retryInMs + 50, 5000));
+      continue;
+    }
+
     if (last.stepsProcessed === 0) {
+      const pending = await hasPendingSteps(runId);
+      if (pending) {
+        await sleep(400);
+        continue;
+      }
       return last;
     }
-    guard += 1;
   }
 
   return last;

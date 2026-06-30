@@ -3,6 +3,7 @@ import { platformWorkflowStep } from "@/lib/db/schema";
 import type { PlanStep, WorkflowStepStatus } from "../core/types";
 import { getPlatformDb } from "../db";
 import { publishPlatformEvent } from "../events/bus";
+import type { AgentMemoryPack } from "../memory/types";
 import { retryAfterDate } from "../orchestrator/retry";
 
 export async function createWorkflowSteps(input: {
@@ -92,6 +93,38 @@ export async function markStepRunning(stepId: string): Promise<void> {
     stepId: row.id,
     agentId: row.agentId,
     payload: { attempt: row.attempt },
+  });
+}
+
+/** Simpan snapshot memori agent ke output step — dashboard live saat step running. */
+export async function updateStepMemorySnapshot(input: {
+  stepId: string;
+  runId: string;
+  agentId: string;
+  memoryPack: AgentMemoryPack;
+}): Promise<void> {
+  const db = getPlatformDb();
+  await db
+    .update(platformWorkflowStep)
+    .set({
+      output: { _platformMemory: input.memoryPack } as never,
+      updatedAt: new Date(),
+    })
+    .where(eq(platformWorkflowStep.id, input.stepId));
+
+  await publishPlatformEvent({
+    topic: "step.memory",
+    runId: input.runId,
+    stepId: input.stepId,
+    agentId: input.agentId,
+    payload: {
+      itemCount: input.memoryPack.itemCount,
+      scopes: input.memoryPack.scopes,
+      totalChars: Object.values(input.memoryPack.byScope ?? {}).reduce(
+        (sum, value) => sum + (value?.length ?? 0),
+        0
+      ),
+    },
   });
 }
 
@@ -229,4 +262,28 @@ export async function allStepsCompleted(runId: string): Promise<boolean> {
 export async function hasPendingSteps(runId: string): Promise<boolean> {
   const counts = await countStepsByStatus(runId);
   return counts.pending + counts.queued + counts.running + counts.waiting > 0;
+}
+
+/** Waktu retry paling awal untuk step yang status waiting (ms epoch), atau null. */
+export async function getEarliestStepRetryAt(
+  runId: string
+): Promise<number | null> {
+  const db = getPlatformDb();
+  const rows = await db
+    .select({ retryAfter: platformWorkflowStep.retryAfter })
+    .from(platformWorkflowStep)
+    .where(
+      and(
+        eq(platformWorkflowStep.runId, runId),
+        eq(platformWorkflowStep.status, "waiting")
+      )
+    )
+    .orderBy(asc(platformWorkflowStep.retryAfter))
+    .limit(1);
+
+  const retryAfter = rows[0]?.retryAfter;
+  if (!retryAfter) {
+    return null;
+  }
+  return retryAfter.getTime();
 }

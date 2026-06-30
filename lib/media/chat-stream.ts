@@ -18,12 +18,20 @@ export function createMediaDownloadStreamResponse(input: {
   chatId: string;
   userId: string;
   slash: MediaSlashCommand;
+  chatTitle?: string;
   consumeSseStream?: Parameters<
     typeof createUIMessageStreamResponse
   >[0]["consumeSseStream"];
 }) {
   const stream = createUIMessageStream({
     execute: async ({ writer: dataStream }) => {
+      if (input.chatTitle) {
+        dataStream.write({
+          type: "data-chat-title",
+          data: input.chatTitle,
+        });
+      }
+
       const pushProgress = (data: MediaDownloadProgressData) => {
         dataStream.write({
           type: "data-media-download-progress",

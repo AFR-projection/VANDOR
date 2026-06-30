@@ -3,6 +3,7 @@
 import {
   ActivityIcon,
   BotIcon,
+  BrainIcon,
   CheckCircle2Icon,
   CircleDotIcon,
   Loader2Icon,
@@ -38,6 +39,22 @@ type WorkflowRunListItem = {
   ageLabel: string;
 };
 
+type StepMemoryScopeChip = {
+  scope: string;
+  label: string;
+  shortLabel: string;
+  state: "configured" | "loaded" | "empty";
+  charCount: number;
+  preview: string | null;
+};
+
+type StepMemoryView = {
+  itemCount: number;
+  totalChars: number;
+  hasSnapshot: boolean;
+  scopes: StepMemoryScopeChip[];
+};
+
 type WorkflowStepView = {
   id: string;
   stepKey: string;
@@ -46,6 +63,8 @@ type WorkflowStepView = {
   attempt: number;
   maxAttempts: number;
   error: string | null;
+  stepSummary: string | null;
+  memory: StepMemoryView;
 };
 
 type WorkflowEventView = {
@@ -70,6 +89,7 @@ type RunsPayload = {
       name: string;
       status: string;
       toolCount: number;
+      memoryScopes: string[];
     }>;
   };
 };
@@ -153,8 +173,135 @@ function topicLabel(topic: string): string {
     "step.completed": "Step OK",
     "step.failed": "Step gagal",
     "step.retry": "Retry",
+    "step.memory": "Memori dimuat",
   };
   return map[topic] ?? topic;
+}
+
+function memoryScopeChipClass(state: StepMemoryScopeChip["state"]): string {
+  if (state === "loaded") {
+    return "border-emerald-500/35 bg-emerald-500/10 text-emerald-300";
+  }
+  if (state === "empty") {
+    return "border-amber-500/30 bg-amber-500/8 text-amber-300/90";
+  }
+  return "border-border/50 bg-muted/20 text-muted-foreground";
+}
+
+function MemoryScopeChip({ chip }: { chip: StepMemoryScopeChip }) {
+  const suffix =
+    chip.state === "loaded"
+      ? `${chip.charCount}c`
+      : chip.state === "empty"
+        ? "∅"
+        : "…";
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-medium text-[10px]",
+        memoryScopeChipClass(chip.state),
+        chip.state === "configured" && "animate-pulse"
+      )}
+      title={chip.label}
+    >
+      <span>{chip.shortLabel}</span>
+      <span className="opacity-70">{suffix}</span>
+    </span>
+  );
+}
+
+function StepMemoryBlock({
+  memory,
+  stepStatus,
+}: {
+  memory: StepMemoryView;
+  stepStatus: string;
+}) {
+  if (memory.scopes.length === 0) {
+    return null;
+  }
+
+  const isLive =
+    stepStatus === "running" && memory.hasSnapshot && memory.itemCount >= 0;
+  const loadedCount = memory.scopes.filter((s) => s.state === "loaded").length;
+  const emptyCount = memory.scopes.filter((s) => s.state === "empty").length;
+
+  return (
+    <div className="mt-2 rounded-md border border-border/25 bg-muted/10 px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <BrainIcon className="size-3 shrink-0 text-primary/70" />
+        <span className="font-medium text-[10px] text-muted-foreground">
+          Memory scope
+        </span>
+        {isLive ? (
+          <span className="rounded-full bg-amber-500/15 px-1.5 py-px font-medium text-[9px] text-amber-400">
+            LIVE
+          </span>
+        ) : null}
+        {memory.hasSnapshot ? (
+          <span className="text-[10px] text-muted-foreground">
+            {memory.itemCount} item · {memory.totalChars}c
+            {loadedCount + emptyCount > 0
+              ? ` · ${loadedCount} terisi${emptyCount > 0 ? ` · ${emptyCount} kosong` : ""}`
+              : ""}
+          </span>
+        ) : (
+          <span className="text-[10px] text-muted-foreground">
+            {memory.scopes.length} scope dikonfigurasi
+          </span>
+        )}
+      </div>
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        {memory.scopes.map((chip) => (
+          <MemoryScopeChip chip={chip} key={chip.scope} />
+        ))}
+      </div>
+      {memory.scopes.some((s) => s.preview) ? (
+        <ul className="mt-2 space-y-1 border-border/20 border-t pt-2">
+          {memory.scopes
+            .filter((s) => s.preview)
+            .map((s) => (
+              <li className="text-[10px] leading-relaxed" key={s.scope}>
+                <span className="font-medium text-primary/80">
+                  {s.shortLabel}:
+                </span>{" "}
+                <span className="text-muted-foreground">{s.preview}</span>
+              </li>
+            ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function AgentMemoryScopes({ scopes }: { scopes: string[] }) {
+  if (scopes.length === 0) {
+    return null;
+  }
+
+  const short: Record<string, string> = {
+    short_term: "Run",
+    long_term: "LTM",
+    conversation: "Chat",
+    project: "Proyek",
+    user: "User",
+    knowledge: "KB",
+  };
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-0.5">
+      {scopes.map((scope) => (
+        <span
+          className="rounded bg-primary/10 px-1 py-px font-medium text-[9px] text-primary/80"
+          key={scope}
+          title={scope}
+        >
+          {short[scope] ?? scope}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export function PlatformWorkflowPanel() {
@@ -283,6 +430,7 @@ export function PlatformWorkflowPanel() {
             <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
               {agent.id} · {agent.toolCount} tools · {agent.status}
             </p>
+            <AgentMemoryScopes scopes={agent.memoryScopes ?? []} />
           </div>
         ))}
       </div>
@@ -397,35 +545,47 @@ export function PlatformWorkflowPanel() {
                 </span>
               </div>
 
-              <h4 className="mt-4 mb-2 font-medium text-xs text-muted-foreground">
-                Pipeline agent
+              <h4 className="mt-4 mb-2 flex items-center gap-1.5 font-medium text-xs text-muted-foreground">
+                <BrainIcon className="size-3.5" />
+                Pipeline agent · memory per step
               </h4>
               <ol className="space-y-2">
                 {detail.steps.map((step) => (
                   <li
-                    className="flex items-start gap-2 rounded-lg border border-border/30 bg-background/40 px-3 py-2"
+                    className="rounded-lg border border-border/30 bg-background/40 px-3 py-2"
                     key={step.id}
                   >
-                    <StepIcon status={step.status} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs">
-                        <span className="font-medium">{step.agentId}</span>
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · {step.stepKey}
-                        </span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {step.status}
-                        {step.attempt > 1
-                          ? ` · attempt ${step.attempt}/${step.maxAttempts}`
-                          : ""}
-                      </p>
-                      {step.error ? (
-                        <p className="mt-1 text-[10px] text-red-400">
-                          {step.error}
+                    <div className="flex items-start gap-2">
+                      <StepIcon status={step.status} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs">
+                          <span className="font-medium">{step.agentId}</span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {step.stepKey}
+                          </span>
                         </p>
-                      ) : null}
+                        <p className="text-[10px] text-muted-foreground">
+                          {step.status}
+                          {step.attempt > 1
+                            ? ` · attempt ${step.attempt}/${step.maxAttempts}`
+                            : ""}
+                        </p>
+                        {step.stepSummary ? (
+                          <p className="mt-1 text-[10px] text-foreground/80">
+                            {step.stepSummary}
+                          </p>
+                        ) : null}
+                        {step.error ? (
+                          <p className="mt-1 text-[10px] text-red-400">
+                            {step.error}
+                          </p>
+                        ) : null}
+                        <StepMemoryBlock
+                          memory={step.memory}
+                          stepStatus={step.status}
+                        />
+                      </div>
                     </div>
                   </li>
                 ))}

@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { auth } from "@/app/(auth)/auth";
+import { repairUntitledChatsInList } from "@/lib/chat/title";
 import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
 
@@ -26,14 +27,16 @@ export async function GET(request: NextRequest) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const chats = await getChatsByUserId({
+  const page = await getChatsByUserId({
     id: session.user.id,
     limit,
     startingAfter,
     endingBefore,
   });
 
-  return Response.json(chats);
+  const repairedChats = await repairUntitledChatsInList(page.chats);
+
+  return Response.json({ chats: repairedChats, hasMore: page.hasMore });
 }
 
 export async function DELETE() {

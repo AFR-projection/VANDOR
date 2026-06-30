@@ -4,6 +4,7 @@ import {
   generateId,
 } from "ai";
 import { saveMessages } from "@/lib/db/queries";
+import { applyChatTitle } from "@/lib/chat/title";
 import type { CustomUIDataTypes } from "@/lib/types";
 import { generateUUID } from "@/lib/utils";
 
@@ -14,6 +15,8 @@ export function createFastTextStreamResponse(input: {
   instant: InstantStatus;
   text: string;
   extraParts?: Array<{ type: string; data: unknown }>;
+  titlePromise?: Promise<string> | null;
+  titleFallbackText?: string;
   consumeSseStream?: Parameters<
     typeof createUIMessageStreamResponse
   >[0]["consumeSseStream"];
@@ -35,6 +38,15 @@ export function createFastTextStreamResponse(input: {
         dataStream.write({ type: "text-delta", id: textId, delta: chunk });
       }
       dataStream.write({ type: "text-end", id: textId });
+
+      await applyChatTitle({
+        chatId: input.chatId,
+        titlePromise: input.titlePromise,
+        fallbackText: input.titleFallbackText ?? input.text,
+        writeTitle: (title) => {
+          dataStream.write({ type: "data-chat-title", data: title });
+        },
+      });
 
       dataStream.write({
         type: "data-instant-status",

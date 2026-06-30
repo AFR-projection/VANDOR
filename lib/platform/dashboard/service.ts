@@ -16,6 +16,10 @@ import {
   formatTimeAgo,
   isActiveRunStatus,
 } from "./format";
+import {
+  buildStepMemoryView,
+  type StepMemoryView,
+} from "./step-memory";
 
 export type WorkflowRunFilter = "active" | "completed" | "failed" | "all";
 
@@ -48,6 +52,8 @@ export type WorkflowStepView = {
   error: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  stepSummary: string | null;
+  memory: StepMemoryView;
 };
 
 export type WorkflowEventView = {
@@ -111,6 +117,10 @@ function toRunListItem(
 }
 
 function toStepView(step: PlatformWorkflowStep): WorkflowStepView {
+  const output = (step.output as Record<string, unknown> | null) ?? {};
+  const stepSummary =
+    typeof output.summary === "string" ? output.summary : null;
+
   return {
     id: step.id,
     stepKey: step.stepKey,
@@ -122,6 +132,8 @@ function toStepView(step: PlatformWorkflowStep): WorkflowStepView {
     error: step.error,
     startedAt: step.startedAt?.toISOString() ?? null,
     completedAt: step.completedAt?.toISOString() ?? null,
+    stepSummary,
+    memory: buildStepMemoryView(step.agentId, output, step.status),
   };
 }
 

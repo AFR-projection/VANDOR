@@ -2,6 +2,7 @@ import type { VandorIntent } from "@/lib/v4/intent";
 import type { ExecutionPlan } from "../core/types";
 import { buildHeuristicPlan } from "./heuristic-planner";
 import { platformLlmJson } from "./llm";
+import { normalizeExecutionPlan } from "./normalize-plan";
 import { executionPlanSchema, type ParsedExecutionPlan } from "./plan-schema";
 
 const PLANNER_SYSTEM = `Kamu Planner Agent VANDOR — buat execution plan multi-agent.
@@ -30,7 +31,10 @@ export async function generateExecutionPlan(input: {
   });
 
   if (!input.openRouterApiKey?.trim()) {
-    return { plan: heuristic, source: "heuristic" };
+    return {
+      plan: normalizeExecutionPlan(heuristic, input.userText, input.intent),
+      source: "heuristic",
+    };
   }
 
   const prompt = `Intent: ${input.intent}
@@ -50,12 +54,18 @@ Buat execution plan JSON.`;
   });
 
   if (!raw) {
-    return { plan: heuristic, source: "heuristic" };
+    return {
+      plan: normalizeExecutionPlan(heuristic, input.userText, input.intent),
+      source: "heuristic",
+    };
   }
 
   const parsed = executionPlanSchema.safeParse(raw);
   if (!parsed.success) {
-    return { plan: heuristic, source: "heuristic" };
+    return {
+      plan: normalizeExecutionPlan(heuristic, input.userText, input.intent),
+      source: "heuristic",
+    };
   }
 
   const hasChatStep = parsed.data.steps.some((s) => s.agentId === "chat");
@@ -71,7 +81,11 @@ Buat execution plan JSON.`;
       ];
 
   return {
-    plan: { summary: parsed.data.summary, steps },
+    plan: normalizeExecutionPlan(
+      { summary: parsed.data.summary, steps },
+      input.userText,
+      input.intent
+    ),
     source: "llm",
   };
 }

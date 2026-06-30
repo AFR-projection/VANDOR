@@ -96,7 +96,6 @@ import {
   getMessagesByChatId,
   saveChat,
   saveMessages,
-  updateChatTitleById,
   updateMessage,
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
@@ -121,7 +120,10 @@ import { captureVisualMemories } from "@/lib/memory/visual-memory";
 import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
 import { recordActivityLog, recordToolEvent } from "@/lib/observability/record";
 import { VANDOR_UNIFIED_IDENTITY_BLOCK } from "@/lib/operator/identity-prompt";
-import { tryPlatformChatWorkflow } from "@/lib/platform/chat/dispatch";
+import {
+  createPlatformWorkflowStreamResponse,
+  shouldUsePlatformWorkflowStream,
+} from "@/lib/platform/chat/stream-workflow";
 import { checkIpRateLimit } from "@/lib/ratelimit";
 import { getWebSearchSynthesisModel } from "@/lib/search/config";
 import {
@@ -164,7 +166,11 @@ import { selectActiveTools } from "@/lib/v4/tool-router";
 import { trimUiMessagesForModel } from "@/lib/v4/trim-messages";
 import { estimateTurnUsage } from "@/lib/v4/turn-usage";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
-import { generateTitleFromUserMessage } from "../../actions";
+import {
+  applyChatTitle,
+  generateChatTitleFromUserText,
+  setChatTitleFallback,
+} from "@/lib/chat/title";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 120;
@@ -232,6 +238,8 @@ export async function POST(request: Request) {
 
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
+    let isNewChatSession = false;
+    let newChatTitleSource = "";
     let titlePromise: Promise<string> | null = null;
 
     if (chat) {
@@ -240,13 +248,14 @@ export async function POST(request: Request) {
       }
       messagesFromDb = await getMessagesByChatId({ id });
     } else if (message?.role === "user") {
+      isNewChatSession = true;
+      newChatTitleSource = getTextFromMessage(message);
       await saveChat({
         id,
         userId: session.user.id,
         title: "New chat",
         visibility: selectedVisibilityType,
       });
-      titlePromise = generateTitleFromUserMessage({ message });
     }
 
     let uiMessages: ChatMessage[];
@@ -343,11 +352,19 @@ export async function POST(request: Request) {
     };
 
     if (mediaSlash) {
+      let earlyTitle: string | undefined;
+      if (isNewChatSession && newChatTitleSource.trim()) {
+        earlyTitle = await setChatTitleFallback({
+          chatId: id,
+          userText: newChatTitleSource,
+        });
+      }
       return createMediaDownloadStreamResponse({
         chatId: id,
         userId: session.user.id,
         slash: mediaSlash,
         consumeSseStream,
+        chatTitle: earlyTitle,
       });
     }
 
@@ -608,43 +625,47 @@ export async function POST(request: Request) {
         "http://localhost:3000",
     };
 
+    if (isNewChatSession && newChatTitleSource.trim()) {
+      titlePromise = generateChatTitleFromUserText(
+        newChatTitleSource,
+        openRouterApiKey,
+        openRouterMeta
+      );
+    }
+
     if (!isToolApprovalFlow && !vaultModeActive && lastUserText.trim()) {
-      try {
-        const platformResult = await tryPlatformChatWorkflow({
-          userId: session.user.id,
-          chatId: id,
-          userText: lastUserText,
-          intent: v4Intent.intent,
-          bypassLlm: v4Intent.bypassLlm,
-          attachmentKinds,
-          openRouterApiKey,
-          plannerModelId:
-            integrationModels.reasoningModel || integrationModels.chatModel,
-          openRouterAppUrl: openRouterMeta.appUrl,
-        });
-        if (platformResult) {
-          return createFastTextStreamResponse({
-            chatId: id,
-            instant: {
-              label: platformResult.label,
-              phase: "done",
-            },
-            text: platformResult.text,
-            extraParts: platformResult.extraParts,
+      const platformDispatch = {
+        userId: session.user.id,
+        chatId: id,
+        userText: lastUserText,
+        intent: v4Intent.intent,
+        bypassLlm: v4Intent.bypassLlm,
+        attachmentKinds,
+        openRouterApiKey,
+        plannerModelId:
+          integrationModels.reasoningModel || integrationModels.chatModel,
+        openRouterAppUrl: openRouterMeta.appUrl,
+      };
+
+      if (shouldUsePlatformWorkflowStream(platformDispatch)) {
+        try {
+          return createPlatformWorkflowStreamResponse({
+            dispatch: platformDispatch,
+            titlePromise,
+            titleFallbackText: newChatTitleSource || lastUserText,
             consumeSseStream,
           });
-        }
-      } catch (platformErr) {
-        // Fall through to legacy chat — log supaya mudah debug di VPS
-        if (process.env.NODE_ENV === "production") {
-          const { createLogger } = await import("@/lib/autonomous/logger");
-          createLogger("platform:chat").warn("workflow fallback", {
-            error:
-              platformErr instanceof Error
-                ? platformErr.message
-                : String(platformErr),
-            intent: v4Intent.intent,
-          });
+        } catch (platformErr) {
+          if (process.env.NODE_ENV === "production") {
+            const { createLogger } = await import("@/lib/autonomous/logger");
+            createLogger("platform:chat").warn("workflow stream fallback", {
+              error:
+                platformErr instanceof Error
+                  ? platformErr.message
+                  : String(platformErr),
+              intent: v4Intent.intent,
+            });
+          }
         }
       }
     }
@@ -659,6 +680,8 @@ export async function POST(request: Request) {
         instant: { label: executed.instantLabel, phase: "start" },
         text: executed.text,
         extraParts: executed.extraParts,
+        titlePromise,
+        titleFallbackText: newChatTitleSource || lastUserText,
         consumeSseStream,
       });
     }
@@ -1121,13 +1144,14 @@ export async function POST(request: Request) {
             }
 
             if (titlePromise) {
-              try {
-                const title = await titlePromise;
-                dataStream.write({ type: "data-chat-title", data: title });
-                updateChatTitleById({ chatId: id, title });
-              } catch (_) {
-                /* non-fatal */
-              }
+              await applyChatTitle({
+                chatId: id,
+                titlePromise,
+                fallbackText: newChatTitleSource || lastUserText,
+                writeTitle: (title) => {
+                  dataStream.write({ type: "data-chat-title", data: title });
+                },
+              });
             }
             return;
           }
@@ -1487,13 +1511,14 @@ export async function POST(request: Request) {
         }
 
         if (titlePromise) {
-          try {
-            const title = await titlePromise;
-            dataStream.write({ type: "data-chat-title", data: title });
-            updateChatTitleById({ chatId: id, title });
-          } catch (_) {
-            /* non-fatal */
-          }
+          await applyChatTitle({
+            chatId: id,
+            titlePromise,
+            fallbackText: newChatTitleSource || lastUserText,
+            writeTitle: (title) => {
+              dataStream.write({ type: "data-chat-title", data: title });
+            },
+          });
         }
 
         agentStepComplete(dataStream, "generate");

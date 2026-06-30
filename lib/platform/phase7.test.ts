@@ -119,4 +119,42 @@ describe("platform phase 7 — memory scopes", () => {
     assert.equal(pack?.agentId, "coding");
     assert.equal(pack?.itemCount, 1);
   });
+
+  it("builds step memory view for dashboard", async () => {
+    const prev = process.env.PLATFORM_V2_ENABLED;
+    process.env.PLATFORM_V2_ENABLED = "true";
+    const { resetPlatformBootstrapForTests, bootstrapPlatformV2 } =
+      await import("./init");
+    const { buildStepMemoryView } = await import("./dashboard/step-memory");
+    resetPlatformBootstrapForTests();
+    bootstrapPlatformV2();
+
+    const pending = buildStepMemoryView("coding", null, "queued");
+    assert.ok(pending.scopes.length >= 1);
+    assert.equal(pending.hasSnapshot, false);
+    assert.equal(pending.scopes[0]?.state, "configured");
+
+    const running = buildStepMemoryView(
+      "coding",
+      {
+        _platformMemory: {
+          agentId: "coding",
+          scopes: ["project", "short_term"],
+          byScope: {
+            project: "- [8/10] Build VANDOR",
+            short_term: "Run abc — prior step",
+          },
+          context: "ctx",
+          itemCount: 2,
+        },
+      },
+      "running"
+    );
+    assert.equal(running.hasSnapshot, true);
+    assert.equal(running.itemCount, 2);
+    assert.equal(running.scopes.find((s) => s.scope === "project")?.state, "loaded");
+    assert.ok(running.scopes.find((s) => s.scope === "project")?.preview);
+
+    process.env.PLATFORM_V2_ENABLED = prev;
+  });
 });
