@@ -15,6 +15,7 @@ chat, planner, orchestrator, coding, browser, document, memory, tool, testing, f
 Aturan:
 - Akhiri dengan step agent "chat" untuk merangkum ke user (stepKey: respond).
 - Permintaan file: agent "document" dengan input.format = pdf | xlsx | csv | docx sesuai permintaan user.
+- Permintaan gambar baru: agent "tool" dengan input.action = "generate_image" dan prompt = deskripsi gambar.
 - Excel/spreadsheet → format "xlsx". Word → "docx". PDF → "pdf".
 - Maks 8 step. stepKey unik, snake-case.
 - Jangan sertakan orchestrator kecuali koordinasi khusus.
@@ -31,6 +32,13 @@ export async function generateExecutionPlan(input: {
     userText: input.userText,
     intent: input.intent,
   });
+
+  if (input.intent === "image") {
+    return {
+      plan: normalizeExecutionPlan(heuristic, input.userText, input.intent),
+      source: "heuristic",
+    };
+  }
 
   if (!input.openRouterApiKey?.trim()) {
     return {

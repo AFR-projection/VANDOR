@@ -92,6 +92,7 @@ const AGENT_TOOL_MAP: Record<PlatformAgentId, string[]> = {
   tool: [
     "checkSystem",
     "agentWork",
+    "generateImage",
     "system.ping",
     "shell.run",
     "monitor.metrics",

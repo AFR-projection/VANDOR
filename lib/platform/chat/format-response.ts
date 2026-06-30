@@ -3,6 +3,10 @@ import type {
   PlatformWorkflowStep,
 } from "@/lib/db/schema";
 import { platformAgentLabel } from "./agent-labels";
+import {
+  extractStepDeliverable,
+  formatDeliverableMarkdown,
+} from "./deliverables";
 import type { ProcessWorkflowResult } from "../orchestrator/engine";
 
 export function summarizeStepOutput(
@@ -11,27 +15,17 @@ export function summarizeStepOutput(
   if (!out) {
     return "";
   }
+
+  const deliverable = extractStepDeliverable(out);
+  if (deliverable) {
+    return formatDeliverableMarkdown(deliverable);
+  }
+
   if (typeof out.summary === "string" && out.summary.trim()) {
     return out.summary.trim();
   }
   if (typeof out.message === "string" && out.message.trim()) {
     return out.message.trim().slice(0, 500);
-  }
-  const document = out.document as
-    | { url?: string; filename?: string; kind?: string; title?: string }
-    | undefined;
-  if (document?.url) {
-    const label =
-      document.filename ??
-      document.title ??
-      (document.kind === "xlsx"
-        ? "spreadsheet.xlsx"
-        : document.kind === "docx"
-          ? "document.docx"
-          : document.kind === "csv"
-            ? "data.csv"
-            : "document.pdf");
-    return `📎 [Unduh ${label}](${document.url})`;
   }
   const scan = out.scan as { summary?: string } | undefined;
   if (scan?.summary) {
@@ -77,24 +71,40 @@ export function synthesizeChatFromWorkflowSteps(input: {
     output: Record<string, unknown>;
   }>;
 }): string {
-  const lines: string[] = [];
+  const deliverables: string[] = [];
+  const details: string[] = [];
+
   for (const step of input.priorSteps) {
+    const deliverable = extractStepDeliverable(step.output);
+    if (deliverable) {
+      deliverables.push(formatDeliverableMarkdown(deliverable));
+      continue;
+    }
+
     const summary = summarizeStepOutput(step.output);
     if (!summary) {
       continue;
     }
-    lines.push(
+    details.push(
       `**${platformAgentLabel(step.agentId)}** (${step.stepKey}): ${summary}`
     );
   }
 
-  if (lines.length === 0) {
+  if (deliverables.length > 0) {
+    const filesBlock = deliverables.join("\n\n");
+    if (details.length === 0) {
+      return filesBlock;
+    }
+    return `**File & media siap:**\n\n${filesBlock}\n\n---\n\n${details.join("\n\n")}`;
+  }
+
+  if (details.length === 0) {
     return input.userText.trim()
       ? `Sudah diproses tim agent untuk: ${input.userText.trim().slice(0, 300)}`
       : "Workflow selesai — tidak ada output teks dari agent.";
   }
 
-  return lines.join("\n\n");
+  return details.join("\n\n");
 }
 
 export function formatPlatformWorkflowReply(input: {
@@ -175,7 +185,7 @@ export function formatPlatformWorkflowReply(input: {
     lines.push("**Menunggu:**");
     for (const s of pending) {
       lines.push(
-        `- ${platformAgentLabel(s.agentId)} · ${s.stepKey} (${s.status})`
+        `- ${platformAgentLabel(s.agentId)} · ${s.stepKey}: ${s.status}`
       );
     }
   }

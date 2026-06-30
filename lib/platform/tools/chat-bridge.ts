@@ -20,6 +20,7 @@ import type {
   PlatformToolContext,
   PlatformToolExecuteResult,
 } from "../core/types";
+import { summaryWithDownloadUrl } from "../chat/deliverables";
 
 function pickQuery(input: Record<string, unknown>): string {
   return String(input.query ?? input.userRequest ?? input.message ?? "").trim();
@@ -212,7 +213,9 @@ export async function executeChatToolForPlatform(
         return {
           ok,
           data: result,
-          summary: ok ? `PDF "${title}" dibuat` : "Gagal buat PDF",
+          summary: ok
+            ? summaryWithDownloadUrl(`PDF "${title}" dibuat`, result)
+            : "Gagal buat PDF",
           error: ok
             ? undefined
             : String((result as { error?: string }).error ?? ""),
@@ -248,7 +251,10 @@ export async function executeChatToolForPlatform(
           ok,
           data: result,
           summary: ok
-            ? `Excel "${title}" dibuat (${kind.toUpperCase()})`
+            ? summaryWithDownloadUrl(
+                `Excel "${title}" dibuat (${kind.toUpperCase()})`,
+                result
+              )
             : "Gagal buat spreadsheet",
           error: ok
             ? undefined
@@ -276,7 +282,53 @@ export async function executeChatToolForPlatform(
         return {
           ok,
           data: result,
-          summary: ok ? `Word "${title}" dibuat` : "Gagal buat DOCX",
+          summary: ok
+            ? summaryWithDownloadUrl(`Word "${title}" dibuat`, result)
+            : "Gagal buat DOCX",
+          error: ok
+            ? undefined
+            : String((result as { error?: string }).error ?? ""),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+    case "generateImage": {
+      const prompt = String(
+        input.prompt ?? input.userRequest ?? input.message ?? ""
+      ).trim();
+      if (prompt.length < 3) {
+        return { ok: false, error: "prompt generateImage terlalu pendek" };
+      }
+      try {
+        const { runGenerateImageForUser } = await import(
+          "@/lib/ai/tools/media-tools"
+        );
+        const result = await runGenerateImageForUser(ctx.userId, {
+          prompt,
+          aspectRatio: input.aspectRatio as
+            | "1:1"
+            | "4:3"
+            | "3:4"
+            | "16:9"
+            | "9:16"
+            | "21:9"
+            | undefined,
+          model: input.model ? String(input.model) : undefined,
+        });
+        const ok = Boolean((result as { ok?: boolean }).ok);
+        const url = (result as { url?: string }).url;
+        return {
+          ok,
+          data: result,
+          summary: ok && url
+            ? `Gambar dibuat — ![${prompt.slice(0, 60)}](${url})`
+            : ok
+              ? "Gambar dibuat"
+              : String((result as { error?: string }).error ?? "Gagal generate gambar"),
           error: ok
             ? undefined
             : String((result as { error?: string }).error ?? ""),

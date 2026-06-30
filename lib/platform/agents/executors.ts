@@ -30,12 +30,16 @@ import {
   summarizeStepOutput,
   synthesizeChatFromWorkflowSteps,
 } from "../chat/format-response";
+import { summaryWithDownloadUrl } from "../chat/deliverables";
 
 const SCAN_CODEBASE_RE =
   /\b(scan\s+(?:code|codebase|repo)|perbaiki\s+(?:error|code|codebase)|cek\s+log)\b/i;
 const FULL_BUILD_RE = /\b(full\s*build|npm\s+run\s+build|build\s+prod)\b/i;
 
 const FIX_RE = /\b(perbaiki|fix|auto-?fix|error|bug)\b/i;
+
+const IMAGE_GEN_RE =
+  /\b(gambar|image|logo|ilustrasi|draw|illustrat|buat\s+(?:kan\s+)?(?:sebuah\s+)?gambar)\b/i;
 
 function userText(ctx: AgentExecutionContext): string {
   return String(
@@ -97,6 +101,28 @@ export async function toolAgentExecute(
   ctx: AgentExecutionContext
 ): Promise<AgentExecutionResult> {
   const text = userText(ctx);
+  const action = String(ctx.input.action ?? "");
+  const intent = String(ctx.input.intent ?? "");
+
+  if (
+    action === "generate_image" ||
+    (intent === "image" && IMAGE_GEN_RE.test(text))
+  ) {
+    const result = await runAgentTool(ctx, "generateImage", {
+      prompt: String(ctx.input.prompt ?? text),
+      aspectRatio: ctx.input.aspectRatio,
+      model: ctx.input.model,
+    });
+    return {
+      ok: result.ok,
+      output: { image: result.data },
+      summary:
+        result.summary ??
+        (result.ok ? "Gambar berhasil dibuat" : "Gagal generate gambar"),
+      error: result.error,
+    };
+  }
+
   const jobType =
     (ctx.input.jobType as string | undefined) ?? inferJobType(text);
 
@@ -313,9 +339,13 @@ export async function documentAgentExecute(
     return {
       ok: result.ok,
       output: { document: result.data, format },
-      summary:
-        result.summary ??
-        `${documentFormatLabel(format)} "${spreadsheet.title}"`,
+      summary: result.ok
+        ? summaryWithDownloadUrl(
+            `${documentFormatLabel(format)} "${spreadsheet.title}"`,
+            result.data
+          )
+        : (result.summary ??
+          `${documentFormatLabel(format)} "${spreadsheet.title}"`),
       error: result.error,
     };
   }
@@ -330,7 +360,9 @@ export async function documentAgentExecute(
     return {
       ok: result.ok,
       output: { document: result.data, format },
-      summary: result.summary ?? `Word "${title}" dibuat`,
+      summary: result.ok
+        ? summaryWithDownloadUrl(`Word "${title}" dibuat`, result.data)
+        : (result.summary ?? `Word "${title}" dibuat`),
       error: result.error,
     };
   }
@@ -344,7 +376,9 @@ export async function documentAgentExecute(
   return {
     ok: result.ok,
     output: { document: result.data, format: "pdf" },
-    summary: result.summary ?? `PDF "${title}" dibuat`,
+    summary: result.ok
+      ? summaryWithDownloadUrl(`PDF "${title}" dibuat`, result.data)
+      : (result.summary ?? `PDF "${title}" dibuat`),
     error: result.error,
   };
 }

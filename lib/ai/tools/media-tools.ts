@@ -115,6 +115,54 @@ function isAllowedImageUrl(url: string, allowedUrls: string[]): boolean {
   }
 }
 
+export async function runGenerateImageForUser(
+  userId: string,
+  input: {
+    prompt: string;
+    aspectRatio?: "1:1" | "4:3" | "3:4" | "16:9" | "9:16" | "21:9";
+    model?: string;
+  }
+) {
+  const ctx = await getOpenRouterContextForUser(userId);
+  const slotModel = pickModel(ctx, "imageModel", input.model);
+  const { result, chosen } = await callImageModel({
+    ctx,
+    model: slotModel,
+    messages: [{ role: "user", content: input.prompt }],
+    aspectRatio: input.aspectRatio,
+  });
+
+  if (!result.ok) {
+    return { ok: false as const, error: result.error, model: chosen };
+  }
+
+  const data = result.data;
+  const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!imageUrl) {
+    return {
+      ok: false as const,
+      error:
+        "Model tidak mengembalikan gambar. Cek model di Pengaturan → API atau kredit OpenRouter.",
+      model: chosen,
+      textResponse: data.choices?.[0]?.message?.content ?? null,
+    };
+  }
+
+  try {
+    return await storeGeneratedImage(imageUrl, {
+      model: chosen,
+      prompt: input.prompt,
+      aspectRatio: input.aspectRatio ?? "1:1",
+    });
+  } catch (err) {
+    return {
+      ok: false as const,
+      error: err instanceof Error ? err.message : String(err),
+      model: chosen,
+    };
+  }
+}
+
 export function makeGenerateImageTool(userId: string) {
   return tool({
     description:
@@ -129,46 +177,8 @@ export function makeGenerateImageTool(userId: string) {
         .optional()
         .describe("Override OpenRouter image model ID from settings."),
     }),
-    execute: async ({ prompt, aspectRatio, model }) => {
-      const ctx = await getOpenRouterContextForUser(userId);
-      const slotModel = pickModel(ctx, "imageModel", model);
-      const { result, chosen } = await callImageModel({
-        ctx,
-        model: slotModel,
-        messages: [{ role: "user", content: prompt }],
-        aspectRatio,
-      });
-
-      if (!result.ok) {
-        return { ok: false as const, error: result.error, model: chosen };
-      }
-
-      const data = result.data;
-      const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (!imageUrl) {
-        return {
-          ok: false as const,
-          error:
-            "Model tidak mengembalikan gambar. Cek model di Pengaturan → API atau kredit OpenRouter.",
-          model: chosen,
-          textResponse: data.choices?.[0]?.message?.content ?? null,
-        };
-      }
-
-      try {
-        return await storeGeneratedImage(imageUrl, {
-          model: chosen,
-          prompt,
-          aspectRatio: aspectRatio ?? "1:1",
-        });
-      } catch (err) {
-        return {
-          ok: false as const,
-          error: err instanceof Error ? err.message : String(err),
-          model: chosen,
-        };
-      }
-    },
+    execute: async ({ prompt, aspectRatio, model }) =>
+      runGenerateImageForUser(userId, { prompt, aspectRatio, model }),
   });
 }
 

@@ -116,9 +116,13 @@ export function buildHeuristicPlan(input: {
       };
     case "image":
       return {
-        summary: "Rencana media: vision pipeline",
+        summary: "Rencana media: generate gambar",
         steps: [
-          step("vision", "document", { ...base, media: true }),
+          step("generate_image", "tool", {
+            ...base,
+            action: "generate_image",
+            prompt: text,
+          }),
           step("respond", "chat", { message: text, formatWorkflow: true }),
         ],
       };
