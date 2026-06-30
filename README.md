@@ -204,6 +204,31 @@ Database tetap **Neon Postgres** (external) — tidak perlu Postgres di VPS.
 
 Update berikutnya: `bash deploy/hostinger/deploy.sh`
 
+### Pipeline otomatis (disarankan)
+
+Alur lengkap supaya deploy VPS **bukan boong**:
+
+```
+PC/Cursor → git push origin main → GitHub → Actions SSH ke VPS → deploy.sh
+```
+
+1. **Kamu push** kode dari PC ke GitHub (`main`) — ini satu-satunya tempat kode baru masuk repo.
+2. **GitHub Actions** (`.github/workflows/deploy-vps.yml`) otomatis SSH ke VPS dan jalankan `deploy/hostinger/deploy.sh`.
+3. **Agent deploy** di chat/Operator = cadangan manual (pull + build + pm2) kalau CI belum disetup.
+
+**GitHub repo → Settings → Secrets and variables → Actions:**
+
+| Secret | Contoh |
+|--------|--------|
+| `VPS_HOST` | `72.61.114.56` |
+| `VPS_USER` | `root` |
+| `VPS_SSH_KEY` | private key SSH (paste full `-----BEGIN...`) |
+| `VPS_APP_DIR` | opsional, default `/var/www/vandor` |
+
+Setelah secret terisi, setiap `git push origin main` = production update otomatis (~2–5 menit).
+
+**Catatan:** Agent di VPS **tidak bisa push** kode dari PC kamu — hanya bisa pull dari GitHub. Push tetap dari Cursor/PC (atau CI lain). Opsional `VANDOR_DEPLOY_PUSH=true` di VPS hanya untuk commit agent yang diedit **langsung di server**.
+
 ### Env wajib di VPS
 
 ```env

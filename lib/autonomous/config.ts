@@ -92,6 +92,8 @@ export const autonomousConfig = {
   /** Path deploy produksi (git pull + build + pm2). */
   deployPath: process.env.VANDOR_DEPLOY_PATH ?? "/var/www/vandor",
   deployBranch: process.env.VANDOR_DEPLOY_BRANCH ?? "main",
+  /** Commit+push dari VPS sebelum pull (hanya jika agent edit file di server). Default off. */
+  deployPushEnabled: process.env.VANDOR_DEPLOY_PUSH === "true",
 
   /** Secret webhook alert eksternal (Datadog/Sentry/UptimeRobot). */
   webhookSecret: process.env.VANDOR_AGENT_WEBHOOK_SECRET ?? "",
