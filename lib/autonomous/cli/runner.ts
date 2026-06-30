@@ -1,12 +1,9 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { hostname } from "node:os";
-import { autonomousConfig } from "../config";
-import {
-  appendTerminalLine,
-  newTerminalSessionId,
-} from "../terminal-log";
 import type { AgentTerminalStream } from "@/lib/db/schema";
+import { autonomousConfig } from "../config";
+import { appendTerminalLine, newTerminalSessionId } from "../terminal-log";
 
 export type CliRunResult = {
   sessionId: string;
@@ -216,7 +213,6 @@ export async function runStatusSnapshot(
   };
 
   for (const command of commands) {
-    // biome-ignore lint/nursery/noAwaitInLoop: status berurutan agar log terbaca
     last = await runCliCommand(command, {
       ...options,
       sessionId,

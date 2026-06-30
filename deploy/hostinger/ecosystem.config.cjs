@@ -1,3 +1,4 @@
+"use strict";
 /** @type {import('pm2').StartOptions} */
 const fs = require("node:fs");
 const path = require("node:path");

@@ -2,11 +2,15 @@
  * Verify Cloudflare R2 connectivity for vault encrypted blobs.
  * Usage: npx tsx scripts/verify-vault-r2.ts
  */
-import { config } from "dotenv";
-import { randomBytes } from "node:crypto";
-import { createHash } from "node:crypto";
-import { createCipheriv, createDecipheriv } from "node:crypto";
+
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "node:crypto";
 import { AwsClient } from "aws4fetch";
+import { config } from "dotenv";
 
 config({ path: ".env.local" });
 
@@ -39,11 +43,7 @@ function encryptSample(plaintext: Buffer) {
   return { ciphertext, iv, tag };
 }
 
-function decryptSample(
-  ciphertext: Buffer,
-  iv: Buffer,
-  tag: Buffer
-): Buffer {
+function decryptSample(ciphertext: Buffer, iv: Buffer, tag: Buffer): Buffer {
   const secret = process.env.AUTH_SECRET;
   if (!secret) fail("AUTH_SECRET missing");
   const key = createHash("sha256").update(secret).digest();

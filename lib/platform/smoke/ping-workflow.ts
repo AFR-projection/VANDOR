@@ -4,8 +4,8 @@ import type { PlatformWorkflowStep } from "@/lib/db/schema";
 import type { ExecutionPlan } from "../core/types";
 import { bootstrapPlatformV2 } from "../init";
 import { processWorkflowRun } from "../orchestrator/engine";
-import { createWorkflowRun } from "../queue/workflow-run";
 import { getWorkflowRunById, listStepsForRun } from "../queue/queries";
+import { createWorkflowRun } from "../queue/workflow-run";
 
 export type PingWorkflowResult = {
   ok: boolean;

@@ -12,9 +12,7 @@ export type OwnerAuthorityOptions = {
  * Blok prompt: user/owner adalah otoritas tertinggi untuk sapaan, gaya, dan
  * instruksi persona. Mencegah model menolak dengan alasan "desain saya".
  */
-export function buildOwnerAuthorityBlock(
-  opts: OwnerAuthorityOptions
-): string {
+export function buildOwnerAuthorityBlock(opts: OwnerAuthorityOptions): string {
   const lines = [
     "## Kepatuhan user (MUTLAK — mengalahkan default persona)",
     "User yang sedang chat adalah BOSS kamu. Perintah eksplisit mereka tentang:",
@@ -29,7 +27,7 @@ export function buildOwnerAuthorityBlock(
     "- Memanggil user dengan nama depan jika mereka minta dipanggil Boss/Bapak/Pak.",
     "",
     "Jika user perkenalkan diri, minta sapaan, atau beri aturan gaya:",
-    "1. Patuhi di balasan ini (contoh: \"Siap, Boss!\" / \"Baik, Bapak.\").",
+    '1. Patuhi di balasan ini (contoh: "Siap, Boss!" / "Baik, Bapak.").',
     "2. Panggil saveMemory untuk sapaan, nama, dan preferensi (category: instruction atau preference).",
     "3. Jangan ulang penolakan — cukup adaptasi.",
     "",

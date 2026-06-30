@@ -1,10 +1,6 @@
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import type { AgentRiskLevel } from "@/lib/db/schema";
-import type {
-  PlatformAgentId,
-  PlatformToolMeta,
-  ToolSource,
-} from "./types";
+import type { PlatformAgentId, PlatformToolMeta, ToolSource } from "./types";
 
 const CHAT_TOOL_DESCRIPTIONS: Record<string, string> = {
   getCurrentTime: "Waktu & tanggal saat ini",
@@ -105,12 +101,7 @@ const AGENT_TOOL_MAP: Record<PlatformAgentId, string[]> = {
   ],
   testing: [],
   fix: ["shell.run", "monitor.logs"],
-  deploy: [
-    "agentWork",
-    "shell.run",
-    "monitor.services",
-    "monitor.uptime",
-  ],
+  deploy: ["agentWork", "shell.run", "monitor.services", "monitor.uptime"],
   monitoring: [
     "checkSystem",
     "monitor.metrics",
@@ -143,7 +134,8 @@ export function buildStaticToolCatalog(): PlatformToolMeta[] {
       name,
       description: CHAT_TOOL_DESCRIPTIONS[name] ?? `Chat tool: ${name}`,
       source: "chat" as ToolSource,
-      risk: name === "agentWork" || name === "checkSystem" ? "moderate" : "safe",
+      risk:
+        name === "agentWork" || name === "checkSystem" ? "moderate" : "safe",
       agents: agentsForChatTool(name),
     });
   }

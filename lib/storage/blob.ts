@@ -5,13 +5,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put as vercelPut } from "@vercel/blob";
 import { getAppUrl } from "@/lib/app-url";
+import { chatFileServeUrl } from "@/lib/files/chat-file-url";
 import {
   hasR2Storage,
   hasVercelBlob,
   isServerlessRuntime,
   storageSetupHint,
 } from "@/lib/storage/config";
-import { chatFileServeUrl } from "@/lib/files/chat-file-url";
 import { putR2File } from "@/lib/storage/r2";
 
 export type StoredFile = {
@@ -64,8 +64,8 @@ export async function putFile(
   const contentType = options.contentType ?? "application/octet-stream";
   const addSuffix = options.addRandomSuffix !== false;
   const buf = toBuffer(data);
-  const runtime = await import("@/lib/settings/integration-runtime").then(
-    (m) => m.getIntegrationRuntimeConfig()
+  const runtime = await import("@/lib/settings/integration-runtime").then((m) =>
+    m.getIntegrationRuntimeConfig()
   );
   const blobToken = runtime.vercelBlob.token;
 

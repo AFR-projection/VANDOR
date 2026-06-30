@@ -1,0 +1,127 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+C:\Users\User\Documents\VANDOR\biome.jsonc:34:9 deserialize ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Found an unknown key `noUnnecessaryConditions`.
+  
+    32 Γöé         "noArrayIndexKey": "off",
+    33 Γöé         "useIterableCallbackReturn": "off",
+  > 34 Γöé         "noUnnecessaryConditions": "off"
+       Γöé         ^^^^^^^^^^^^^^^^^^^^^^^^^
+    35 Γöé       },
+    36 Γöé       "style": {
+  
+  i Known keys:
+  
+  - recommended
+  - noAlert
+  - noApproximativeNumericConstant
+  - noArrayIndexKey
+  - noAssignInExpressions
+  - noAsyncPromiseExecutor
+  - noBiomeFirstException
+  - noBitwiseOperators
+  - noCatchAssign
+  - noClassAssign
+  - noCommentText
+  - noCompareNegZero
+  - noConfusingLabels
+  - noConfusingVoidType
+  - noConsole
+  - noConstEnum
+  - noConstantBinaryExpressions
+  - noControlCharactersInRegex
+  - noDebugger
+  - noDocumentCookie
+  - noDocumentImportInPage
+  - noDoubleEquals
+  - noDuplicateAtImportRules
+  - noDuplicateCase
+  - noDuplicateClassMembers
+  - noDuplicateCustomProperties
+  - noDuplicateElseIf
+  - noDuplicateFields
+  - noDuplicateFontNames
+  - noDuplicateJsxProps
+  - noDuplicateObjectKeys
+  - noDuplicateParameters
+  - noDuplicateProperties
+  - noDuplicateSelectorsKeyframeBlock
+  - noDuplicateTestHooks
+  - noEmptyBlock
+  - noEmptyBlockStatements
+  - noEmptyInterface
+  - noEvolvingTypes
+  - noExplicitAny
+  - noExportsInTest
+  - noExtraNonNullAssertion
+  - noFallthroughSwitchClause
+  - noFocusedTests
+  - noFunctionAssign
+  - noGlobalAssign
+  - noGlobalIsFinite
+  - noGlobalIsNan
+  - noHeadImportInDocument
+  - noImplicitAnyLet
+  - noImportAssign
+  - noImportantInKeyframe
+  - noIrregularWhitespace
+  - noLabelVar
+  - noMisleadingCharacterClass
+  - noMisleadingInstantiator
+  - noMisplacedAssertion
+  - noMisrefactoredShorthandAssign
+  - noNonNullAssertedOptionalChain
+  - noOctalEscape
+  - noPrototypeBuiltins
+  - noQuickfixBiome
+  - noReactSpecificProps
+  - noRedeclare
+  - noRedundantUseStrict
+  - noSelfCompare
+  - noShadowRestrictedNames
+  - noShorthandPropertyOverrides
+  - noSkippedTests
+  - noSparseArray
+  - noSuspiciousSemicolonInJsx
+  - noTemplateCurlyInString
+  - noThenProperty
+  - noTsIgnore
+  - noUnassignedVariables
+  - noUnknownAtRules
+  - noUnsafeDeclarationMerging
+  - noUnsafeNegation
+  - noUselessEscapeInString
+  - noUselessRegexBackrefs
+  - noVar
+  - noWith
+  - useAdjacentOverloadSignatures
+  - useAwait
+  - useBiomeIgnoreFolder
+  - useDefaultSwitchClauseLast
+  - useErrorMessage
+  - useGetterReturn
+  - useGoogleFontDisplay
+  - useGuardForIn
+  - useIsArray
+  - useIterableCallbackReturn
+  - useNamespaceKeyword
+  - useNumberToFixedDigitsArgument
+  - useStaticResponseMethods
+  - useStrictMode
+  
+
+configuration ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Biome exited because the configuration resulted in errors. Please fix them.
+  
+

@@ -7,12 +7,14 @@ let migratePromise: Promise<void> | null = null;
 
 async function ensureGuestVaultMerged(ownerUserId: string): Promise<void> {
   if (!migratePromise) {
-    migratePromise = migrateGuestVaultFilesToOwner(ownerUserId).then(() => {
-      /* once per process */
-    }).catch((error) => {
-      migratePromise = null;
-      console.error("[vault] guest merge failed:", error);
-    });
+    migratePromise = migrateGuestVaultFilesToOwner(ownerUserId)
+      .then(() => {
+        /* once per process */
+      })
+      .catch((error) => {
+        migratePromise = null;
+        console.error("[vault] guest merge failed:", error);
+      });
   }
   await migratePromise;
 }
@@ -22,7 +24,9 @@ async function ensureGuestVaultMerged(ownerUserId: string): Promise<void> {
  * When VANDOR_OWNER_EMAIL is set, all vault files live under that user —
  * guest sessions no longer get an empty berangkas.
  */
-export async function resolveVaultUserId(sessionUserId: string): Promise<string> {
+export async function resolveVaultUserId(
+  sessionUserId: string
+): Promise<string> {
   const owner = await resolveDeploymentOwnerUser();
   if (owner) {
     await ensureGuestVaultMerged(owner.id);

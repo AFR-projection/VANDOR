@@ -1,19 +1,16 @@
 import { recordAgentAction } from "./audit";
-import { autonomousConfig } from "./config";
+import { collectSystemAwareness } from "./awareness";
 import { analyzeCodeScan } from "./coding-agent/analyze";
 import { runCodeScan } from "./coding-agent/scan";
-import { collectSystemAwareness } from "./awareness";
 import { composeOperatorWhatsappMessage } from "./compose-message";
+import { autonomousConfig } from "./config";
 import { emitEvent } from "./events";
 import type { Issue } from "./healing/detectors";
 import { createLogger } from "./logger";
 import { notify } from "./notify";
 import { recordOperatorIncident } from "./operator-memory";
 import { resolveOwnerUserId } from "./owner";
-import {
-  canAutoFixCommand,
-  evaluateCommand,
-} from "./rule-engine";
+import { canAutoFixCommand, evaluateCommand } from "./rule-engine";
 import { execApprovedCommand } from "./tools/shell";
 
 const log = createLogger("auto-fix");
@@ -82,9 +79,10 @@ export async function runAutoFixCommand(
   log.info(`Auto-fix [${context.source}] ${command.slice(0, 120)}`);
   const result = await execApprovedCommand(command);
   const stdout = result.data
-    ? String(
-        (result.data as { stdout?: string }).stdout ?? result.data
-      ).slice(0, 800)
+    ? String((result.data as { stdout?: string }).stdout ?? result.data).slice(
+        0,
+        800
+      )
     : undefined;
 
   await recordAgentAction({
@@ -168,7 +166,7 @@ export async function autoFixIssues(
           `✅ *${issue.title}*\n\n` +
           `Perintah: \`${command}\`\n\n` +
           `${issue.detail.slice(0, 300)}\n\n` +
-          `_VANDOR Operator memperbaiki otomatis — tidak perlu approval._`,
+          "_VANDOR Operator memperbaiki otomatis — tidak perlu approval._",
         level: "info",
       });
     } else {
@@ -185,7 +183,7 @@ export async function autoFixIssues(
           `❌ *${issue.title}*\n\n` +
           `Perintah: \`${command}\`\n` +
           `Error: ${fix.error ?? "unknown"}\n\n` +
-          `Perlu tindakan manual atau cek Operator.`,
+          "Perlu tindakan manual atau cek Operator.",
         level: "error",
       });
     }
@@ -194,10 +192,7 @@ export async function autoFixIssues(
   return result;
 }
 
-const BUILTIN_CODE_FIX_COMMANDS = [
-  "npm run fix",
-  "npx ultracite fix",
-];
+const BUILTIN_CODE_FIX_COMMANDS = ["npm run fix", "npx ultracite fix"];
 
 /**
  * Pipeline auto-fix codebase: scan → fix builtin → LLM commands → rescan.
@@ -290,13 +285,13 @@ export async function runCodeAutoFixPipeline(options?: {
   });
 
   if (!finalScan.ok) {
-    if (!analysis.skipNotify) {
+    if (analysis.skipNotify) {
+      log.info("Auto-fix skip notify — tooling/config only");
+    } else {
       await notifyCodeFix(
         "code_fix_failed",
         `Auto-fix dicoba ${commandsRun.length} perintah, scan masih gagal. ${analysis.diagnosis.slice(0, 300)} Session ${scanBefore.sessionId.slice(0, 8)}.`
       );
-    } else {
-      log.info("Auto-fix skip notify — tooling/config only");
     }
   }
 

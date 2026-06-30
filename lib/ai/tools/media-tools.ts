@@ -9,8 +9,8 @@ import {
 } from "@/lib/ai/integration-models";
 import { openRouterFetch } from "@/lib/ai/openrouter-http";
 import { putFile } from "@/lib/storage/blob";
-import { formatWhatsappSticker } from "@/lib/whatsapp/sticker-format";
 import { transcribeAudioBuffer } from "@/lib/voice/transcribe";
+import { formatWhatsappSticker } from "@/lib/whatsapp/sticker-format";
 
 type OpenRouterImage = {
   image_url?: { url?: string };
@@ -388,8 +388,7 @@ export function makeTranscribeAudioTool(userId: string) {
       } catch (err) {
         return {
           ok: false as const,
-          error:
-            err instanceof Error ? err.message : "Gagal unduh file audio",
+          error: err instanceof Error ? err.message : "Gagal unduh file audio",
           model: chosen,
         };
       }
@@ -458,7 +457,9 @@ export function makeCreateWhatsappStickerTool(userId: string) {
       prompt: z
         .string()
         .optional()
-        .describe("Deskripsi stiker yang ingin dibuat (wajib jika tanpa imageUrl)."),
+        .describe(
+          "Deskripsi stiker yang ingin dibuat (wajib jika tanpa imageUrl)."
+        ),
       imageUrl: z
         .string()
         .url()

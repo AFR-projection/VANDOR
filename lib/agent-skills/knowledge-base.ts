@@ -90,11 +90,13 @@ export async function searchKnowledgeBase(input: {
       LIMIT ${maxResults}
     `);
 
-    const results = (rows as unknown as Array<{
-      content: string;
-      fileName: string;
-      similarity: number;
-    }>)
+    const results = (
+      rows as unknown as Array<{
+        content: string;
+        fileName: string;
+        similarity: number;
+      }>
+    )
       .filter((r) => r.similarity >= minSimilarity)
       .map((r) => ({
         content: r.content,
@@ -127,7 +129,9 @@ export async function extractKbText(
     const mod = await import("pdf-parse");
     const PDFParse = (
       mod as {
-        PDFParse: new (opts: { data: Uint8Array }) => {
+        PDFParse: new (opts: {
+          data: Uint8Array;
+        }) => {
           getText: () => Promise<{ text: string }>;
           destroy?: () => Promise<void>;
         };

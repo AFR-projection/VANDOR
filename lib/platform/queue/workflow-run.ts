@@ -120,11 +120,7 @@ export async function updateWorkflowRunStatus(
   if (status === "running") {
     values.startedAt = now;
   }
-  if (
-    status === "completed" ||
-    status === "failed" ||
-    status === "cancelled"
-  ) {
+  if (status === "completed" || status === "failed" || status === "cancelled") {
     values.completedAt = now;
   }
 

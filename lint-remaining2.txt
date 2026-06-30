@@ -1,0 +1,428 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> vandor@3.2.0 check C:\Users\User\Documents\VANDOR
+> ultracite check
+
+lib\autonomous\executor.ts:42:5 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    41 Γöé   for (const command of commands) {
+  > 42 Γöé     // biome-ignore lint: deploy steps must run sequentially
+       Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    43 Γöé     const result = await execApprovedCommand(command);
+    44 Γöé     if (command.includes("git rev-parse") && result.ok && result.data) {
+  
+
+lib\autonomous\executor.ts:256:5 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    255 Γöé   for (const task of tasks) {
+  > 256 Γöé     // biome-ignore lint: sequential task processing
+        Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    257 Γöé     await markTaskRunning(task.id);
+    258 Γöé     try {
+  
+
+lib\autonomous\tools\monitor.ts:24:5 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    22 Γöé     });
+    23 Γöé   } catch (error) {
+  > 24 Γöé     // biome-ignore lint/suspicious/noConsole: surface metric persist failure
+       Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    25 Γöé     console.error("persistMetrics failed:", error);
+    26 Γöé   }
+  
+
+lib\whatsapp\manager.ts:721:7 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    719 Γöé     const sock = makeWASocket({
+    720 Γöé       auth: state,
+  > 721 Γöé       // biome-ignore lint/suspicious/noExplicitAny: pino logger shape differs across versions
+        Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    722 Γöé       logger: pino({ level: "silent" }) as any,
+    723 Γöé       printQRInTerminal: false,
+  
+
+components\chat\multimodal-input.tsx:226:18 lint/style/useAtIndex  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Prefer X.at(-Y) over X[X.length - Y].
+  
+    224 Γöé   useEffect(() => {
+    225 Γöé     if (!messages.length) return;
+  > 226 Γöé     const last = messages[messages.length - 1];
+        Γöé                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    227 Γöé     if (last.role !== "assistant") return;
+    228 Γöé     const hasAddPrompt = last.parts?.some(
+  
+  i Using .at() is more convenient and is easier to read.
+  
+  i Unsafe fix: Use .at().
+  
+    224 224 Γöé     useEffect(() => {
+    225 225 Γöé       if (!messages.length) return;
+    226     Γöé - ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages[messages.length┬╖-┬╖1];
+        226 Γöé + ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages.at(-1);
+    227 227 Γöé       if (last.role !== "assistant") return;
+    228 228 Γöé       const hasAddPrompt = last.parts?.some(
+  
+
+components\chat\shell.tsx:136:18 lint/style/useAtIndex  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Prefer X.at(-Y) over X[X.length - Y].
+  
+    134 Γöé   useEffect(() => {
+    135 Γöé     if (!messages.length) return;
+  > 136 Γöé     const last = messages[messages.length - 1];
+        Γöé                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    137 Γöé     if (last.role !== "assistant") return;
+    138 Γöé     for (const part of last.parts ?? []) {
+  
+  i Using .at() is more convenient and is easier to read.
+  
+  i Unsafe fix: Use .at().
+  
+    134 134 Γöé     useEffect(() => {
+    135 135 Γöé       if (!messages.length) return;
+    136     Γöé - ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages[messages.length┬╖-┬╖1];
+        136 Γöé + ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages.at(-1);
+    137 137 Γöé       if (last.role !== "assistant") return;
+    138 138 Γöé       for (const part of last.parts ?? []) {
+  
+
+components\settings\whatsapp-panel.tsx:202:9 lint/correctness/noUnusedVariables  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This variable pct is unused.
+  
+    200 Γöé }) {
+    201 Γöé   const remaining = useCountdown(active?.expiresAt ?? null);
+  > 202 Γöé   const pct = active
+        Γöé         ^^^
+    203 Γöé     ? Math.round(
+    204 Γöé         (remaining /
+  
+  i Unused variables are often the result of typos, incomplete refactors, or other sources of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend pct with an underscore.
+  
+    200 200 Γöé   }) {
+    201 201 Γöé     const remaining = useCountdown(active?.expiresAt ?? null);
+    202     Γöé - ┬╖┬╖const┬╖pct┬╖=┬╖active
+        202 Γöé + ┬╖┬╖const┬╖_pct┬╖=┬╖active
+    203 203 Γöé       ? Math.round(
+    204 204 Γöé           (remaining /
+  
+
+lib\autonomous\chat-task-notify.ts:46:7 lint/complexity/useOptionalChain  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Change to an optional chain.
+  
+    44 Γöé }): Promise<void> {
+    45 Γöé   const payload = input.task.payload as ChatTaskPayload | null;
+  > 46 Γöé   if (!payload || payload.requestedBy !== "chat") {
+       Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    47 Γöé     return;
+    48 Γöé   }
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    44 44 Γöé   }): Promise<void> {
+    45 45 Γöé     const payload = input.task.payload as ChatTaskPayload | null;
+    46    Γöé - ┬╖┬╖if┬╖(!payload┬╖||┬╖payload.requestedBy┬╖!==┬╖"chat")┬╖{
+       46 Γöé + ┬╖┬╖if┬╖(payload?.requestedBy┬╖!==┬╖"chat")┬╖{
+    47 47 Γöé       return;
+    48 48 Γöé     }
+  
+
+lib\autonomous\heartbeat.ts:246:7 lint/complexity/useOptionalChain  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Change to an optional chain.
+  
+    244 Γöé   const state = await getAgentState();
+    245 Γöé   const prev = parseStoredNote(state.note);
+  > 246 Γöé   if (!prev || prev.v !== 1) {
+        Γöé       ^^^^^^^^^^^^^^^^^^^^^
+    247 Γöé     return;
+    248 Γöé   }
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    244 244 Γöé     const state = await getAgentState();
+    245 245 Γöé     const prev = parseStoredNote(state.note);
+    246     Γöé - ┬╖┬╖if┬╖(!prev┬╖||┬╖prev.v┬╖!==┬╖1)┬╖{
+        246 Γöé + ┬╖┬╖if┬╖(prev?.v┬╖!==┬╖1)┬╖{
+    247 247 Γöé       return;
+    248 248 Γöé     }
+  
+
+lib\autonomous\loop.ts:129:7 lint/correctness/noUnusedVariables  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This variable platformTick is unused.
+  
+    127 Γöé   const executed = await executeApprovedRemediations();
+    128 Γöé 
+  > 129 Γöé   let platformTick = {
+        Γöé       ^^^^^^^^^^^^
+    130 Γöé     runsProcessed: 0,
+    131 Γöé     stepsProcessed: 0,
+  
+  i Unused variables are often the result of typos, incomplete refactors, or other sources of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend platformTick with an underscore.
+  
+    127 127 Γöé     const executed = await executeApprovedRemediations();
+    128 128 Γöé   
+    129     Γöé - ┬╖┬╖let┬╖platformTick┬╖=┬╖{
+        129 Γöé + ┬╖┬╖let┬╖_platformTick┬╖=┬╖{
+    130 130 Γöé       runsProcessed: 0,
+    131 131 Γöé       stepsProcessed: 0,
+    ┬╖┬╖┬╖┬╖┬╖┬╖┬╖ Γöé 
+    138 138 Γöé       const tick = await runPlatformOrchestratorTick();
+    139 139 Γöé       if (tick.enabled && tick.runsProcessed > 0) {
+    140     Γöé - ┬╖┬╖┬╖┬╖┬╖┬╖platformTick┬╖=┬╖{
+        140 Γöé + ┬╖┬╖┬╖┬╖┬╖┬╖_platformTick┬╖=┬╖{
+    141 141 Γöé           runsProcessed: tick.runsProcessed,
+    142 142 Γöé           stepsProcessed: tick.stepsProcessed,
+  
+
+lib\autonomous\permission.ts:147:7 lint/complexity/useOptionalChain  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Change to an optional chain.
+  
+    145 Γöé export async function resumeApprovedTask(approvalId: string): Promise<void> {
+    146 Γöé   const row = await getApproval(approvalId);
+  > 147 Γöé   if (!row || row.status !== "approved" || !row.taskId) {
+        Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    148 Γöé     return;
+    149 Γöé   }
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    145 145 Γöé   export async function resumeApprovedTask(approvalId: string): Promise<void> {
+    146 146 Γöé     const row = await getApproval(approvalId);
+    147     Γöé - ┬╖┬╖if┬╖(!row┬╖||┬╖row.status┬╖!==┬╖"approved"┬╖||┬╖!row.taskId)┬╖{
+        147 Γöé + ┬╖┬╖if┬╖(row?.status┬╖!==┬╖"approved"┬╖||┬╖!row.taskId)┬╖{
+    148 148 Γöé       return;
+    149 149 Γöé     }
+  
+
+lib\football\service.ts:323:5 lint/complexity/noUselessSwitchCase  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Useless case clause.
+  
+    321 Γöé       return runFootballTeamSearch(userId, teamQuery);
+    322 Γöé     }
+  > 323 Γöé     case "fixtures_today":
+        Γöé     ^^^^^^^^^^^^^^^^^^^^^^
+    324 Γöé     default:
+    325 Γöé       return runFootballFixturesByDate(userId);
+  
+  i because the default clause is present:
+  
+    322 Γöé     }
+    323 Γöé     case "fixtures_today":
+  > 324 Γöé     default:
+        Γöé     ^^^^^^^^
+  > 325 Γöé       return runFootballFixturesByDate(userId);
+        Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    326 Γöé   }
+    327 Γöé }
+  
+  i Unsafe fix: Remove the useless case.
+  
+    321 321 Γöé         return runFootballTeamSearch(userId, teamQuery);
+    322 322 Γöé       }
+    323     Γöé - ┬╖┬╖┬╖┬╖case┬╖"fixtures_today":
+    324 323 Γöé       default:
+    325 324 Γöé         return runFootballFixturesByDate(userId);
+  
+
+lib\football\service.ts:439:7 lint/complexity/noUselessSwitchCase  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Useless case clause.
+  
+    437 Γöé         );
+    438 Γöé       }
+  > 439 Γöé       case "smart_query":
+        Γöé       ^^^^^^^^^^^^^^^^^^^
+    440 Γöé       default:
+    441 Γöé         return runFootballSmartQuery(userId, query ?? "");
+  
+  i because the default clause is present:
+  
+    438 Γöé       }
+    439 Γöé       case "smart_query":
+  > 440 Γöé       default:
+        Γöé       ^^^^^^^^
+  > 441 Γöé         return runFootballSmartQuery(userId, query ?? "");
+        Γöé         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    442 Γöé     }
+    443 Γöé   } catch (error) {
+  
+  i Unsafe fix: Remove the useless case.
+  
+    437 437 Γöé           );
+    438 438 Γöé         }
+    439     Γöé - ┬╖┬╖┬╖┬╖┬╖┬╖case┬╖"smart_query":
+    440 439 Γöé         default:
+    441 440 Γöé           return runFootballSmartQuery(userId, query ?? "");
+  
+
+lib\media\download.ts:563:16 lint/correctness/noUnusedVariables  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This function downloadYoutube is unused.
+  
+    561 Γöé type YoutubeBackend = "ytdlp" | "innertube" | "cobalt" | "piped" | "invidious";
+    562 Γöé 
+  > 563 Γöé async function downloadYoutube(
+        Γöé                ^^^^^^^^^^^^^^^
+    564 Γöé   url: string,
+    565 Γöé   format: MediaDownloadFormat,
+  
+  i Unused variables are often the result of typos, incomplete refactors, or other sources of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend downloadYoutube with an underscore.
+  
+     561  561 Γöé   type YoutubeBackend = "ytdlp" | "innertube" | "cobalt" | "piped" | "invidious";
+     562  562 Γöé   
+     563      Γöé - async┬╖function┬╖downloadYoutube(
+          563 Γöé + async┬╖function┬╖_downloadYoutube(
+     564  564 Γöé     url: string,
+     565  565 Γöé     format: MediaDownloadFormat,
+  
+
+lib\platform\dashboard\service.ts:173:7 lint/suspicious/noEvolvingTypes 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù The type of this variable may evolve implicitly to any type, including the any type.
+  
+    171 Γöé   const status = input.status ?? "all";
+    172 Γöé 
+  > 173 Γöé   let statusFilter;
+        Γöé       ^^^^^^^^^^^^
+    174 Γöé   if (status === "active") {
+    175 Γöé     statusFilter = inArray(platformWorkflowRun.status, ACTIVE_RUN_STATUSES);
+  
+  i Add an explicit type or initialization to avoid implicit type evolution.
+  
+
+lib\platform\dashboard\service.ts:173:7 lint/suspicious/noImplicitAnyLet 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This variable implicitly has the any type.
+  
+    171 Γöé   const status = input.status ?? "all";
+    172 Γöé 
+  > 173 Γöé   let statusFilter;
+        Γöé       ^^^^^^^^^^^^
+    174 Γöé   if (status === "active") {
+    175 Γöé     statusFilter = inArray(platformWorkflowRun.status, ACTIVE_RUN_STATUSES);
+  
+  i Variable declarations without type annotation and initialization implicitly have the any type. Declare a type or 
+initialize the variable with some value.
+  
+
+lib\platform\orchestrator\timeout.ts:3:5 lint/style/noParameterProperties 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Use a more explicit class property instead of a parameter property.
+  
+    1 Γöé export class StepTimeoutError extends Error {
+    2 Γöé   constructor(
+  > 3 Γöé     readonly timeoutMs: number,
+      Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    4 Γöé     readonly agentId: string
+    5 Γöé   ) {
+  
+  i Parameter properties are less explicit than other ways of declaring and initializing class properties.
+  
+
+lib\platform\orchestrator\timeout.ts:4:5 lint/style/noParameterProperties 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Use a more explicit class property instead of a parameter property.
+  
+    2 Γöé   constructor(
+    3 Γöé     readonly timeoutMs: number,
+  > 4 Γöé     readonly agentId: string
+      Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^
+    5 Γöé   ) {
+    6 Γöé     super(`Step timeout setelah ${timeoutMs}ms (agent: ${agentId})`);
+  
+  i Parameter properties are less explicit than other ways of declaring and initializing class properties.
+  
+
+lib\whatsapp\manager.ts:718:40 lint/correctness/useHookAtTopLevel 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This hook is being called conditionally, but all hooks must be called in the exact same order in every component 
+render.
+Checked 584 files in 375ms. No fixes applied.
+Found 15 errors.
+Found 4 warnings.
+  
+    716 Γöé     const pino = (await import("pino")).default;
+    717 Γöé 
+  > 718 Γöé     const { state, saveCreds } = await useMultiFileAuthState(authDir);
+        Γöé                                        ^^^^^^^^^^^^^^^^^^^^^
+    719 Γöé     const sock = makeWASocket({
+    720 Γöé       auth: state,
+  
+  i For React to preserve state between calls, hooks needs to be called unconditionally and always in the same order.
+  
+  i See https://react.dev/reference/rules/rules-of-hooks
+  
+
+check ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Some errors were emitted while running checks.
+  
+
+Error: Lint errors found
+    at file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/ultracite@7.0.11_typescript@5.8.2/node_modules/ultraci
+te/dist/index.js:313:13045
+    at async resolveMiddleware (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescrip
+t@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:221:17)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async procedure (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/
+node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:281:18)
+    at async file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_module
+s/@trpc/server/dist/tracked-D4V22yc5.mjs:298:13
+    at async Command.<anonymous> (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve
+_387680dd8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:355:32)
+    at async Command.parseAsync 
+(C:\Users\User\Documents\VANDOR\node_modules\.pnpm\commander@14.0.2\node_modules\commander\lib\command.js:1122:5)
+    at async Object.run (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve_387680dd
+8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:461:9)
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

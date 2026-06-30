@@ -5,10 +5,7 @@ import {
   toolActivityLabel,
   toolEventMessage,
 } from "./labels";
-import {
-  defaultThinkingTrace,
-  toSafeThinkingTrace,
-} from "./thinking-trace";
+import { defaultThinkingTrace, toSafeThinkingTrace } from "./thinking-trace";
 import type {
   AgentActivityEvent,
   AgentActivityState,
@@ -273,8 +270,7 @@ export function deriveAgentActivityFromMessage(
 
     if (type === "reasoning" && "text" in part) {
       hasReasoning = true;
-      reasoningStreaming =
-        "state" in part ? part.state === "streaming" : false;
+      reasoningStreaming = "state" in part ? part.state === "streaming" : false;
       if (part.text?.trim()) {
         reasoningText = part.text;
       }
@@ -351,10 +347,7 @@ export function deriveAgentActivityFromMessage(
 
   for (const part of parts) {
     if (part.type === "data-agent-activity" && "data" in part) {
-      state = applyActivityUpdate(
-        state,
-        part.data as AgentActivityUpdate
-      );
+      state = applyActivityUpdate(state, part.data as AgentActivityUpdate);
     }
   }
 
@@ -367,10 +360,7 @@ export function deriveAgentActivityFromMessage(
     state.phase = "complete";
     state.progress = 100;
   } else {
-    state.progress = Math.max(
-      state.progress,
-      computeProgress(state.steps)
-    );
+    state.progress = Math.max(state.progress, computeProgress(state.steps));
 
     if (isLoading && !hasText && state.steps.length === 1) {
       state.steps[0] = { ...state.steps[0], status: "running" };
@@ -392,9 +382,7 @@ export function deriveAgentActivityFromMessage(
   return state;
 }
 
-export function deriveInitialActivity(
-  intent?: string
-): AgentActivityState {
+export function deriveInitialActivity(intent?: string): AgentActivityState {
   const liveStatus =
     (intent && INTENT_LIVE_STATUS[intent]) || "Memproses permintaan";
   return {

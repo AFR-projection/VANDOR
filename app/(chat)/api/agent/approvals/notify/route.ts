@@ -1,11 +1,11 @@
 import { auth } from "@/app/(auth)/auth";
 import { sendPendingApprovalsDigest } from "@/lib/autonomous/approval-notify";
-import { requireClientAccess } from "@/lib/security/client-access";
-import { sendSystemWhatsappNotification } from "@/lib/whatsapp/manager";
 import {
   approvalShortId,
   listPendingApprovals,
 } from "@/lib/autonomous/permission";
+import { requireClientAccess } from "@/lib/security/client-access";
+import { sendSystemWhatsappNotification } from "@/lib/whatsapp/manager";
 
 /** POST — kirim digest approval pending langsung ke WhatsApp (tanpa worker). */
 export async function POST(request: Request) {
@@ -20,7 +20,11 @@ export async function POST(request: Request) {
 
   const pending = await listPendingApprovals(10);
   if (pending.length === 0) {
-    return Response.json({ ok: true, count: 0, message: "Tidak ada approval pending" });
+    return Response.json({
+      ok: true,
+      count: 0,
+      message: "Tidak ada approval pending",
+    });
   }
 
   const lines = pending.map((row, i) => {
@@ -34,7 +38,7 @@ export async function POST(request: Request) {
   const text =
     `📋 *${pending.length} persetujuan Operator menunggu:*\n\n` +
     `${lines.join("\n\n")}\n\n` +
-    `Balas *SETUJU <kode>* atau *TOLAK <kode>* dari WhatsApp ini.`;
+    "Balas *SETUJU <kode>* atau *TOLAK <kode>* dari WhatsApp ini.";
 
   const direct = await sendSystemWhatsappNotification(text);
   if (direct.ok) {

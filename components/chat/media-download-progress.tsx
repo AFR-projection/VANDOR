@@ -18,6 +18,7 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { triggerMediaDownload } from "@/components/security/pin-confirm-dialog";
 import { formatBytes } from "@/lib/media/progress";
 import {
   MEDIA_DOWNLOAD_STEPS,
@@ -27,7 +28,6 @@ import {
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { toErrorMessage } from "@/lib/utils/error-message";
-import { triggerMediaDownload } from "@/components/security/pin-confirm-dialog";
 
 export function getMediaDownloadProgressFromMessage(
   message: ChatMessage

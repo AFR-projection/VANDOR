@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { agentRule } from "@/lib/db/schema";
-import { db } from "./db";
 import { autonomousConfig } from "./config";
+import { db } from "./db";
 import type { RiskLevel } from "./types";
 
 export type Decision = "allow" | "deny" | "require_approval";

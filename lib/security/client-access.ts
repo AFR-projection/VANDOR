@@ -1,12 +1,8 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import { useSecureCookies } from "@/lib/constants";
+import { shouldUseSecureCookies } from "@/lib/constants";
 import { touchSession } from "./gate";
-import {
-  shouldTouchGateSession,
-  isSessionActiveCached,
-} from "./gate-session-cache";
 import {
   DEVICE_COOKIE_NAME,
   GATE_COOKIE_NAME,
@@ -17,6 +13,10 @@ import {
   readGateToken,
   verifyGateToken,
 } from "./gate-edge";
+import {
+  isSessionActiveCached,
+  shouldTouchGateSession,
+} from "./gate-session-cache";
 
 export type AccessDenyReason = "gate_required" | "session_revoked";
 
@@ -68,10 +68,13 @@ export async function getClientAccessSnapshot(
 
   const requiresPin = gateConfigured && (!gateValid || sessionRevoked);
 
-  if (gateValid && payload?.sid && !sessionRevoked) {
-    if (shouldTouchGateSession(payload.sid)) {
-      void touchSession(payload.sid);
-    }
+  if (
+    gateValid &&
+    payload?.sid &&
+    !sessionRevoked &&
+    shouldTouchGateSession(payload.sid)
+  ) {
+    void touchSession(payload.sid);
   }
 
   return {
@@ -89,7 +92,7 @@ export async function accessDeniedResponse(
   snapshot: ClientAccessSnapshot,
   opts?: { secureCookie?: boolean }
 ): Promise<NextResponse> {
-  const secure = opts?.secureCookie ?? useSecureCookies();
+  const secure = opts?.secureCookie ?? shouldUseSecureCookies();
 
   let reason: AccessDenyReason = "gate_required";
   if (snapshot.sessionRevoked) {

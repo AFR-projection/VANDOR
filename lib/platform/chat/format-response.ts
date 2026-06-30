@@ -1,4 +1,7 @@
-import type { PlatformWorkflowRun, PlatformWorkflowStep } from "@/lib/db/schema";
+import type {
+  PlatformWorkflowRun,
+  PlatformWorkflowStep,
+} from "@/lib/db/schema";
 import type { ProcessWorkflowResult } from "../orchestrator/engine";
 
 function stepResultSummary(out: Record<string, unknown> | null): string {
@@ -15,11 +18,15 @@ function stepResultSummary(out: Record<string, unknown> | null): string {
   if (scan?.summary) {
     return scan.summary;
   }
-  const dispatch = out.dispatch as { message?: string; taskId?: string } | undefined;
+  const dispatch = out.dispatch as
+    | { message?: string; taskId?: string }
+    | undefined;
   if (dispatch?.message) {
     return dispatch.message;
   }
-  const deployDispatch = out.dispatch as { taskId?: string; jobType?: string } | undefined;
+  const deployDispatch = out.dispatch as
+    | { taskId?: string; jobType?: string }
+    | undefined;
   if (deployDispatch?.taskId && out.approvalRequired) {
     return `Deploy diantre (${deployDispatch.taskId.slice(0, 8)}…) — tunggu approval`;
   }
@@ -52,11 +59,11 @@ export function formatPlatformWorkflowReply(input: {
   const lines: string[] = [];
 
   if (input.processed.status === "completed") {
-    lines.push("✅ **Multi-Agent Workflow selesai** — ringkasan dari tim agent:");
-  } else if (input.processed.status === "waiting") {
     lines.push(
-      "Workflow masih berjalan (retry/backoff). Hasil sementara:"
+      "✅ **Multi-Agent Workflow selesai** — ringkasan dari tim agent:"
     );
+  } else if (input.processed.status === "waiting") {
+    lines.push("Workflow masih berjalan (retry/backoff). Hasil sementara:");
   } else {
     lines.push("Workflow gagal pada salah satu step. Detail:");
   }

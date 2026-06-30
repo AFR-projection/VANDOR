@@ -48,7 +48,9 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.flatten().fieldErrors.pin?.[0] ?? "PIN tidak valid" },
+      {
+        error: parsed.error.flatten().fieldErrors.pin?.[0] ?? "PIN tidak valid",
+      },
       { status: 400 }
     );
   }

@@ -30,8 +30,7 @@
         "noDocumentCookie": "off",
         "noAlert": "off",
         "noArrayIndexKey": "off",
-        "useIterableCallbackReturn": "off",
-        "noUnnecessaryConditions": "off"
+        "useIterableCallbackReturn": "off"
       },
       "style": {
         "noMagicNumbers": "off",
@@ -68,8 +67,21 @@
       "performance": {
         "noBarrelFile": "off",
         "useTopLevelRegex": "off",
-        "noImgElement": "off"
+        "noImgElement": "off",
+        "noNamespaceImport": "off"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["services/whatsapp-bridge/**", "lib/whatsapp/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useHookAtTopLevel": "off"
+          }
+        }
+      }
+    }
+  ]
 }

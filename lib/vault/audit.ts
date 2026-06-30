@@ -1,8 +1,8 @@
 import "server-only";
 
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { desc, eq } from "drizzle-orm";
 import type { VaultAuditAction } from "@/lib/db/schema";
 import { vaultAuditLog } from "@/lib/db/schema";
 

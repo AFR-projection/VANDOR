@@ -76,10 +76,7 @@ export function detectIssues(obs: ObservationBundle): Issue[] {
         risk: "moderate",
       },
     });
-  } else if (
-    metrics.diskUsedPct != null &&
-    metrics.diskUsedPct >= t.diskWarn
-  ) {
+  } else if (metrics.diskUsedPct != null && metrics.diskUsedPct >= t.diskWarn) {
     issues.push({
       key: "disk-warn",
       severity: "warn",
@@ -113,7 +110,8 @@ export function detectIssues(obs: ObservationBundle): Issue[] {
       key: `service-down:${svc.kind}:${svc.name}`,
       severity: "error",
       title: `Service mati: ${svc.name}`,
-      detail: `${svc.kind} '${svc.name}' status=${svc.state}. ${svc.detail ?? ""}`.trim(),
+      detail:
+        `${svc.kind} '${svc.name}' status=${svc.state}. ${svc.detail ?? ""}`.trim(),
       remediation: command
         ? {
             description: `Restart ${svc.kind} '${svc.name}'.`,

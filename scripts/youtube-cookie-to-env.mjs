@@ -8,7 +8,7 @@
  *   3. Copy output ke .env.local atau Vercel
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const defaultFile = path.join(process.cwd(), "cookies", "youtube.txt");
@@ -19,7 +19,9 @@ if (!existsSync(inputPath)) {
   console.error("");
   console.error("Langkah:");
   console.error("  1. Buat folder cookies/ (sudah ada)");
-  console.error("  2. Paste isi Get cookies.txt LOCALLY ke cookies/youtube.txt");
+  console.error(
+    "  2. Paste isi Get cookies.txt LOCALLY ke cookies/youtube.txt"
+  );
   console.error("  3. Jalankan lagi: node scripts/youtube-cookie-to-env.mjs");
   process.exit(1);
 }
@@ -64,4 +66,6 @@ console.log("");
 console.log("# Opsi B — satu baris (untuk Vercel Environment Variables):");
 console.log(`YOUTUBE_COOKIE=${JSON.stringify(header)}`);
 console.log("");
-console.log(`# Panjang: ${header.length} karakter, ~${header.split(";").length} cookie`);
+console.log(
+  `# Panjang: ${header.length} karakter, ~${header.split(";").length} cookie`
+);

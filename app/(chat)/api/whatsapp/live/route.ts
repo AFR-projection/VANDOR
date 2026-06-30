@@ -32,9 +32,7 @@ export async function GET(request: Request) {
         chatId === "*"
           ? onAnyWaChatUpdated((updatedId) => {
               try {
-                controller.enqueue(
-                  encoder.encode(`data: ${updatedId}\n\n`)
-                );
+                controller.enqueue(encoder.encode(`data: ${updatedId}\n\n`));
               } catch {
                 // stream already closed
               }

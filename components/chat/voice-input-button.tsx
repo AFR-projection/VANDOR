@@ -4,9 +4,9 @@ import { Loader2Icon, MicIcon, SquareIcon } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
+import { apiBasePath } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
 
-import { apiBasePath } from "@/lib/app-url";
 const base = apiBasePath;
 
 type VoiceInputButtonProps = {

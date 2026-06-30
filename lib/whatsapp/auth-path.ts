@@ -11,5 +11,7 @@ export function getWhatsappAuthDir(): string {
 }
 
 export function isWhatsappServerlessHost(): boolean {
-  return process.env.VERCEL === "1" || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+  return (
+    process.env.VERCEL === "1" || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+  );
 }

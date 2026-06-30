@@ -43,16 +43,26 @@ export function detectFootballNeed(text: string): FootballDetection {
   }
 
   if (hits >= 2) {
-    return { needed: true, reason: matched || "multi_match", confidence: "high" };
+    return {
+      needed: true,
+      reason: matched || "multi_match",
+      confidence: "high",
+    };
   }
   if (hits === 1) {
-    return { needed: true, reason: matched || "single_match", confidence: "medium" };
+    return {
+      needed: true,
+      reason: matched || "single_match",
+      confidence: "medium",
+    };
   }
 
   return { needed: false, reason: "no_match", confidence: "low" };
 }
 
-export function inferFootballAction(text: string):
+export function inferFootballAction(
+  text: string
+):
   | "live_scores"
   | "standings"
   | "fixtures_today"
@@ -70,10 +80,15 @@ export function inferFootballAction(text: string):
   if (/\b(top\s*scorer|pencetak\s*gol|artilador|top\s*gol)\b/.test(lower)) {
     return "top_scorers";
   }
-  if (/\b(tim|team|klub|club)\b/.test(lower) && !/\b(vs|versus|melawan)\b/.test(lower)) {
+  if (
+    /\b(tim|team|klub|club)\b/.test(lower) &&
+    !/\b(vs|versus|melawan)\b/.test(lower)
+  ) {
     return "team_info";
   }
-  if (/\b(hari\s*ini|today|jadwal|pertandingan|fixture|skor|hasil)\b/.test(lower)) {
+  if (
+    /\b(hari\s*ini|today|jadwal|pertandingan|fixture|skor|hasil)\b/.test(lower)
+  ) {
     return "fixtures_today";
   }
   return "smart_query";

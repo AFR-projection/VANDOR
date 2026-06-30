@@ -6,8 +6,8 @@ import type {
   MediaDownloadFormat,
   MediaDownloadProgressReporter,
 } from "@/lib/media/types";
-import { extractYoutubeVideoId } from "@/lib/media/youtube-id";
 import { resolveYoutubeCookieHeader } from "@/lib/media/youtube-cookie";
+import { extractYoutubeVideoId } from "@/lib/media/youtube-id";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
 type YoutubeClient = "ANDROID_VR" | "IOS" | "WEB";

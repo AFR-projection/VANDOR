@@ -25,11 +25,11 @@ import {
 import { useState } from "react";
 import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
+import { PlatformWorkflowPanel } from "@/components/settings/platform-workflow-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiBasePath } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
-import { PlatformWorkflowPanel } from "@/components/settings/platform-workflow-panel";
 
 const base = apiBasePath;
 
@@ -547,8 +547,19 @@ export function OperatorPanel() {
     );
   }
 
-  const { state, heartbeat, metrics, approvals, actions, events, tasks, goals, rules, schedules, terminal } =
-    data;
+  const {
+    state,
+    heartbeat,
+    metrics,
+    approvals,
+    actions,
+    events,
+    tasks,
+    goals,
+    rules,
+    schedules,
+    terminal,
+  } = data;
   const m = metrics.latest;
   const hb = heartbeat;
 
@@ -697,7 +708,10 @@ export function OperatorPanel() {
                           await fetch(`${base()}/api/agent/goals`, {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ id: g.id, status: "paused" }),
+                            body: JSON.stringify({
+                              id: g.id,
+                              status: "paused",
+                            }),
                           });
                           await mutate();
                         } finally {
@@ -853,401 +867,411 @@ export function OperatorPanel() {
 
       {tab === "overview" && (
         <>
-      {/* Kontrol mode + kill switch */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-card/30 p-3">
-        <span className="text-xs text-muted-foreground">Mode:</span>
-        <Button
-          className="h-8 text-xs"
-          disabled={busy || state.killSwitch}
-          onClick={() =>
-            control({
-              mode: state.mode === "autonomous" ? "manual" : "autonomous",
-            })
-          }
-          size="sm"
-          type="button"
-          variant={state.mode === "autonomous" ? "default" : "outline"}
-        >
-          {state.mode === "autonomous" ? "Autonomous" : "Manual"}
-        </Button>
-        <div className="flex-1" />
-        <Button
-          className={cn(
-            "h-8 text-xs",
-            state.killSwitch &&
-              "border-red-500/40 bg-red-500/10 text-red-400"
-          )}
-          disabled={busy}
-          onClick={() => control({ killSwitch: !state.killSwitch })}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <PowerIcon className="size-3.5" />
-          {state.killSwitch ? "Aktifkan lagi" : "Kill switch"}
-        </Button>
-      </div>
-
-      {/* Metrik */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <MetricCard
-          icon={CpuIcon}
-          label="CPU"
-          pct={m?.cpuPct}
-          tone={tone(m?.cpuPct)}
-          value={m?.cpuPct == null ? "—" : `${m.cpuPct}%`}
-        />
-        <MetricCard
-          icon={MemoryStickIcon}
-          label="RAM"
-          pct={m?.memUsedPct}
-          tone={tone(m?.memUsedPct)}
-          value={m?.memUsedPct == null ? "—" : `${m.memUsedPct}%`}
-        />
-        <MetricCard
-          icon={HardDriveIcon}
-          label="Disk"
-          pct={m?.diskUsedPct}
-          tone={tone(m?.diskUsedPct)}
-          value={m?.diskUsedPct == null ? "—" : `${m.diskUsedPct}%`}
-        />
-        <MetricCard
-          icon={ActivityIcon}
-          label="Uptime"
-          value={formatUptime(m?.uptimeSec ?? null)}
-        />
-      </div>
-
-      {hb ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {(
-            [
-              ["Worker", hb.subsystems.worker],
-              ["Web", hb.subsystems.web],
-              ["WhatsApp", hb.subsystems.whatsapp],
-              ["Database", hb.subsystems.database],
-            ] as const
-          ).map(([label, status]) => (
-            <div
-              className="rounded-lg border border-border/40 bg-card/25 px-3 py-2"
-              key={label}
-            >
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                {label}
-              </p>
-              <p
-                className={cn(
-                  "mt-0.5 font-medium text-xs capitalize",
-                  status === "ok"
-                    ? "text-emerald-400"
-                    : status === "warn"
-                      ? "text-amber-400"
-                      : "text-red-400"
-                )}
-              >
-                {status}
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="flex items-center justify-between gap-2">
-        <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-          <MetricsChart
-            color="#34d399"
-            field="cpuPct"
-            label="CPU"
-            series={metrics.series}
-          />
-          <MetricsChart
-            color="#60a5fa"
-            field="memUsedPct"
-            label="RAM"
-            series={metrics.series}
-          />
-        </div>
-        <Button
-          className="h-8 shrink-0 text-xs"
-          onClick={() => exportMetrics()}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          <DownloadIcon className="size-3.5" />
-          Export
-        </Button>
-      </div>
-
-      {/* Approval pending */}
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <ShieldAlertIcon className="size-4 text-amber-400" />
-            <h3 className="font-semibold text-sm">
-              Persetujuan ({approvals.length})
-            </h3>
-          </div>
-          {approvals.length > 0 ? (
+          {/* Kontrol mode + kill switch */}
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/40 bg-card/30 p-3">
+            <span className="text-xs text-muted-foreground">Mode:</span>
             <Button
-              className="h-7 gap-1.5 text-xs"
+              className="h-8 text-xs"
+              disabled={busy || state.killSwitch}
+              onClick={() =>
+                control({
+                  mode: state.mode === "autonomous" ? "manual" : "autonomous",
+                })
+              }
+              size="sm"
+              type="button"
+              variant={state.mode === "autonomous" ? "default" : "outline"}
+            >
+              {state.mode === "autonomous" ? "Autonomous" : "Manual"}
+            </Button>
+            <div className="flex-1" />
+            <Button
+              className={cn(
+                "h-8 text-xs",
+                state.killSwitch &&
+                  "border-red-500/40 bg-red-500/10 text-red-400"
+              )}
               disabled={busy}
-              onClick={notifyApprovalsWa}
+              onClick={() => control({ killSwitch: !state.killSwitch })}
               size="sm"
               type="button"
               variant="outline"
             >
-              <SendIcon className="size-3.5" />
-              Kirim ke WA
-            </Button>
-          ) : null}
-        </div>
-        {approvals.length === 0 ? (
-          <p className="rounded-lg border border-border/40 bg-card/20 p-3 text-muted-foreground text-xs">
-            Tidak ada aksi menunggu persetujuan.
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {approvals.map((a) => (
-              <li
-                className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"
-                key={a.id}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[10px] text-amber-400 uppercase">
-                      {a.riskLevel}
-                    </span>
-                    <p className="mt-1 break-words text-xs">{a.summary}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      {timeAgo(a.createdAt)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-1.5">
-                    <Button
-                      className="h-7 bg-emerald-600 text-xs hover:bg-emerald-700"
-                      disabled={busy}
-                      onClick={() => decide(a.id, "approved")}
-                      size="sm"
-                      type="button"
-                    >
-                      <CheckIcon className="size-3.5" />
-                    </Button>
-                    <Button
-                      className="h-7 text-xs"
-                      disabled={busy}
-                      onClick={() => decide(a.id, "rejected")}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      <XIcon className="size-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Terminal nyata — output CLI tersimpan di DB */}
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <TerminalIcon className="size-4 text-emerald-400" />
-            <h3 className="font-semibold text-sm">Terminal Agent</h3>
-            <span className="text-[10px] text-muted-foreground">
-              output nyata · refresh 5s
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <Button
-              className="h-7 text-xs"
-              disabled={busy}
-              onClick={() => agentCli({ action: "enqueue_scan" })}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              Scan code
-            </Button>
-            <Button
-              className="h-7 text-xs"
-              disabled={busy}
-              onClick={() => agentCli({ action: "enqueue_scan", fullBuild: true })}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              Scan + build
-            </Button>
-            <Button
-              className="h-7 text-xs"
-              disabled={busy}
-              onClick={() => agentCli({ action: "enqueue_fix" })}
-              size="sm"
-              type="button"
-              variant="outline"
-            >
-              Analisis bug
+              <PowerIcon className="size-3.5" />
+              {state.killSwitch ? "Aktifkan lagi" : "Kill switch"}
             </Button>
           </div>
-        </div>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const cmd = cliInput.trim();
-            if (!cmd) {
-              return;
-            }
-            void agentCli({ command: cmd }).then(() => setCliInput(""));
-          }}
-        >
-          <Input
-            className="h-8 font-mono text-xs"
-            disabled={busy}
-            onChange={(e) => setCliInput(e.target.value)}
-            placeholder="pm2 jlist · git status · df -h"
-            value={cliInput}
-          />
-          <Button className="h-8 shrink-0" disabled={busy || !cliInput.trim()} type="submit">
-            Jalankan
-          </Button>
-        </form>
-        <div className="max-h-72 overflow-y-auto rounded-lg border border-emerald-500/20 bg-black/80 p-3 font-mono text-[11px] leading-relaxed text-emerald-100/90">
-          {terminal.length === 0 ? (
-            <p className="text-muted-foreground">
-              Belum ada log. Jalankan{" "}
-              <code className="text-emerald-400">npm run agent:cli -- status</code>{" "}
-              di VPS atau ketik perintah di atas.
-            </p>
-          ) : (
-            [...terminal].reverse().map((row) => (
-              <div
-                className={cn(
-                  "whitespace-pre-wrap break-all",
-                  row.level === "cmd" && "text-amber-300",
-                  (row.level === "stderr" || row.level === "error") &&
-                    "text-red-400",
-                  row.level === "info" && "text-sky-300/80"
-                )}
-                key={row.id}
-              >
-                {row.level === "cmd" ? "$ " : ""}
-                {row.line}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
 
-      {/* Event + Audit */}
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangleIcon className="size-4 text-primary" />
-            <h3 className="font-semibold text-sm">Event terbaru</h3>
+          {/* Metrik */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <MetricCard
+              icon={CpuIcon}
+              label="CPU"
+              pct={m?.cpuPct}
+              tone={tone(m?.cpuPct)}
+              value={m?.cpuPct == null ? "—" : `${m.cpuPct}%`}
+            />
+            <MetricCard
+              icon={MemoryStickIcon}
+              label="RAM"
+              pct={m?.memUsedPct}
+              tone={tone(m?.memUsedPct)}
+              value={m?.memUsedPct == null ? "—" : `${m.memUsedPct}%`}
+            />
+            <MetricCard
+              icon={HardDriveIcon}
+              label="Disk"
+              pct={m?.diskUsedPct}
+              tone={tone(m?.diskUsedPct)}
+              value={m?.diskUsedPct == null ? "—" : `${m.diskUsedPct}%`}
+            />
+            <MetricCard
+              icon={ActivityIcon}
+              label="Uptime"
+              value={formatUptime(m?.uptimeSec ?? null)}
+            />
           </div>
-          <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-lg border border-border/40 bg-card/20 p-2">
-            {events.length === 0 ? (
-              <p className="p-2 text-muted-foreground text-xs">
-                Belum ada event.
-              </p>
-            ) : (
-              events.map((e) => (
-                <div className="text-xs" key={e.id}>
-                  <span
-                    className={cn(
-                      "font-mono text-[10px]",
-                      e.severity === "critical" || e.severity === "error"
-                        ? "text-red-400"
-                        : e.severity === "warn"
-                          ? "text-amber-400"
-                          : "text-sky-400"
-                    )}
-                  >
-                    [{e.source}]
-                  </span>{" "}
-                  <span className="text-foreground/90">{e.message}</span>
-                  <span className="ml-1 text-[10px] text-muted-foreground">
-                    {timeAgo(e.createdAt)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <ActivityIcon className="size-4 text-primary" />
-            <h3 className="font-semibold text-sm">Audit aksi</h3>
-          </div>
-          <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-lg border border-border/40 bg-card/20 p-2">
-            {actions.length === 0 ? (
-              <p className="p-2 text-muted-foreground text-xs">
-                Belum ada aksi.
-              </p>
-            ) : (
-              actions.map((a) => (
-                <div className="text-xs" key={a.id}>
-                  <span
-                    className={cn(
-                      "font-mono text-[10px]",
-                      a.status === "error"
-                        ? "text-red-400"
-                        : a.status === "pending"
-                          ? "text-amber-400"
-                          : "text-emerald-400"
-                    )}
-                  >
-                    {a.tool}.{a.action}
-                  </span>{" "}
-                  <span className="text-muted-foreground">
-                    {a.reason ?? a.status}
-                  </span>
-                  <span className="ml-1 text-[10px] text-muted-foreground">
-                    {timeAgo(a.createdAt)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Task queue */}
-      <div className="space-y-2">
-        <h3 className="font-semibold text-sm">Task queue</h3>
-        <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border/40 bg-card/20 p-2">
-          {tasks.length === 0 ? (
-            <p className="p-2 text-muted-foreground text-xs">Kosong.</p>
-          ) : (
-            tasks.map((t) => (
-              <div
-                className="flex items-center justify-between text-xs"
-                key={t.id}
-              >
-                <span className="truncate text-foreground/90">{t.title}</span>
-                <span
-                  className={cn(
-                    "ml-2 shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]",
-                    t.status === "failed"
-                      ? "bg-red-500/15 text-red-400"
-                      : t.status === "done"
-                        ? "bg-emerald-500/15 text-emerald-400"
-                        : "bg-muted text-muted-foreground"
-                  )}
+          {hb ? (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(
+                [
+                  ["Worker", hb.subsystems.worker],
+                  ["Web", hb.subsystems.web],
+                  ["WhatsApp", hb.subsystems.whatsapp],
+                  ["Database", hb.subsystems.database],
+                ] as const
+              ).map(([label, status]) => (
+                <div
+                  className="rounded-lg border border-border/40 bg-card/25 px-3 py-2"
+                  key={label}
                 >
-                  {t.status}
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                    {label}
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-0.5 font-medium text-xs capitalize",
+                      status === "ok"
+                        ? "text-emerald-400"
+                        : status === "warn"
+                          ? "text-amber-400"
+                          : "text-red-400"
+                    )}
+                  >
+                    {status}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+              <MetricsChart
+                color="#34d399"
+                field="cpuPct"
+                label="CPU"
+                series={metrics.series}
+              />
+              <MetricsChart
+                color="#60a5fa"
+                field="memUsedPct"
+                label="RAM"
+                series={metrics.series}
+              />
+            </div>
+            <Button
+              className="h-8 shrink-0 text-xs"
+              onClick={() => exportMetrics()}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <DownloadIcon className="size-3.5" />
+              Export
+            </Button>
+          </div>
+
+          {/* Approval pending */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlertIcon className="size-4 text-amber-400" />
+                <h3 className="font-semibold text-sm">
+                  Persetujuan ({approvals.length})
+                </h3>
+              </div>
+              {approvals.length > 0 ? (
+                <Button
+                  className="h-7 gap-1.5 text-xs"
+                  disabled={busy}
+                  onClick={notifyApprovalsWa}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <SendIcon className="size-3.5" />
+                  Kirim ke WA
+                </Button>
+              ) : null}
+            </div>
+            {approvals.length === 0 ? (
+              <p className="rounded-lg border border-border/40 bg-card/20 p-3 text-muted-foreground text-xs">
+                Tidak ada aksi menunggu persetujuan.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {approvals.map((a) => (
+                  <li
+                    className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"
+                    key={a.id}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[10px] text-amber-400 uppercase">
+                          {a.riskLevel}
+                        </span>
+                        <p className="mt-1 break-words text-xs">{a.summary}</p>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">
+                          {timeAgo(a.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-1.5">
+                        <Button
+                          className="h-7 bg-emerald-600 text-xs hover:bg-emerald-700"
+                          disabled={busy}
+                          onClick={() => decide(a.id, "approved")}
+                          size="sm"
+                          type="button"
+                        >
+                          <CheckIcon className="size-3.5" />
+                        </Button>
+                        <Button
+                          className="h-7 text-xs"
+                          disabled={busy}
+                          onClick={() => decide(a.id, "rejected")}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          <XIcon className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Terminal nyata — output CLI tersimpan di DB */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <TerminalIcon className="size-4 text-emerald-400" />
+                <h3 className="font-semibold text-sm">Terminal Agent</h3>
+                <span className="text-[10px] text-muted-foreground">
+                  output nyata · refresh 5s
                 </span>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  className="h-7 text-xs"
+                  disabled={busy}
+                  onClick={() => agentCli({ action: "enqueue_scan" })}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Scan code
+                </Button>
+                <Button
+                  className="h-7 text-xs"
+                  disabled={busy}
+                  onClick={() =>
+                    agentCli({ action: "enqueue_scan", fullBuild: true })
+                  }
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Scan + build
+                </Button>
+                <Button
+                  className="h-7 text-xs"
+                  disabled={busy}
+                  onClick={() => agentCli({ action: "enqueue_fix" })}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Analisis bug
+                </Button>
+              </div>
+            </div>
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const cmd = cliInput.trim();
+                if (!cmd) {
+                  return;
+                }
+                void agentCli({ command: cmd }).then(() => setCliInput(""));
+              }}
+            >
+              <Input
+                className="h-8 font-mono text-xs"
+                disabled={busy}
+                onChange={(e) => setCliInput(e.target.value)}
+                placeholder="pm2 jlist · git status · df -h"
+                value={cliInput}
+              />
+              <Button
+                className="h-8 shrink-0"
+                disabled={busy || !cliInput.trim()}
+                type="submit"
+              >
+                Jalankan
+              </Button>
+            </form>
+            <div className="max-h-72 overflow-y-auto rounded-lg border border-emerald-500/20 bg-black/80 p-3 font-mono text-[11px] leading-relaxed text-emerald-100/90">
+              {terminal.length === 0 ? (
+                <p className="text-muted-foreground">
+                  Belum ada log. Jalankan{" "}
+                  <code className="text-emerald-400">
+                    npm run agent:cli -- status
+                  </code>{" "}
+                  di VPS atau ketik perintah di atas.
+                </p>
+              ) : (
+                [...terminal].reverse().map((row) => (
+                  <div
+                    className={cn(
+                      "whitespace-pre-wrap break-all",
+                      row.level === "cmd" && "text-amber-300",
+                      (row.level === "stderr" || row.level === "error") &&
+                        "text-red-400",
+                      row.level === "info" && "text-sky-300/80"
+                    )}
+                    key={row.id}
+                  >
+                    {row.level === "cmd" ? "$ " : ""}
+                    {row.line}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Event + Audit */}
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangleIcon className="size-4 text-primary" />
+                <h3 className="font-semibold text-sm">Event terbaru</h3>
+              </div>
+              <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-lg border border-border/40 bg-card/20 p-2">
+                {events.length === 0 ? (
+                  <p className="p-2 text-muted-foreground text-xs">
+                    Belum ada event.
+                  </p>
+                ) : (
+                  events.map((e) => (
+                    <div className="text-xs" key={e.id}>
+                      <span
+                        className={cn(
+                          "font-mono text-[10px]",
+                          e.severity === "critical" || e.severity === "error"
+                            ? "text-red-400"
+                            : e.severity === "warn"
+                              ? "text-amber-400"
+                              : "text-sky-400"
+                        )}
+                      >
+                        [{e.source}]
+                      </span>{" "}
+                      <span className="text-foreground/90">{e.message}</span>
+                      <span className="ml-1 text-[10px] text-muted-foreground">
+                        {timeAgo(e.createdAt)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ActivityIcon className="size-4 text-primary" />
+                <h3 className="font-semibold text-sm">Audit aksi</h3>
+              </div>
+              <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-lg border border-border/40 bg-card/20 p-2">
+                {actions.length === 0 ? (
+                  <p className="p-2 text-muted-foreground text-xs">
+                    Belum ada aksi.
+                  </p>
+                ) : (
+                  actions.map((a) => (
+                    <div className="text-xs" key={a.id}>
+                      <span
+                        className={cn(
+                          "font-mono text-[10px]",
+                          a.status === "error"
+                            ? "text-red-400"
+                            : a.status === "pending"
+                              ? "text-amber-400"
+                              : "text-emerald-400"
+                        )}
+                      >
+                        {a.tool}.{a.action}
+                      </span>{" "}
+                      <span className="text-muted-foreground">
+                        {a.reason ?? a.status}
+                      </span>
+                      <span className="ml-1 text-[10px] text-muted-foreground">
+                        {timeAgo(a.createdAt)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Task queue */}
+          <div className="space-y-2">
+            <h3 className="font-semibold text-sm">Task queue</h3>
+            <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-border/40 bg-card/20 p-2">
+              {tasks.length === 0 ? (
+                <p className="p-2 text-muted-foreground text-xs">Kosong.</p>
+              ) : (
+                tasks.map((t) => (
+                  <div
+                    className="flex items-center justify-between text-xs"
+                    key={t.id}
+                  >
+                    <span className="truncate text-foreground/90">
+                      {t.title}
+                    </span>
+                    <span
+                      className={cn(
+                        "ml-2 shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]",
+                        t.status === "failed"
+                          ? "bg-red-500/15 text-red-400"
+                          : t.status === "done"
+                            ? "bg-emerald-500/15 text-emerald-400"
+                            : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {t.status}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </>
       )}
     </section>

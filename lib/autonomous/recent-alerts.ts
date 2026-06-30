@@ -46,9 +46,7 @@ export async function buildRecentAlertsContextBlock(
 
   for (const e of events.slice(0, 2)) {
     if (e.severity === "critical" || e.severity === "error") {
-      lines.push(
-        `- [event ${e.severity}] ${e.message.slice(0, 200)}`
-      );
+      lines.push(`- [event ${e.severity}] ${e.message.slice(0, 200)}`);
     }
   }
 

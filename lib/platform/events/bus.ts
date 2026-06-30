@@ -1,7 +1,7 @@
 import { desc, eq, gt } from "drizzle-orm";
 import { platformEvent } from "@/lib/db/schema";
-import { getPlatformDb } from "../db";
 import type { PlatformAgentId, PlatformEventTopic } from "../core/types";
+import { getPlatformDb } from "../db";
 
 export type PlatformEventInput = {
   topic: PlatformEventTopic | string;
@@ -11,15 +11,14 @@ export type PlatformEventInput = {
   payload?: unknown;
 };
 
-type EventHandler = (event: PlatformEventInput & { id: string }) => void | Promise<void>;
+type EventHandler = (
+  event: PlatformEventInput & { id: string }
+) => void | Promise<void>;
 
 const handlers = new Map<string, EventHandler[]>();
 
 /** Subscribe in-process (dashboard SSE / orchestrator hooks). */
-export function onPlatformEvent(
-  topic: string,
-  handler: EventHandler
-): void {
+export function onPlatformEvent(topic: string, handler: EventHandler): void {
   const list = handlers.get(topic) ?? [];
   list.push(handler);
   handlers.set(topic, list);

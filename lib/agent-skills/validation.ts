@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  agentSkillCategories,
-  agentSkillTypes,
-} from "@/lib/db/schema";
+import { agentSkillCategories, agentSkillTypes } from "@/lib/db/schema";
 
 const slugSchema = z
   .string()
@@ -77,7 +74,9 @@ export const createSkillSchema = z.object({
   rateLimitPerHour: z.number().int().min(1).max(10_000).optional(),
 });
 
-export const updateSkillSchema = createSkillSchema.partial().omit({ slug: true });
+export const updateSkillSchema = createSkillSchema
+  .partial()
+  .omit({ slug: true });
 
 export function validateSkillConfig(
   skillType: (typeof agentSkillTypes)[number],

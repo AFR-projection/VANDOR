@@ -4,13 +4,13 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { userSettings } from "@/lib/db/schema";
+import { stripUndefinedSettingsPatch } from "./patch";
 import {
   defaultUserSettings,
   mergeUserSettings,
   type UserSettings,
   userSettingsSchema,
 } from "./types";
-import { stripUndefinedSettingsPatch } from "./patch";
 
 const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
 const db = drizzle(client);

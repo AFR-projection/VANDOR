@@ -20,10 +20,7 @@ export function writeAgentActivity(
   });
 }
 
-export function agentStatus(
-  dataStream: DataStreamWriter,
-  label: string
-): void {
+export function agentStatus(dataStream: DataStreamWriter, label: string): void {
   writeAgentActivity(dataStream, { kind: "status", label });
 }
 

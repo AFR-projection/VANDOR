@@ -2,10 +2,11 @@
  * Move vault blobs from local disk to R2 (metadata row updated in Neon).
  * Usage: npx tsx scripts/migrate-vault-local-to-r2.ts
  */
-import { config } from "dotenv";
+
 import { readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { AwsClient } from "aws4fetch";
+import { config } from "dotenv";
 
 config({ path: ".env.local" });
 

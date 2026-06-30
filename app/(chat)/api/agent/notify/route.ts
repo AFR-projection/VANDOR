@@ -82,9 +82,10 @@ export async function POST(request: Request) {
   const emoji = LEVEL_EMOJI[body.level ?? "warn"] ?? "⚠️";
   const title = body.title?.trim();
   const inner = body.body?.trim() ?? "";
-  const text = title && title !== "VANDOR"
-    ? `${emoji} *VANDOR*\n\n*${title}*\n${inner}`
-    : `${emoji} *VANDOR*\n\n${inner}`;
+  const text =
+    title && title !== "VANDOR"
+      ? `${emoji} *VANDOR*\n\n*${title}*\n${inner}`
+      : `${emoji} *VANDOR*\n\n${inner}`;
 
   const result = await sendSystemWhatsappNotification(text);
   return Response.json(result, { status: result.ok ? 200 : 502 });

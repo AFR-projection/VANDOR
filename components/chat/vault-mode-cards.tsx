@@ -11,19 +11,16 @@ import {
   TerminalIcon,
   XCircleIcon,
 } from "lucide-react";
+import { VaultDownloadButton } from "@/components/chat/vault-download-button";
+import { VaultMediaPreview } from "@/components/chat/vault-media-preview";
 import type { ChatMessage } from "@/lib/types";
+import { formatBytes } from "@/lib/utils";
+import type { VaultModeExitNotice, VaultModeNotice } from "@/lib/vault/mode";
 import type {
   ShareToAiNotice,
   VaultDeniedNotice,
   VaultReadNotice,
 } from "@/lib/vault/notice";
-import type {
-  VaultModeExitNotice,
-  VaultModeNotice,
-} from "@/lib/vault/mode";
-import { formatBytes } from "@/lib/utils";
-import { VaultDownloadButton } from "@/components/chat/vault-download-button";
-import { VaultMediaPreview } from "@/components/chat/vault-media-preview";
 
 export function getVaultModeEnterFromMessage(
   message: ChatMessage
@@ -139,8 +136,8 @@ export function VaultHelpCard({
             Perintah Vault Mode
           </p>
           <p className="text-[10px] text-emerald-300/50">
-            Ketik <span className="font-mono text-emerald-300/80">i</span>{" "}
-            kapan saja untuk buka daftar ini
+            Ketik <span className="font-mono text-emerald-300/80">i</span> kapan
+            saja untuk buka daftar ini
           </p>
         </div>
       </div>
@@ -159,8 +156,12 @@ export function VaultHelpCard({
                   <span className="shrink-0 text-[11px] font-medium text-emerald-200/90">
                     {cmd}
                   </span>
-                  <span className="hidden text-emerald-500/30 sm:inline">—</span>
-                  <span className="text-[11px] text-emerald-200/45">{desc}</span>
+                  <span className="hidden text-emerald-500/30 sm:inline">
+                    —
+                  </span>
+                  <span className="text-[11px] text-emerald-200/45">
+                    {desc}
+                  </span>
                 </div>
               ))}
             </div>

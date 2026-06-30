@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -26,7 +27,6 @@ import {
 import { useVisualViewportInset } from "@/hooks/use-visual-viewport-inset";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
 import { ChatHeader } from "./chat-header";
 import { DataStreamHandler } from "./data-stream-handler";
 import { MemorySavedHandler } from "./memory-saved-handler";
@@ -133,8 +133,8 @@ export function ChatShell() {
   // Listen for vault session redirects (enter → new vault chat; exit → fresh chat).
   useEffect(() => {
     if (!messages.length) return;
-    const last = messages[messages.length - 1];
-    if (last.role !== "assistant") return;
+    const last = messages.at(-1);
+    if (last?.role !== "assistant") return;
     for (const part of last.parts ?? []) {
       if (!part || typeof part !== "object" || !("type" in part)) {
         continue;
@@ -191,10 +191,12 @@ export function ChatShell() {
             />
           )}
 
-          <div className={cn(
-            "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background max-md:rounded-none md:rounded-tl-[12px] md:border-t md:border-l md:border-border/40",
-            vaultModeActive && "ring-1 ring-emerald-500/20"
-          )}>
+          <div
+            className={cn(
+              "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background max-md:rounded-none md:rounded-tl-[12px] md:border-t md:border-l md:border-border/40",
+              vaultModeActive && "ring-1 ring-emerald-500/20"
+            )}
+          >
             <Messages
               addToolApprovalResponse={addToolApprovalResponse}
               chatId={chatId}

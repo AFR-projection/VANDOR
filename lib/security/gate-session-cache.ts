@@ -8,7 +8,7 @@ type CacheEntry = {
 };
 
 /** Short TTL — kurangi query Neon di middleware tanpa mengorbankan revoke cepat. */
-const SESSION_CACHE_TTL_MS = 8_000;
+const SESSION_CACHE_TTL_MS = 8000;
 
 const sessionCache = new Map<string, CacheEntry>();
 

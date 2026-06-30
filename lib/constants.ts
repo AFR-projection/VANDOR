@@ -9,7 +9,7 @@ export const isTestEnvironment = Boolean(
 );
 
 /** False on http:// deploys (VPS IP) so login cookies work before SSL. */
-export function useSecureCookies(): boolean {
+export function shouldUseSecureCookies(): boolean {
   if (isDevelopmentEnvironment || isTestEnvironment) {
     return false;
   }

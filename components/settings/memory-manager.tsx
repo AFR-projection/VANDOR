@@ -41,6 +41,7 @@ type MemoryStats = {
 };
 
 import { apiBasePath } from "@/lib/app-url";
+
 const base = apiBasePath;
 
 async function fetchMemories(filter: string): Promise<MemoryItem[]> {

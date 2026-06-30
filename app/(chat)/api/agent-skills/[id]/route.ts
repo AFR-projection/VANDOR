@@ -1,4 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
+import { formatZodFieldErrors } from "@/lib/agent-skills/format-api-error";
 import {
   deleteAgentSkill,
   getAgentSkillById,
@@ -8,7 +9,6 @@ import {
   updateSkillSchema,
   validateSkillConfig,
 } from "@/lib/agent-skills/validation";
-import { formatZodFieldErrors } from "@/lib/agent-skills/format-api-error";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 
@@ -92,7 +92,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
   }
 
-  if (existing.isBuiltin && patch.skillType && patch.skillType !== existing.skillType) {
+  if (
+    existing.isBuiltin &&
+    patch.skillType &&
+    patch.skillType !== existing.skillType
+  ) {
     return Response.json(
       { error: "Skill bawaan tidak bisa diubah tipenya" },
       { status: 403 }

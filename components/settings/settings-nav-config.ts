@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import {
   BotIcon,
   BrainIcon,
@@ -15,7 +16,6 @@ import {
   TerminalIcon,
   WrenchIcon,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 export type SettingsArea = "general" | "memory";
 

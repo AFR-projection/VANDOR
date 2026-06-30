@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { apiBasePath } from "@/lib/app-url";
-import { APP_NAME, APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
+import { APP_NAME, APP_VERSION } from "@/lib/version";
 import {
-  isNavItemActive,
-  memorySubNav,
   type GeneralTabId,
+  isNavItemActive,
   type MemoryTabId,
+  memorySubNav,
   type SettingsArea,
   settingsNavGroups,
 } from "./settings-nav-config";
@@ -73,7 +73,9 @@ export function SettingsShell({
 }: SettingsShellProps) {
   const router = useRouter();
 
-  const handleNav = (item: (typeof settingsNavGroups)[number]["items"][number]) => {
+  const handleNav = (
+    item: (typeof settingsNavGroups)[number]["items"][number]
+  ) => {
     if (item.area === "memory") {
       const q =
         item.memoryTab && item.memoryTab !== "memory"

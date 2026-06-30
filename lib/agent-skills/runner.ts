@@ -1,14 +1,11 @@
 import "server-only";
 
 import { runWebSearch } from "@/lib/search/engine";
-import { getAgentSkillBySlug, insertSkillLog } from "./queries";
-import { checkSkillRateLimit } from "./rate-limit";
 import { executeDatabaseSkill, executeHttpApiSkill } from "./executors";
 import { searchKnowledgeBase } from "./knowledge-base";
-import {
-  calculateMixParlay,
-  type ParlayCalcInput,
-} from "./parlay-calculator";
+import { calculateMixParlay, type ParlayCalcInput } from "./parlay-calculator";
+import { getAgentSkillBySlug, insertSkillLog } from "./queries";
+import { checkSkillRateLimit } from "./rate-limit";
 import type {
   AgentSkillRecord,
   DatabaseSkillConfig,
@@ -132,10 +129,11 @@ function executeParlayCalculatorSkill(
       legs: legs.map((leg, i) => {
         const row = leg as Record<string, unknown>;
         return {
-          label:
-            typeof row.label === "string" ? row.label : `Pilihan ${i + 1}`,
+          label: typeof row.label === "string" ? row.label : `Pilihan ${i + 1}`,
           odds: Number(row.odds),
-          status: String(row.status ?? "W") as ParlayCalcInput["legs"][number]["status"],
+          status: String(
+            row.status ?? "W"
+          ) as ParlayCalcInput["legs"][number]["status"],
         };
       }),
     };
@@ -149,7 +147,8 @@ function executeParlayCalculatorSkill(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "Perhitungan parlay gagal",
+      error:
+        error instanceof Error ? error.message : "Perhitungan parlay gagal",
       executionTimeMs: Date.now() - started,
     };
   }

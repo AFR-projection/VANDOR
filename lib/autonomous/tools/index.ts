@@ -99,7 +99,8 @@ export function registerBuiltinTools(): void {
   }
   registerTool({
     name: "system.ping",
-    description: "Health-check internal worker (membuktikan pipeline berjalan).",
+    description:
+      "Health-check internal worker (membuktikan pipeline berjalan).",
     risk: "safe",
     execute: (_input: Record<string, unknown>, _ctx: ToolContext) =>
       Promise.resolve<ToolResult>({

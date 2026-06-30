@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { WASocket, WAMessage } from "@whiskeysockets/baileys";
+import type { WAMessage, WASocket } from "@whiskeysockets/baileys";
 import {
   downloadMediaMessage,
   extensionForMediaMessage,
@@ -173,9 +173,7 @@ export async function extractInboundMedia(
   }
 
   if (buffer.byteLength > MAX_BYTES) {
-    console.warn(
-      `[wa] media too large (${buffer.byteLength} bytes), skipping`
-    );
+    console.warn(`[wa] media too large (${buffer.byteLength} bytes), skipping`);
     return null;
   }
 

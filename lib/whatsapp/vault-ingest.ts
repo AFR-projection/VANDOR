@@ -1,9 +1,9 @@
 import "server-only";
 
-import type { WhatsappInboundMedia } from "./inbound-media";
 import { storeVaultFile } from "@/lib/vault/store";
 import type { VaultFileSnapshot } from "@/lib/vault/types";
 import { resolveVaultUserId } from "@/lib/vault/vault-scope";
+import type { WhatsappInboundMedia } from "./inbound-media";
 
 const VAULT_SAVE_RE =
   /^(\/?v\s+save|\/?vault\s+save|\/?vault|simpan\s+(?:ke\s+)?vault|save\s+(?:to\s+)?vault)/i;
@@ -13,9 +13,7 @@ export function isWhatsappVaultSaveCommand(text: string): boolean {
 }
 
 export function vaultSaveReplyText(
-  result:
-    | { ok: true; file: VaultFileSnapshot }
-    | { ok: false; error: string }
+  result: { ok: true; file: VaultFileSnapshot } | { ok: false; error: string }
 ): string {
   if (result.ok) {
     const shortId = result.file.id.slice(0, 8);

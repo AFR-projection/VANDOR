@@ -1,10 +1,7 @@
 "use client";
 
 import { toSafeThinkingTrace } from "@/lib/agent-activity/thinking-trace";
-import {
-  Reasoning,
-  ReasoningTrigger,
-} from "../ai-elements/reasoning";
+import { Reasoning, ReasoningTrigger } from "../ai-elements/reasoning";
 
 type MessageReasoningProps = {
   isLoading: boolean;

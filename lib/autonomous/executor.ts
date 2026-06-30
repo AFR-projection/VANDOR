@@ -1,7 +1,9 @@
-import { runCodeAutoFixPipeline } from "./auto-fix";
-import { runCodeScan } from "./coding-agent/scan";
-import { runStatusSnapshot } from "./cli/runner";
+import type { AgentTask } from "@/lib/db/schema";
 import { recordAgentAction } from "./audit";
+import { runCodeAutoFixPipeline } from "./auto-fix";
+import { notifyChatTaskOutcome } from "./chat-task-notify";
+import { runStatusSnapshot } from "./cli/runner";
+import { runCodeScan } from "./coding-agent/scan";
 import { autonomousConfig } from "./config";
 import {
   buildDeployApprovalSummary,
@@ -18,7 +20,6 @@ import {
   markApprovalConsumed,
 } from "./permission";
 import { runRemoteHealthChecks } from "./remote-hosts";
-import { notifyChatTaskOutcome } from "./chat-task-notify";
 import { collectServiceHealth } from "./services";
 import {
   claimReadyTasks,
@@ -27,9 +28,8 @@ import {
   markTaskRunning,
   setTaskAwaitingApproval,
 } from "./tasks";
-import { execApprovedCommand } from "./tools/shell";
 import { runTool } from "./tools";
-import type { AgentTask } from "@/lib/db/schema";
+import { execApprovedCommand } from "./tools/shell";
 import type { ToolContext } from "./types";
 import { checkUrls } from "./uptime";
 
@@ -39,7 +39,6 @@ async function runDeploySteps(_ctx: ToolContext): Promise<DeployStepResult> {
   let previousCommit = "";
 
   for (const command of commands) {
-    // biome-ignore lint/nursery/noAwaitInLoop: deploy berurutan
     const result = await execApprovedCommand(command);
     if (command.includes("git rev-parse") && result.ok && result.data) {
       previousCommit = String(result.data).trim().slice(0, 40);
@@ -117,7 +116,9 @@ async function runTaskByType(
           `CPU ${metrics.cpuPct}% · RAM ${metrics.memUsedPct}% · Disk ${metrics.diskUsedPct ?? "?"}%\n` +
           `Uptime ${Math.round(metrics.uptimeSec / 3600)} jam\n` +
           `Service: ${services.length - down.length}/${services.length} sehat` +
-          (down.length ? `\nBermasalah: ${down.map((s) => s.name).join(", ")}` : ""),
+          (down.length
+            ? `\nBermasalah: ${down.map((s) => s.name).join(", ")}`
+            : ""),
         level: "info",
       });
       return { metrics, servicesDown: down.length };
@@ -177,7 +178,7 @@ async function runTaskByType(
         if (shouldAutoFix) {
           const fix = await runCodeAutoFixPipeline({
             taskId: task.id,
-            fullBuild: fullBuild,
+            fullBuild,
           });
           return { scan, autoFix: fix };
         }
@@ -251,14 +252,10 @@ export async function processTaskQueue(ctx: ToolContext): Promise<number> {
   let processed = 0;
 
   for (const task of tasks) {
-    // biome-ignore lint/nursery/noAwaitInLoop: task harus berurutan, dibatasi kecil
     await markTaskRunning(task.id);
     try {
-      // biome-ignore lint/nursery/noAwaitInLoop: eksekusi task berurutan
       const result = await runTaskByType(task, ctx);
-      // biome-ignore lint/nursery/noAwaitInLoop: update status berurutan
       await completeTask(task.id, result);
-      // biome-ignore lint/nursery/noAwaitInLoop: notifikasi chat berurutan
       await notifyChatTaskOutcome({
         task: {
           ...task,
@@ -272,9 +269,7 @@ export async function processTaskQueue(ctx: ToolContext): Promise<number> {
       processed += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      // biome-ignore lint/nursery/noAwaitInLoop: update status berurutan
       await failTask(task.id, message);
-      // biome-ignore lint/nursery/noAwaitInLoop: notifikasi chat berurutan
       await notifyChatTaskOutcome({
         task: {
           ...task,
@@ -285,7 +280,6 @@ export async function processTaskQueue(ctx: ToolContext): Promise<number> {
         outcome: "failed",
         error: message,
       });
-      // biome-ignore lint/nursery/noAwaitInLoop: audit berurutan
       await recordAgentAction({
         taskId: task.id,
         tool: "executor",
@@ -310,15 +304,12 @@ export async function executeApprovedRemediations(): Promise<number> {
     const payload = approval.payload as { command?: string } | null;
     const command = payload?.command;
     if (!command) {
-      // biome-ignore lint/nursery/noAwaitInLoop: jumlah kecil, berurutan
       await markApprovalConsumed(approval.id);
       continue;
     }
 
     const started = Date.now();
-    // biome-ignore lint/nursery/noAwaitInLoop: eksekusi berurutan demi keamanan
     const result = await execApprovedCommand(command);
-    // biome-ignore lint/nursery/noAwaitInLoop: audit berurutan
     await recordAgentAction({
       taskId: approval.taskId,
       tool: "shell",
@@ -330,9 +321,7 @@ export async function executeApprovedRemediations(): Promise<number> {
       reason: result.error ?? approval.summary,
       durationMs: Date.now() - started,
     });
-    // biome-ignore lint/nursery/noAwaitInLoop: berurutan
     await markApprovalConsumed(approval.id);
-    // biome-ignore lint/nursery/noAwaitInLoop: notifikasi berurutan
     await notify({
       title: result.ok ? "Remediasi berhasil" : "Remediasi gagal",
       body: `\`${command}\`\n\n${result.ok ? "Selesai dijalankan." : `Gagal: ${result.error}`}`,

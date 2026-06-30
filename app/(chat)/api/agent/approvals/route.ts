@@ -1,5 +1,8 @@
 import { auth } from "@/app/(auth)/auth";
-import { decideApproval, resumeApprovedTask } from "@/lib/autonomous/permission";
+import {
+  decideApproval,
+  resumeApprovedTask,
+} from "@/lib/autonomous/permission";
 import { requireClientAccess } from "@/lib/security/client-access";
 
 export async function POST(request: Request) {

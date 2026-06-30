@@ -272,7 +272,9 @@ export const whatsappSessionState = pgTable("WhatsappSessionState", {
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
-export type WhatsappSessionState = InferSelectModel<typeof whatsappSessionState>;
+export type WhatsappSessionState = InferSelectModel<
+  typeof whatsappSessionState
+>;
 
 export const gateLockout = pgTable("GateLockout", {
   ip: text("ip").primaryKey().notNull(),
@@ -524,7 +526,9 @@ export const vaultAuditLog = pgTable("VaultAuditLog", {
   userId: uuid("userId")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  fileId: uuid("fileId").references(() => vaultFile.id, { onDelete: "set null" }),
+  fileId: uuid("fileId").references(() => vaultFile.id, {
+    onDelete: "set null",
+  }),
   action: varchar("action", { length: 32 }).notNull(),
   detail: json("detail"),
   ip: text("ip"),
@@ -566,9 +570,7 @@ export const agentSkill = pgTable(
     slug: varchar("slug", { length: 64 }).notNull(),
     name: text("name").notNull(),
     description: text("description").notNull(),
-    category: varchar("category", { length: 32 })
-      .notNull()
-      .default("api"),
+    category: varchar("category", { length: 32 }).notNull().default("api"),
     skillType: varchar("skillType", { length: 32 })
       .notNull()
       .default("http_api"),
@@ -902,11 +904,7 @@ export const agentRule = pgTable("AgentRule", {
 
 export type AgentRule = InferSelectModel<typeof agentRule>;
 
-export const agentNotificationStatuses = [
-  "queued",
-  "sent",
-  "failed",
-] as const;
+export const agentNotificationStatuses = ["queued", "sent", "failed"] as const;
 export type AgentNotificationStatus =
   (typeof agentNotificationStatuses)[number];
 
@@ -983,12 +981,7 @@ export const platformWorkflowStepStatuses = [
 export type PlatformWorkflowStepStatus =
   (typeof platformWorkflowStepStatuses)[number];
 
-export const platformLogLevels = [
-  "debug",
-  "info",
-  "warn",
-  "error",
-] as const;
+export const platformLogLevels = ["debug", "info", "warn", "error"] as const;
 export type PlatformLogLevel = (typeof platformLogLevels)[number];
 
 /** Satu permintaan user end-to-end (workflow run). */
@@ -1041,7 +1034,9 @@ export const platformWorkflowStep = pgTable("PlatformWorkflowStep", {
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
-export type PlatformWorkflowStep = InferSelectModel<typeof platformWorkflowStep>;
+export type PlatformWorkflowStep = InferSelectModel<
+  typeof platformWorkflowStep
+>;
 
 /** Event bus platform — persist + SSE feed dashboard. */
 export const platformEvent = pgTable("PlatformEvent", {

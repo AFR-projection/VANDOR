@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import {
   CheckCircle2Icon,
   CopyIcon,
-  DownloadIcon,
   FileAudioIcon,
   FileIcon,
   FileImageIcon,
@@ -16,17 +15,17 @@ import {
   SparklesIcon,
   StarIcon,
 } from "lucide-react";
+import { VaultDownloadButton } from "@/components/chat/vault-download-button";
+import { VaultMediaPreview } from "@/components/chat/vault-media-preview";
+import { apiBasePath } from "@/lib/app-url";
+import type { ChatMessage } from "@/lib/types";
+import { cn, formatBytes } from "@/lib/utils";
 import type {
   VaultDetailNotice,
   VaultListNotice,
   VaultOpenNotice,
   VaultUploadNotice,
 } from "@/lib/vault/notice";
-import type { ChatMessage } from "@/lib/types";
-import { cn, formatBytes } from "@/lib/utils";
-import { apiBasePath } from "@/lib/app-url";
-import { VaultDownloadButton } from "@/components/chat/vault-download-button";
-import { VaultMediaPreview } from "@/components/chat/vault-media-preview";
 
 const typeColors: Record<string, string> = {
   image: "text-pink-400 bg-pink-500/10",
@@ -112,7 +111,9 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/5"
-          style={{ animation: "vandor-download-aurora 4s ease-in-out infinite" }}
+          style={{
+            animation: "vandor-download-aurora 4s ease-in-out infinite",
+          }}
         />
         <div className="relative flex items-center gap-3 text-white">
           <div className="flex size-10 items-center justify-center rounded-xl bg-black/20 ring-1 ring-white/20">
@@ -120,7 +121,9 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">
-              {data.filterLabel ? `Berangkas · ${data.filterLabel}` : "Berangkas Pribadi"}
+              {data.filterLabel
+                ? `Berangkas · ${data.filterLabel}`
+                : "Berangkas Pribadi"}
             </p>
             <p className="text-[11px] text-white/70">
               Terenkripsi AES-256-GCM
@@ -237,8 +240,7 @@ export function VaultListCard({ data }: { data: VaultListNotice }) {
       <div className="border-t border-border/25 bg-muted/10 px-4 py-2.5">
         <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
           <LockIcon className="size-3 shrink-0 text-emerald-500/70" />
-          Vault:{" "}
-          <span className="font-mono text-foreground/50">/v</span>
+          Vault: <span className="font-mono text-foreground/50">/v</span>
           {" · "}
           Bagikan:{" "}
           <span className="font-mono text-foreground/50">
@@ -266,7 +268,9 @@ export function VaultOpenCard({ data }: { data: VaultOpenNotice }) {
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/5"
-          style={{ animation: "vandor-download-aurora 4s ease-in-out infinite" }}
+          style={{
+            animation: "vandor-download-aurora 4s ease-in-out infinite",
+          }}
         />
         <div className="relative flex items-center gap-3 text-white">
           <div className="flex size-10 items-center justify-center rounded-xl bg-black/20 ring-1 ring-white/20">
@@ -339,7 +343,9 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/5"
-          style={{ animation: "vandor-download-aurora 4s ease-in-out infinite" }}
+          style={{
+            animation: "vandor-download-aurora 4s ease-in-out infinite",
+          }}
         />
         <div className="relative flex items-center gap-3 text-white">
           <div className="flex size-10 items-center justify-center rounded-xl bg-black/20 ring-1 ring-white/20">
@@ -410,8 +416,7 @@ export function VaultUploadSuccessCard({ data }: { data: VaultUploadNotice }) {
 
         <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
           <LockIcon className="size-3 shrink-0 text-emerald-500/60" />
-          Lihat:{" "}
-          <span className="font-mono text-foreground/40">/v</span>
+          Lihat: <span className="font-mono text-foreground/40">/v</span>
           {" → "}
           <span className="font-mono text-foreground/40">list</span>
           {" · Bagikan: "}

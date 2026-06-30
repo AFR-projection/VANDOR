@@ -1,7 +1,7 @@
 import { auth } from "@/app/(auth)/auth";
-import { bootstrapPlatformV2 } from "@/lib/platform/init";
 import { isPlatformV2Enabled } from "@/lib/platform/config";
 import { getWorkflowRunDetailForUser } from "@/lib/platform/dashboard/service";
+import { bootstrapPlatformV2 } from "@/lib/platform/init";
 import { requireClientAccess } from "@/lib/security/client-access";
 
 type RouteContext = {
@@ -29,7 +29,10 @@ export async function GET(request: Request, context: RouteContext) {
   const detail = await getWorkflowRunDetailForUser(session.user.id, runId);
 
   if (!detail) {
-    return Response.json({ error: "Workflow tidak ditemukan" }, { status: 404 });
+    return Response.json(
+      { error: "Workflow tidak ditemukan" },
+      { status: 404 }
+    );
   }
 
   return Response.json({ enabled: true, ...detail });

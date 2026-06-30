@@ -6,9 +6,9 @@ import {
   updateGoal,
 } from "@/lib/autonomous/goals";
 import { resolveOwnerUserId } from "@/lib/autonomous/owner";
-import { requireClientAccess } from "@/lib/security/client-access";
 import type { AgentGoalStatus } from "@/lib/db/schema";
 import { agentGoalStatuses } from "@/lib/db/schema";
+import { requireClientAccess } from "@/lib/security/client-access";
 
 async function guard(request: Request) {
   const denied = await requireClientAccess(request);
@@ -58,10 +58,11 @@ export async function POST(request: Request) {
   const goal = await createGoal({
     userId: ownerId,
     title,
-    description:
-      typeof body.description === "string" ? body.description : null,
+    description: typeof body.description === "string" ? body.description : null,
     priority:
-      typeof body.priority === "number" && body.priority >= 1 && body.priority <= 10
+      typeof body.priority === "number" &&
+      body.priority >= 1 &&
+      body.priority <= 10
         ? body.priority
         : 5,
     deadline:
@@ -106,8 +107,7 @@ export async function PATCH(request: Request) {
     description:
       typeof body.description === "string" ? body.description : undefined,
     status,
-    priority:
-      typeof body.priority === "number" ? body.priority : undefined,
+    priority: typeof body.priority === "number" ? body.priority : undefined,
   });
 
   if (!goal) {

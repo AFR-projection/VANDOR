@@ -1,11 +1,10 @@
-import { auth } from "@/app/(auth)/auth";
-import { ChatbotError } from "@/lib/errors";
-import { requireClientAccess } from "@/lib/security/client-access";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { auth } from "@/app/(auth)/auth";
 import { knowledgeBaseDocument } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import { ChatbotError } from "@/lib/errors";
+import { requireClientAccess } from "@/lib/security/client-access";
 
 const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
 const db = drizzle(client);

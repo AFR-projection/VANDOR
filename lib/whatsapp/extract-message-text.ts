@@ -2,7 +2,9 @@ import type { WAMessage } from "@whiskeysockets/baileys";
 
 type MessageContent = NonNullable<WAMessage["message"]>;
 
-function unwrapMessage(message: MessageContent | null | undefined): MessageContent | null {
+function unwrapMessage(
+  message: MessageContent | null | undefined
+): MessageContent | null {
   if (!message) {
     return null;
   }
@@ -14,9 +16,7 @@ function unwrapMessage(message: MessageContent | null | undefined): MessageConte
 }
 
 /** Teks utama pesan (tanpa konteks reply). */
-export function extractPlainText(
-  message: WAMessage["message"]
-): string {
+export function extractPlainText(message: WAMessage["message"]): string {
   const m = unwrapMessage(message);
   if (!m) {
     return "";

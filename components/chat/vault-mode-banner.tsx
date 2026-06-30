@@ -26,10 +26,7 @@ const statusItems = [
   { icon: DatabaseIcon, label: "Vault", value: "ONLY", off: false },
 ];
 
-export function VaultModeBanner({
-  enteredAt,
-  onExit,
-}: VaultModeBannerProps) {
+export function VaultModeBanner({ enteredAt, onExit }: VaultModeBannerProps) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape" && (e.ctrlKey || e.metaKey)) {

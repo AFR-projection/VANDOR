@@ -192,7 +192,9 @@ export function PinConfirmDialog({
                 key={key}
                 onClick={() => onKey(key)}
                 type="button"
-                variant={key === "clear" || key === "back" ? "ghost" : "outline"}
+                variant={
+                  key === "clear" || key === "back" ? "ghost" : "outline"
+                }
               >
                 {key === "clear" ? "C" : key === "back" ? "⌫" : key}
               </Button>
@@ -220,7 +222,10 @@ export async function triggerFileDownload(
   let res = await fetch(url, { credentials: "same-origin" });
 
   if (res.status === 401 && opts?.requestPin) {
-    const data = await res.clone().json().catch(() => ({}));
+    const data = await res
+      .clone()
+      .json()
+      .catch(() => ({}));
     if (data.reason === "vault_pin_required" || data.requiresPin) {
       const ok = await opts.requestPin();
       if (!ok) return false;

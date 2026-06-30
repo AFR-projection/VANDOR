@@ -1,4 +1,3 @@
-import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { listRecentVaultAudit } from "@/lib/vault/audit";

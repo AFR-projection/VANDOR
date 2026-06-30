@@ -1,8 +1,5 @@
-import type {
-  AgentExecutionContext,
-  PlatformToolContext,
-} from "../core/types";
 import { executePlatformTool } from "../core/tool-registry";
+import type { AgentExecutionContext, PlatformToolContext } from "../core/types";
 
 export function toToolContext(ctx: AgentExecutionContext): PlatformToolContext {
   return {

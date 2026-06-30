@@ -33,7 +33,9 @@ function mapSkill(row: typeof agentSkill.$inferSelect): AgentSkillRecord {
   };
 }
 
-export async function listAgentSkills(userId: string): Promise<AgentSkillRecord[]> {
+export async function listAgentSkills(
+  userId: string
+): Promise<AgentSkillRecord[]> {
   const rows = await db
     .select()
     .from(agentSkill)

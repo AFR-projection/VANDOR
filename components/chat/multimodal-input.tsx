@@ -16,19 +16,19 @@ import {
   useRef,
   useState,
 } from "react";
-import { toast as notify } from "@/components/chat/toast";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { useLocalStorage, useWindowSize } from "usehooks-ts";
 import { ChatModelStatusStrip } from "@/components/chat/chat-model-status";
 import { OpenRouterModelPicker } from "@/components/chat/openrouter-model-picker";
+import { toast as notify } from "@/components/chat/toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ModelCapabilities } from "@/lib/ai/models";
 import { isBareMediaSlash, parseMediaSlash } from "@/lib/chat/media-slash";
 import {
+  isLegacyVaultChatCommand,
   parseVaultEnter,
   parseVaultModeAdd,
-  isLegacyVaultChatCommand,
 } from "@/lib/chat/vault-slash";
 import { resolveChatFileDisplayUrl } from "@/lib/files/chat-file-url";
 import type { Attachment, ChatMessage } from "@/lib/types";
@@ -64,12 +64,12 @@ function PureMultimodalInput({
   setMessages,
   sendMessage,
   className,
-  selectedVisibilityType,
+  selectedVisibilityType: _selectedVisibilityType,
   selectedModelId,
   onModelChange,
   editingMessage,
   onCancelEdit,
-  isLoading,
+  isLoading: _isLoading,
 }: {
   chatId: string;
   chatMode: "chat" | "vault" | "vault-locked";
@@ -223,8 +223,8 @@ function PureMultimodalInput({
   // Auto-trigger vault upload UI when backend signals it
   useEffect(() => {
     if (!messages.length) return;
-    const last = messages[messages.length - 1];
-    if (last.role !== "assistant") return;
+    const last = messages.at(-1);
+    if (last?.role !== "assistant") return;
     const hasAddPrompt = last.parts?.some(
       (p: { type?: string }) => p.type === "data-vault-add-prompt"
     );
@@ -468,7 +468,6 @@ function PureMultimodalInput({
           </button>
         </div>
       )}
-
 
       <input
         accept="image/*,video/*,audio/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/*,application/json,application/zip,application/x-zip-compressed,application/x-7z-compressed,application/x-rar-compressed,application/x-tar,application/gzip,.txt,.md,.csv,.json,.yaml,.yml,.toml,.ini,.log,.sql,.html,.css,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cpp,.cs,.php,.sh"

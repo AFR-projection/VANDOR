@@ -1,4 +1,5 @@
 import { isPlatformV2Enabled, platformConfig } from "../config";
+import { publishPlatformEvent } from "../events/bus";
 import { bootstrapPlatformV2 } from "../init";
 import {
   claimRunnableWorkflowRuns,
@@ -6,7 +7,6 @@ import {
   markWorkflowRunActive,
   recoverStaleRunningSteps,
 } from "../queue/claim-runs";
-import { publishPlatformEvent } from "../events/bus";
 import { processWorkflowRun } from "./engine";
 
 export type PlatformTickResult = {
@@ -50,11 +50,7 @@ export async function runPlatformOrchestratorTick(): Promise<PlatformTickResult>
 
   for (const run of runs) {
     await markWorkflowRunActive(run.id);
-    const processed = await processWorkflowRun(
-      run.id,
-      run.userId,
-      run.chatId
-    );
+    const processed = await processWorkflowRun(run.id, run.userId, run.chatId);
     stepsProcessed += processed.stepsProcessed;
     results.push({
       runId: run.id,

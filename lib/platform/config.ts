@@ -25,10 +25,16 @@ export const platformConfig = {
   ),
 
   /** Poll interval event bus SSE (ms). */
-  eventPollMs: Number.parseInt(process.env.PLATFORM_EVENT_POLL_MS ?? "1000", 10),
+  eventPollMs: Number.parseInt(
+    process.env.PLATFORM_EVENT_POLL_MS ?? "1000",
+    10
+  ),
 
   /** Maks. workflow run diproses per tick orchestrator. */
-  maxRunsPerTick: Number.parseInt(process.env.PLATFORM_MAX_RUNS_PER_TICK ?? "3", 10),
+  maxRunsPerTick: Number.parseInt(
+    process.env.PLATFORM_MAX_RUNS_PER_TICK ?? "3",
+    10
+  ),
 
   /** Retry backoff — base delay (ms). */
   retryBackoffBaseMs: Number.parseInt(
@@ -49,15 +55,11 @@ export function isPlatformV2Enabled(): boolean {
 
 export function isPlatformChatWorkflowEnabled(): boolean {
   return (
-    isPlatformV2Enabled() &&
-    process.env.PLATFORM_V2_CHAT_WORKFLOW !== "false"
+    isPlatformV2Enabled() && process.env.PLATFORM_V2_CHAT_WORKFLOW !== "false"
   );
 }
 
 /** Maks step saat workflow diproses sinkron dari chat (bukan worker tick). */
 export function platformChatMaxSteps(): number {
-  return Number.parseInt(
-    process.env.PLATFORM_CHAT_MAX_STEPS ?? "24",
-    10
-  );
+  return Number.parseInt(process.env.PLATFORM_CHAT_MAX_STEPS ?? "24", 10);
 }

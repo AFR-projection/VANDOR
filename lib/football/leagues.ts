@@ -9,7 +9,11 @@ export const POPULAR_LEAGUES: Record<
   "serie a": { id: 135, name: "Serie A", country: "Italy" },
   bundesliga: { id: 78, name: "Bundesliga", country: "Germany" },
   "ligue 1": { id: 61, name: "Ligue 1", country: "France" },
-  "champions league": { id: 2, name: "UEFA Champions League", country: "World" },
+  "champions league": {
+    id: 2,
+    name: "UEFA Champions League",
+    country: "World",
+  },
   ucl: { id: 2, name: "UEFA Champions League", country: "World" },
   "europa league": { id: 3, name: "UEFA Europa League", country: "World" },
   "liga 1": { id: 274, name: "Liga 1", country: "Indonesia" },

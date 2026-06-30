@@ -20,10 +20,7 @@ describe("football detect", () => {
 
   it("infers live action", () => {
     assert.equal(inferFootballAction("skor live liga 1"), "live_scores");
-    assert.equal(
-      inferFootballAction("klasemen premier league"),
-      "standings"
-    );
+    assert.equal(inferFootballAction("klasemen premier league"), "standings");
   });
 });
 

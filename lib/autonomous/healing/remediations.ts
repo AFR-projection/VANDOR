@@ -1,12 +1,12 @@
 import { recordAgentAction } from "../audit";
+import type { AutoFixResult } from "../auto-fix";
 import { autonomousConfig } from "../config";
 import { emitEvent } from "../events";
 import { notify, notifyApprovalRequest } from "../notify";
 import { recordOperatorIncident } from "../operator-memory";
+import { resolveOwnerUserId } from "../owner";
 import { createApproval } from "../permission";
 import { canAutoFixCommand } from "../rule-engine";
-import { resolveOwnerUserId } from "../owner";
-import type { AutoFixResult } from "../auto-fix";
 import type { Issue } from "./detectors";
 
 const severityToAgentEvent = {
@@ -73,8 +73,7 @@ export async function handleIssues(
       });
 
       const command = issue.remediation?.command?.trim();
-      const skipApproval =
-        autoFixOn && command && canAutoFixCommand(command);
+      const skipApproval = autoFixOn && command && canAutoFixCommand(command);
 
       if (command && !skipApproval) {
         const { id, deduped } = await createApproval({
@@ -112,12 +111,7 @@ export async function handleIssues(
         }
       }
 
-      if (
-        issue.severity === "warn" &&
-        command &&
-        !skipApproval &&
-        !autoFixOn
-      ) {
+      if (issue.severity === "warn" && command && !skipApproval && !autoFixOn) {
         await notify({
           title: issue.title,
           body: `${issue.detail}\n\nSaran: ${issue.remediation?.description ?? "—"}`,

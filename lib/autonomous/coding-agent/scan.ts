@@ -1,5 +1,5 @@
-import { runCliCommand, resolveAgentCwd } from "../cli/runner";
 import type { CliRunOptions } from "../cli/runner";
+import { resolveAgentCwd, runCliCommand } from "../cli/runner";
 
 export type CodeScanStep = {
   name: string;
@@ -99,11 +99,7 @@ export async function runCodeScan(
   }
 
   if (options.includeUltracite) {
-    await runStep(
-      "ultracite",
-      "npm run check 2>&1",
-      120_000
-    );
+    await runStep("ultracite", "npm run check 2>&1", 120_000);
   }
 
   if (options.fullBuild) {

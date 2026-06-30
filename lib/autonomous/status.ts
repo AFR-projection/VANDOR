@@ -1,10 +1,10 @@
-import { getAgentState } from "./state";
-import { listPendingApprovals } from "./permission";
-import { listActiveGoals } from "./goals";
-import { listRecentTasks } from "./tasks";
 import { listRecentEvents } from "./events";
+import { listActiveGoals } from "./goals";
 import { collectMetrics } from "./metrics";
+import { listPendingApprovals } from "./permission";
 import { collectServiceHealth } from "./services";
+import { getAgentState } from "./state";
+import { listRecentTasks } from "./tasks";
 
 /** Snapshot ringkas untuk slash /agent dan /status. */
 export async function formatAgentStatus(): Promise<string> {

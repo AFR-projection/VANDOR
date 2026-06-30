@@ -1,6 +1,13 @@
 import "server-only";
 
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -41,13 +48,18 @@ async function readAuthBlob(userId: string): Promise<AuthFileMap | null> {
   }
 }
 
-export async function hasPersistedWhatsappAuth(userId: string): Promise<boolean> {
+export async function hasPersistedWhatsappAuth(
+  userId: string
+): Promise<boolean> {
   const blob = await readAuthBlob(userId);
   return Boolean(blob?.["creds.json"]);
 }
 
 /** Restore encrypted auth files into a writable directory for Baileys. */
-export async function hydrateAuthDir(dir: string, userId: string): Promise<boolean> {
+export async function hydrateAuthDir(
+  dir: string,
+  userId: string
+): Promise<boolean> {
   await mkdir(dir, { recursive: true });
   const blob = await readAuthBlob(userId);
   if (!blob) {
@@ -60,7 +72,10 @@ export async function hydrateAuthDir(dir: string, userId: string): Promise<boole
 }
 
 /** Snapshot auth directory back into encrypted Postgres storage. */
-export async function persistAuthDir(dir: string, userId: string): Promise<void> {
+export async function persistAuthDir(
+  dir: string,
+  userId: string
+): Promise<void> {
   const entries = await readdir(dir).catch(() => [] as string[]);
   const blob: AuthFileMap = {};
 
@@ -94,7 +109,9 @@ export async function persistAuthDir(dir: string, userId: string): Promise<void>
     });
 }
 
-export async function clearPersistedWhatsappAuth(userId: string): Promise<void> {
+export async function clearPersistedWhatsappAuth(
+  userId: string
+): Promise<void> {
   await db
     .update(userSecrets)
     .set({ whatsappAuthEnc: null, updatedAt: new Date() })

@@ -6,6 +6,7 @@ import {
   ShieldCheckIcon,
   SparklesIcon,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
@@ -13,7 +14,6 @@ import { GateNumpad } from "@/components/gate/gate-numpad";
 import { GatePinDisplay } from "@/components/gate/gate-pin-display";
 import { GateScene } from "@/components/gate/gate-scene";
 import { cn } from "@/lib/utils";
-import { motion, useReducedMotion } from "motion/react";
 
 const PIN_LENGTH = 4;
 
@@ -286,20 +286,22 @@ function GateForm() {
           </p>
         ) : null}
 
-        {!locked ? (
+        {locked ? null : (
           <p className="mb-5 text-center text-[11px] text-muted-foreground">
             Sisa percobaan{" "}
-            <span className="font-semibold text-foreground">{attemptsLeft}</span>
+            <span className="font-semibold text-foreground">
+              {attemptsLeft}
+            </span>
             <span className="text-muted-foreground/60">
               {" "}
               / {status?.maxAttempts ?? 3}
             </span>
           </p>
-        ) : null}
+        )}
 
-        {!locked ? (
+        {locked ? null : (
           <GateNumpad disabled={locked || loading || success} onKey={onKey} />
-        ) : null}
+        )}
 
         {loading && !success ? (
           <div className="mt-4 flex justify-center">

@@ -1,7 +1,4 @@
-import type {
-  AgentSkillCategory,
-  AgentSkillType,
-} from "@/lib/db/schema";
+import type { AgentSkillCategory, AgentSkillType } from "@/lib/db/schema";
 
 export const SKILL_TOOL_PREFIX = "skill_" as const;
 

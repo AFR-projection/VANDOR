@@ -1,7 +1,7 @@
-import type { Assessment } from "./planner";
-import type { Issue } from "./healing/detectors";
 import { emitEvent } from "./events";
+import type { Issue } from "./healing/detectors";
 import { isLlmConfigured, llmJson } from "./llm";
+import type { Assessment } from "./planner";
 import { enqueueTask } from "./tasks";
 
 export type PlannedStep = {

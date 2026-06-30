@@ -29,7 +29,10 @@ export async function resolveOpenRouterApiKey(): Promise<string | null> {
 
   if (!dbKey) {
     const anyRow = await db
-      .select({ userId: userSecrets.userId, enc: userSecrets.openrouterApiKeyEnc })
+      .select({
+        userId: userSecrets.userId,
+        enc: userSecrets.openrouterApiKeyEnc,
+      })
       .from(userSecrets)
       .where(isNotNull(userSecrets.openrouterApiKeyEnc))
       .orderBy(desc(userSecrets.updatedAt))

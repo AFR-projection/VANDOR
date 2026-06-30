@@ -3,6 +3,7 @@ import "server-only";
 import type { RequestHints } from "@/lib/ai/prompts";
 import { parseMediaSlash } from "@/lib/chat/media-slash";
 import {
+  isLegacyVaultChatCommand,
   parseShareToAi,
   parseVaultDelete,
   parseVaultEnter,
@@ -30,8 +31,22 @@ import {
   parseVaultModeUpdate,
   parseVaultOpen,
   parseVaultUploaded,
-  isLegacyVaultChatCommand,
 } from "@/lib/chat/vault-slash";
+import type { VaultFileType } from "@/lib/db/schema";
+import {
+  createTask,
+  getChatSummary,
+  listTasks,
+} from "@/lib/memory/assistant-db";
+import { memorySavedDataPart } from "@/lib/memory/notice";
+import { saveMemory } from "@/lib/memory/queries";
+import { isExplicitRememberRequest } from "@/lib/memory/remember";
+import { runWebSearch } from "@/lib/search/engine";
+import { formatBytes } from "@/lib/utils";
+import {
+  vaultModeEnterDataPart,
+  vaultModeExitDataPart,
+} from "@/lib/vault/mode";
 import {
   shareToAiDataPart,
   vaultDeniedDataPart,
@@ -43,24 +58,9 @@ import {
   vaultUploadDataPart,
   vaultUrls,
 } from "@/lib/vault/notice";
-import {
-  vaultModeEnterDataPart,
-  vaultModeExitDataPart,
-} from "@/lib/vault/mode";
-import {
-  createTask,
-  getChatSummary,
-  listTasks,
-} from "@/lib/memory/assistant-db";
-import { memorySavedDataPart } from "@/lib/memory/notice";
-import { saveMemory } from "@/lib/memory/queries";
-import { isExplicitRememberRequest } from "@/lib/memory/remember";
-import { runWebSearch } from "@/lib/search/engine";
 import { fetchWeatherPanelData } from "@/lib/weather/fetch";
 import { extractWeatherCity } from "@/lib/weather/location-phrases";
 import { weatherDataPart } from "@/lib/weather/notice";
-import type { VaultFileType } from "@/lib/db/schema";
-import { formatBytes } from "@/lib/utils";
 
 export type DirectCommand =
   | { kind: "media" }
@@ -302,7 +302,9 @@ export function parseDirectCommand(
 
   if (
     /^\/?(?:agent|status|operator)\s*$/i.test(trimmed) ||
-    /^(?:status|cek\s+status)\s+(?:agent|operator|server|sistem|vps)\s*$/i.test(trimmed)
+    /^(?:status|cek\s+status)\s+(?:agent|operator|server|sistem|vps)\s*$/i.test(
+      trimmed
+    )
   ) {
     return { kind: "agent_status" };
   }
@@ -755,7 +757,9 @@ export async function executeDirectCommand(
         };
       }
       const failNote =
-        failed.length > 0 ? ` (${failed.length} gagal: ${failed.join(", ")})` : "";
+        failed.length > 0
+          ? ` (${failed.length} gagal: ${failed.join(", ")})`
+          : "";
       return {
         text: `Tag **${cmd.tag}** ditambahkan ke **${updated.length}** file${failNote}.`,
         instantLabel: "Berangkas",
@@ -878,7 +882,9 @@ export async function executeDirectCommand(
       return {
         text: [
           "**Folder Berangkas**",
-          ...folders.map((f) => `- \`${f}\` — lihat dengan \`list folder:${f}\``),
+          ...folders.map(
+            (f) => `- \`${f}\` — lihat dengan \`list folder:${f}\``
+          ),
         ].join("\n"),
         instantLabel: "Berangkas",
       };

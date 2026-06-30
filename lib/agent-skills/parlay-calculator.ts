@@ -103,7 +103,10 @@ export function formatOddsOriginal(odds: number): string {
 }
 
 /** Odds hasil konversi di baris per pilihan */
-export function formatOddsConverted(odds: number, norm: ParlayLegStatus | "D"): string {
+export function formatOddsConverted(
+  odds: number,
+  norm: ParlayLegStatus | "D"
+): string {
   if (norm === "LH") {
     return "0.5";
   }
@@ -118,7 +121,9 @@ export function formatOddsMultiply(odds: number): string {
 export function formatBetCs(amount: number): string {
   const whole = Math.abs(amount - Math.round(amount)) < 1e-9;
   if (whole) {
-    return `Rp${Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+    return `Rp${Math.round(amount)
+      .toString()
+      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
   }
   const truncated = truncateDecimals(amount, 3);
   const [intPart, decPart] = truncated.toFixed(3).split(".");
@@ -131,7 +136,11 @@ export function formatReturnCs(amount: number): string {
   return `Rp${intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${decPart}`;
 }
 
-function formatLegLine(originalOdds: number, norm: ParlayLegStatus | "D", converted: number | null): string {
+function formatLegLine(
+  originalOdds: number,
+  norm: ParlayLegStatus | "D",
+  converted: number | null
+): string {
   const oddsStr = formatOddsOriginal(originalOdds);
   if (norm === "D") {
     return `Odds ${oddsStr} → DRAW (tidak dihitung)`;

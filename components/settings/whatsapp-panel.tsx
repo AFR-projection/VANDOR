@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { apiBasePath } from "@/lib/app-url";
+
 const base = apiBasePath;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -72,7 +73,9 @@ async function fetchPrimaryOwner(): Promise<{ primaryOwner: string }> {
   return res.json();
 }
 
-async function savePrimaryOwner(phone: string): Promise<{ primaryOwner: string }> {
+async function savePrimaryOwner(
+  phone: string
+): Promise<{ primaryOwner: string }> {
   const res = await fetch(`${base()}/api/whatsapp/primary-owner`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -196,27 +199,8 @@ function VerifCodeCard({
   busy: boolean;
 }) {
   const remaining = useCountdown(active?.expiresAt ?? null);
-  const pct = active
-    ? Math.round(
-        (remaining /
-          Math.max(
-            1,
-            Math.floor(
-              (new Date(active.expiresAt).getTime() -
-                new Date(active.expiresAt).getTime() +
-                10 * 60) /
-                1
-            )
-          )) *
-          100
-      )
-    : 0;
 
-  const progressPct = active
-    ? Math.round(
-        (remaining / 600) * 100
-      )
-    : 0;
+  const progressPct = active ? Math.round((remaining / 600) * 100) : 0;
 
   const isExpired = active ? remaining === 0 : false;
 
@@ -276,13 +260,11 @@ function VerifCodeCard({
             scanner atas. Kode otomatis hangus setelah digunakan.
           </p>
         </div>
-      ) : (
-        active && isExpired ? (
-          <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-            Kode terakhir sudah kedaluwarsa. Generate kode baru.
-          </p>
-        ) : null
-      )}
+      ) : active && isExpired ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+          Kode terakhir sudah kedaluwarsa. Generate kode baru.
+        </p>
+      ) : null}
 
       <Button
         disabled={busy}
@@ -296,7 +278,9 @@ function VerifCodeCard({
         ) : (
           <KeyRoundIcon className="size-3.5" />
         )}
-        {active && !isExpired ? "Generate kode baru" : "Generate kode verifikasi"}
+        {active && !isExpired
+          ? "Generate kode baru"
+          : "Generate kode verifikasi"}
       </Button>
     </section>
   );
@@ -331,8 +315,8 @@ function PrimaryOwnerCard({
         Semua alert sistem (service down, error, persetujuan remediasi) dikirim
         ke nomor ini. Kamu bisa balas{" "}
         <span className="font-mono text-foreground">SETUJU abc12345</span> atau{" "}
-        <span className="font-mono text-foreground">TOLAK abc12345</span> langsung
-        dari WhatsApp.
+        <span className="font-mono text-foreground">TOLAK abc12345</span>{" "}
+        langsung dari WhatsApp.
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -344,9 +328,7 @@ function PrimaryOwnerCard({
             className="font-mono text-sm"
             id="wa-primary-owner"
             inputMode="tel"
-            onChange={(e) =>
-              setDraft(e.target.value.replace(/[^\d+]/g, ""))
-            }
+            onChange={(e) => setDraft(e.target.value.replace(/[^\d+]/g, ""))}
             placeholder="85568541476 atau 6281234567890"
             value={draft}
           />
@@ -357,9 +339,7 @@ function PrimaryOwnerCard({
           size="sm"
           type="button"
         >
-          {busy ? (
-            <Loader2Icon className="size-3.5 animate-spin" />
-          ) : null}
+          {busy ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
           Simpan
         </Button>
         {primaryOwner ? (
@@ -378,7 +358,9 @@ function PrimaryOwnerCard({
 
       {owners.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
-          <span className="text-[10px] text-muted-foreground">Pilih cepat:</span>
+          <span className="text-[10px] text-muted-foreground">
+            Pilih cepat:
+          </span>
           {owners.map((o) => (
             <button
               className="rounded-md border border-border/40 bg-background/60 px-2 py-0.5 font-mono text-[10px] hover:border-primary/40"
@@ -443,7 +425,9 @@ function OwnersCard({
         <div className="flex flex-col items-center gap-2 py-4 text-center text-xs text-muted-foreground">
           <UserXIcon className="size-8 opacity-30" />
           <p>Belum ada nomor terverifikasi.</p>
-          <p>Generate kode di atas lalu kirim dari HP yang ingin didaftarkan.</p>
+          <p>
+            Generate kode di atas lalu kirim dari HP yang ingin didaftarkan.
+          </p>
         </div>
       ) : (
         <>
@@ -451,33 +435,33 @@ function OwnersCard({
             Satu verifikasi = satu nomor. ID internal WhatsApp (@lid) tidak
             ditampilkan sebagai owner terpisah.
           </p>
-        <ul className="space-y-2">
-          {owners.map((o) => (
-            <li
-              className="flex items-center gap-3 rounded-lg border border-border/30 bg-background/50 px-3 py-2"
-              key={o.phone}
-            >
-              <SmartphoneIcon className="size-4 shrink-0 text-emerald-500" />
-              <div className="min-w-0 flex-1">
-                <p className="font-mono text-sm font-medium">+{o.phone}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Terverifikasi {fmt(o.verifiedAt)}
-                  {o.label ? ` · ${o.label}` : ""}
-                </p>
-              </div>
-              <Button
-                disabled={busy}
-                onClick={() => onRevoke(o.phone)}
-                size="icon-sm"
-                type="button"
-                variant="ghost"
+          <ul className="space-y-2">
+            {owners.map((o) => (
+              <li
+                className="flex items-center gap-3 rounded-lg border border-border/30 bg-background/50 px-3 py-2"
+                key={o.phone}
               >
-                <Trash2Icon className="size-3.5 text-destructive" />
-                <span className="sr-only">Cabut akses {o.phone}</span>
-              </Button>
-            </li>
-          ))}
-        </ul>
+                <SmartphoneIcon className="size-4 shrink-0 text-emerald-500" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-sm font-medium">+{o.phone}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Terverifikasi {fmt(o.verifiedAt)}
+                    {o.label ? ` · ${o.label}` : ""}
+                  </p>
+                </div>
+                <Button
+                  disabled={busy}
+                  onClick={() => onRevoke(o.phone)}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <Trash2Icon className="size-3.5 text-destructive" />
+                  <span className="sr-only">Cabut akses {o.phone}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </section>
@@ -537,11 +521,10 @@ function mergePollState(
   if (
     prev.qr &&
     prev.status === "qr" &&
-    (!next.qr || next.status === "idle" || next.status === "connecting")
+    (!next.qr || next.status === "idle" || next.status === "connecting") &&
+    next.updatedAt <= prev.updatedAt
   ) {
-    if (next.updatedAt <= prev.updatedAt) {
-      return prev;
-    }
+    return prev;
   }
   if (next.updatedAt >= prev.updatedAt) {
     return next;
@@ -579,7 +562,9 @@ export function WhatsappPanel() {
   useEffect(() => {
     void refreshAll();
     const ms =
-      waState?.status === "qr" || waState?.status === "connecting" ? 1500 : 4000;
+      waState?.status === "qr" || waState?.status === "connecting"
+        ? 1500
+        : 4000;
     pollRef.current = setInterval(() => {
       void refreshAll();
     }, ms);
@@ -598,9 +583,15 @@ export function WhatsappPanel() {
       if (!res.ok) throw new Error(json.error ?? "Gagal menyambungkan");
       setWaState((prev) => mergePollState(prev, json));
       if (json.status === "qr" && json.qr) {
-        toast({ type: "success", description: "QR siap — scan dari HP sekarang." });
+        toast({
+          type: "success",
+          description: "QR siap — scan dari HP sekarang.",
+        });
       } else {
-        toast({ type: "success", description: "Menyiapkan sambungan WhatsApp…" });
+        toast({
+          type: "success",
+          description: "Menyiapkan sambungan WhatsApp…",
+        });
       }
     } catch (e) {
       toast({
@@ -615,7 +606,9 @@ export function WhatsappPanel() {
   const logout = useCallback(async () => {
     setBusy(true);
     try {
-      const res = await fetch(`${base()}/api/whatsapp/logout`, { method: "POST" });
+      const res = await fetch(`${base()}/api/whatsapp/logout`, {
+        method: "POST",
+      });
       const json = (await res.json()) as WhatsappState;
       setWaState(json);
       toast({ type: "success", description: "WhatsApp diputus." });
@@ -671,29 +664,26 @@ export function WhatsappPanel() {
     [refreshAll]
   );
 
-  const savePrimary = useCallback(
-    async (phone: string) => {
-      setBusy(true);
-      try {
-        const res = await savePrimaryOwner(phone);
-        setPrimaryOwner(res.primaryOwner);
-        toast({
-          type: "success",
-          description: res.primaryOwner
-            ? `Owner utama: +${res.primaryOwner}`
-            : "Owner utama dihapus",
-        });
-      } catch (e) {
-        toast({
-          type: "error",
-          description: e instanceof Error ? e.message : "Gagal menyimpan",
-        });
-      } finally {
-        setBusy(false);
-      }
-    },
-    []
-  );
+  const savePrimary = useCallback(async (phone: string) => {
+    setBusy(true);
+    try {
+      const res = await savePrimaryOwner(phone);
+      setPrimaryOwner(res.primaryOwner);
+      toast({
+        type: "success",
+        description: res.primaryOwner
+          ? `Owner utama: +${res.primaryOwner}`
+          : "Owner utama dihapus",
+      });
+    } catch (e) {
+      toast({
+        type: "error",
+        description: e instanceof Error ? e.message : "Gagal menyimpan",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }, []);
 
   const testAlert = useCallback(async () => {
     setBusy(true);
@@ -701,7 +691,11 @@ export function WhatsappPanel() {
       const res = await fetch(`${base()}/api/whatsapp/test-alert`, {
         method: "POST",
       });
-      const json = (await res.json()) as { ok?: boolean; error?: string; target?: string };
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        target?: string;
+      };
       if (!res.ok || !json.ok) {
         throw new Error(json.error ?? "Gagal kirim test alert");
       }
@@ -874,19 +868,15 @@ export function WhatsappPanel() {
       />
 
       {/* ── Verified owners ── */}
-      <OwnersCard
-        busy={busy}
-        onRevoke={revokeOwner}
-        owners={owners}
-      />
+      <OwnersCard busy={busy} onRevoke={revokeOwner} owners={owners} />
 
       {/* ── Audit log ── */}
       <AuditLogCard logs={logs} />
 
       <p className="text-[11px] text-muted-foreground">
-        Kredensial WhatsApp disimpan terenkripsi di database. Di Vercel,
-        koneksi WebSocket tidak menetap antar cold start — untuk online 24 jam
-        jalankan di host yang selalu nyala atau gunakan bridge eksternal.
+        Kredensial WhatsApp disimpan terenkripsi di database. Di Vercel, koneksi
+        WebSocket tidak menetap antar cold start — untuk online 24 jam jalankan
+        di host yang selalu nyala atau gunakan bridge eksternal.
       </p>
     </div>
   );

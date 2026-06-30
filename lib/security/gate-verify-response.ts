@@ -2,7 +2,7 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { useSecureCookies } from "@/lib/constants";
+import { shouldUseSecureCookies } from "@/lib/constants";
 import { DEVICE_COOKIE_NAME, GATE_COOKIE_NAME } from "@/lib/security/gate-edge";
 
 const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
@@ -13,7 +13,7 @@ async function attachGateSessionCookies(
   deviceId: string,
   gateCookieMaxAge: number
 ): Promise<NextResponse> {
-  const secure = useSecureCookies();
+  const secure = shouldUseSecureCookies();
   const cookieOpts = {
     httpOnly: true,
     secure,
@@ -55,7 +55,12 @@ export async function buildGateLoginSuccessResponse(
   gateCookieMaxAge: number
 ): Promise<NextResponse> {
   const response = NextResponse.redirect(target);
-  return attachGateSessionCookies(response, gateToken, deviceId, gateCookieMaxAge);
+  return attachGateSessionCookies(
+    response,
+    gateToken,
+    deviceId,
+    gateCookieMaxAge
+  );
 }
 
 /**
@@ -72,5 +77,10 @@ export async function buildGateLoginSuccessJsonResponse(
     ok: true,
     redirectUrl: redirectPath,
   });
-  return attachGateSessionCookies(response, gateToken, deviceId, gateCookieMaxAge);
+  return attachGateSessionCookies(
+    response,
+    gateToken,
+    deviceId,
+    gateCookieMaxAge
+  );
 }

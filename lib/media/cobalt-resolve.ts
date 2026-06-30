@@ -3,11 +3,11 @@ import "server-only";
 import { formatCobaltApiError } from "@/lib/media/cobalt-error";
 import {
   buildCobaltFetchHeaders,
+  type CobaltResponse,
   isCobaltTunnelUrl,
   isOnCobaltHost,
   normalizeHttpUrl,
   resolveCobaltDownloadUrl,
-  type CobaltResponse,
 } from "@/lib/media/cobalt-shared";
 import { baseProgress, reportProgress } from "@/lib/media/progress";
 import type {
@@ -94,7 +94,9 @@ export async function requestCobaltDownload(
   }
 
   if (!res.ok || data.status === "error") {
-    throw new Error(`${label}: ${formatCobaltApiError(data.error, res.status)}`);
+    throw new Error(
+      `${label}: ${formatCobaltApiError(data.error, res.status)}`
+    );
   }
 
   if (data.status === "picker") {

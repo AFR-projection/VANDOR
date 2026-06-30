@@ -1,10 +1,7 @@
 import { desc, eq } from "drizzle-orm";
-import {
-  type AgentTerminalStream,
-  agentTerminalLog,
-} from "@/lib/db/schema";
-import { db } from "./db";
+import { type AgentTerminalStream, agentTerminalLog } from "@/lib/db/schema";
 import { generateUUID } from "@/lib/utils";
+import { db } from "./db";
 
 export type TerminalLineInput = {
   sessionId: string;

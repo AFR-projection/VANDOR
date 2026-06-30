@@ -10,20 +10,20 @@ import {
   maskSecret,
 } from "@/lib/security/crypto";
 import { hashNumpadPin } from "@/lib/security/pin-hash";
+import { invalidateIntegrationRuntimeCache } from "@/lib/settings/integration-runtime";
 import {
   type IntegrationSecretKey,
   type IntegrationSecretsPayload,
   isIntegrationSecretKey,
 } from "@/lib/settings/integration-secret-keys";
-import { invalidateIntegrationRuntimeCache } from "@/lib/settings/integration-runtime";
 import { getUserSettings } from "@/lib/settings/queries";
 import type {
   SecretFieldView,
-  SecretsPublicView,
   SecretSource,
+  SecretsPublicView,
 } from "@/lib/settings/secrets-types";
 
-export type { SecretFieldView, SecretsPublicView, SecretSource };
+export type { SecretFieldView, SecretSource, SecretsPublicView };
 
 const client = postgres(process.env.POSTGRES_URL ?? "", { prepare: false });
 const db = drizzle(client);
@@ -37,7 +37,9 @@ async function getRow(userId: string) {
   return rows.at(0) ?? null;
 }
 
-function readExtraSecretsEnc(payload: string | null | undefined): IntegrationSecretsPayload {
+function readExtraSecretsEnc(
+  payload: string | null | undefined
+): IntegrationSecretsPayload {
   if (!payload) {
     return {};
   }
@@ -49,7 +51,11 @@ function readExtraSecretsEnc(payload: string | null | undefined): IntegrationSec
     const parsed = JSON.parse(dec) as Record<string, unknown>;
     const out: IntegrationSecretsPayload = {};
     for (const [key, value] of Object.entries(parsed)) {
-      if (isIntegrationSecretKey(key) && typeof value === "string" && value.trim()) {
+      if (
+        isIntegrationSecretKey(key) &&
+        typeof value === "string" &&
+        value.trim()
+      ) {
         out[key] = value.trim();
       }
     }

@@ -5,9 +5,9 @@ import {
   listRules,
   updateRule,
 } from "@/lib/autonomous/rules";
+import type { AgentRiskLevel, AgentRuleKind } from "@/lib/db/schema";
+import { agentRiskLevels, agentRuleKinds } from "@/lib/db/schema";
 import { requireClientAccess } from "@/lib/security/client-access";
-import type { AgentRuleKind, AgentRiskLevel } from "@/lib/db/schema";
-import { agentRuleKinds, agentRiskLevels } from "@/lib/db/schema";
 
 async function guard(request: Request) {
   const denied = await requireClientAccess(request);
@@ -124,7 +124,10 @@ export async function PATCH(request: Request) {
   });
 
   if (!rule) {
-    return Response.json({ error: "Rule tidak ditemukan/invalid" }, { status: 404 });
+    return Response.json(
+      { error: "Rule tidak ditemukan/invalid" },
+      { status: 404 }
+    );
   }
   return Response.json({ rule });
 }

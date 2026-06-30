@@ -1,7 +1,7 @@
 import { desc } from "drizzle-orm";
 import {
-  agentNotification,
   type AgentMode,
+  agentNotification,
   systemMetric,
 } from "@/lib/db/schema";
 import { maybeNotifyPendingApprovals } from "./approval-notify";
@@ -9,13 +9,13 @@ import { listAgentActions } from "./audit";
 import { db } from "./db";
 import { listRecentEvents } from "./events";
 import { listGoals } from "./goals";
+import { getLatestHeartbeat } from "./heartbeat";
 import { listPendingApprovals } from "./permission";
 import { listRules } from "./rules";
 import { listSchedules } from "./schedules-manage";
 import { getAgentState, setKillSwitch, setMode } from "./state";
-import { getLatestHeartbeat } from "./heartbeat";
-import { listTerminalLogs } from "./terminal-log";
 import { listRecentTasks } from "./tasks";
+import { listTerminalLogs } from "./terminal-log";
 
 export async function getOverview() {
   const [

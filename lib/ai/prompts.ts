@@ -1,11 +1,7 @@
 import type { Geo } from "@vercel/functions";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import { buildPersonaPromptBlock } from "@/lib/ai/build-persona-prompt";
-import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
-import {
-  buildOwnerConversationFreedomBlock,
-  buildSystemSecurityFence,
-} from "@/lib/ai/system-security-fence";
+import { buildSystemSecurityFence } from "@/lib/ai/system-security-fence";
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
 import { VANDOR_CHAT_TOOLS } from "@/lib/ai/tools/registry";
 import { MEDIA_SLASH_HINT } from "@/lib/chat/media-slash";

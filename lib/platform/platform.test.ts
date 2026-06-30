@@ -2,24 +2,21 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { PLATFORM_AGENT_DEFINITIONS } from "./agents/definitions";
 import { registerPlatformAgents } from "./agents/index";
+import { defineAgent } from "./core/agent-definition";
 import {
   clearAgentRegistry,
   getAgent,
   listAgentIds,
   registerAgent,
 } from "./core/agent-registry";
-import { defineAgent } from "./core/agent-definition";
-import { PLATFORM_AGENT_IDS } from "./core/types";
 import { buildStaticToolCatalog } from "./core/tool-catalog";
 import {
   listTools,
   listToolsForAgent,
   resetToolCatalogForTests,
 } from "./core/tool-registry";
-import {
-  bootstrapPlatformV2,
-  resetPlatformBootstrapForTests,
-} from "./init";
+import { PLATFORM_AGENT_IDS } from "./core/types";
+import { bootstrapPlatformV2, resetPlatformBootstrapForTests } from "./init";
 
 describe("platform agent registry", () => {
   it("registers all 12 V2 agents", () => {

@@ -1,13 +1,13 @@
 import "server-only";
 
 import { maskSecret } from "@/lib/security/crypto";
-import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
-import { getExtraSecretsDecrypted } from "@/lib/settings/secrets-queries";
 import { getUserSettings } from "@/lib/settings/queries";
+import { getExtraSecretsDecrypted } from "@/lib/settings/secrets-queries";
 import {
   defaultUserSettings,
   type IntegrationsSettings,
 } from "@/lib/settings/types";
+import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
 import type { IntegrationSecretsPayload } from "./integration-secret-keys";
 
 export type SecretSource = "database" | "env" | "none";
@@ -100,13 +100,11 @@ function buildRuntimeConfig(
     process.env.R2_SECRET_ACCESS_KEY
   );
   const r2AccountId = pickSecret(
-    extra.r2AccountId ??
-      (integrations.r2AccountId.trim() || undefined),
+    extra.r2AccountId ?? (integrations.r2AccountId.trim() || undefined),
     process.env.R2_ACCOUNT_ID
   );
   const r2Bucket = pickSecret(
-    extra.r2BucketName ??
-      (integrations.r2BucketName.trim() || undefined),
+    extra.r2BucketName ?? (integrations.r2BucketName.trim() || undefined),
     process.env.R2_BUCKET_NAME
   );
   const r2PublicUrl = pickConfig(
@@ -120,8 +118,7 @@ function buildRuntimeConfig(
     process.env.COBALT_API_URL
   );
   const cobaltAllowPublic =
-    integrations.cobaltAllowPublic ||
-    process.env.COBALT_ALLOW_PUBLIC === "1";
+    integrations.cobaltAllowPublic || process.env.COBALT_ALLOW_PUBLIC === "1";
 
   const owm = pickSecret(
     extra.openweathermapApiKey,
@@ -137,10 +134,7 @@ function buildRuntimeConfig(
   );
 
   const r2Configured = Boolean(
-    r2AccountId.value &&
-      r2Bucket.value &&
-      r2Access.value &&
-      r2Secret.value
+    r2AccountId.value && r2Bucket.value && r2Access.value && r2Secret.value
   );
 
   const cobaltConfigured = Boolean(

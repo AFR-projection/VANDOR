@@ -1,6 +1,4 @@
-import http from "node:http";
-import { request as httpRequest } from "node:http";
-import { request as httpsRequest } from "node:https";
+import http, { request as httpRequest } from "node:http";
 
 const PORT = Number(process.env.PORT || 8080);
 const COBALT_PORT = Number(process.env.COBALT_PORT || 9000);

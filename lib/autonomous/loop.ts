@@ -1,33 +1,27 @@
+import { maybeNotifyPendingApprovals } from "./approval-notify";
+import { type AutoFixResult, autoFixIssues } from "./auto-fix";
 import { autonomousConfig } from "./config";
 import { emitEvent } from "./events";
-import {
-  autoFixIssues,
-  type AutoFixResult,
-} from "./auto-fix";
-import {
-  executeApprovedRemediations,
-  processTaskQueue,
-} from "./executor";
+import { executeApprovedRemediations, processTaskQueue } from "./executor";
 import { detectIssues, type ObservationBundle } from "./healing/detectors";
 import { handleIssues } from "./healing/remediations";
 import { recordEnhancedHeartbeat } from "./heartbeat";
 import { createLogger } from "./logger";
 import { scanLogs } from "./logs";
 import { collectMetrics } from "./metrics";
+import { resolveOwnerUserId } from "./owner";
+import { expireOldApprovals } from "./permission";
 import { assessSystem } from "./planner";
 import { planAndActFromAssessment } from "./planner-act";
 import { processActiveGoals } from "./planner-goals";
-import { expireOldApprovals } from "./permission";
-import { maybeNotifyPendingApprovals } from "./approval-notify";
 import { runProactiveOutreach } from "./proactive-outreach";
+import { scheduleRemoteChecksIfConfigured } from "./remote-hosts";
 import { ensureDefaultRules } from "./rules";
 import { ensureDefaultSchedules, runDueSchedules } from "./schedules";
-import { scheduleRemoteChecksIfConfigured } from "./remote-hosts";
 import { collectServiceHealth } from "./services";
-import { resolveOwnerUserId } from "./owner";
 import { getAgentState, recordHeartbeat } from "./state";
-import { persistMetrics, registerMonitorTools } from "./tools/monitor";
 import { registerBuiltinTools } from "./tools";
+import { persistMetrics, registerMonitorTools } from "./tools/monitor";
 import { registerShellTools } from "./tools/shell";
 import type { ToolContext } from "./types";
 import { checkUrls } from "./uptime";
@@ -132,22 +126,12 @@ export async function runTick(): Promise<void> {
   const tasksDone = await processTaskQueue(ctx);
   const executed = await executeApprovedRemediations();
 
-  let platformTick = {
-    runsProcessed: 0,
-    stepsProcessed: 0,
-    activeRuns: 0,
-  };
   try {
     const { runPlatformOrchestratorTick } = await import(
       "@/lib/platform/orchestrator/tick"
     );
     const tick = await runPlatformOrchestratorTick();
     if (tick.enabled && tick.runsProcessed > 0) {
-      platformTick = {
-        runsProcessed: tick.runsProcessed,
-        stepsProcessed: tick.stepsProcessed,
-        activeRuns: tick.activeRuns,
-      };
       log.info(
         `platform tick: ${tick.runsProcessed} run, ${tick.stepsProcessed} step, ${tick.activeRuns} active`
       );

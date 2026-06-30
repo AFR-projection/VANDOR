@@ -23,7 +23,7 @@ export function formatFixtures(fixtures: FootballFixtureItem[]): string {
     const { fixture, league, teams, goals, score } = item;
     const status = fixture.status.short;
     const elapsed =
-      fixture.status.elapsed !== null ? ` ${fixture.status.elapsed}'` : "";
+      fixture.status.elapsed === null ? "" : ` ${fixture.status.elapsed}'`;
     const liveTag =
       status === "1H" || status === "2H" || status === "HT" || status === "ET"
         ? " 🔴"
@@ -31,10 +31,7 @@ export function formatFixtures(fixtures: FootballFixtureItem[]): string {
     const resultScore =
       goals.home !== null && goals.away !== null
         ? fmtScore(goals.home, goals.away)
-        : fmtScore(
-            score.fulltime?.home ?? null,
-            score.fulltime?.away ?? null
-          );
+        : fmtScore(score.fulltime?.home ?? null, score.fulltime?.away ?? null);
 
     lines.push(
       `[${league.name}] ${teams.home.name} vs ${teams.away.name} — ${resultScore} (${status}${elapsed})${liveTag} — ${fixture.date.slice(0, 16).replace("T", " ")} UTC`
@@ -116,7 +113,7 @@ export function formatMatchDetail(fixture: FootballFixtureItem): string {
   const lines = [
     `${teams.home.name} vs ${teams.away.name}`,
     `Liga: ${league.name} (${league.country}) — ${league.round ?? ""}`,
-    `Status: ${f.status.long}${f.status.elapsed !== null ? ` (${f.status.elapsed}')` : ""}`,
+    `Status: ${f.status.long}${f.status.elapsed === null ? "" : ` (${f.status.elapsed}')`}`,
     `Skor: ${fmtScore(goals.home, goals.away)}`,
   ];
   if (
@@ -125,12 +122,12 @@ export function formatMatchDetail(fixture: FootballFixtureItem): string {
     score.halftime?.away !== null &&
     score.halftime?.away !== undefined
   ) {
-    lines.push(
-      `HT: ${fmtScore(score.halftime.home, score.halftime.away)}`
-    );
+    lines.push(`HT: ${fmtScore(score.halftime.home, score.halftime.away)}`);
   }
   if (f.venue?.name) {
-    lines.push(`Venue: ${f.venue.name}${f.venue.city ? `, ${f.venue.city}` : ""}`);
+    lines.push(
+      `Venue: ${f.venue.name}${f.venue.city ? `, ${f.venue.city}` : ""}`
+    );
   }
   lines.push(`Tanggal: ${f.date}`);
   lines.push(`Fixture ID: ${f.id}`);

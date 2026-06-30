@@ -8,8 +8,7 @@ import type {
   SkillExecutionResult,
 } from "./types";
 
-const READ_ONLY_SQL =
-  /^\s*(SELECT|WITH|SHOW|DESCRIBE|EXPLAIN)\b/i;
+const READ_ONLY_SQL = /^\s*(SELECT|WITH|SHOW|DESCRIBE|EXPLAIN)\b/i;
 
 function isReadOnlySql(sql: string): boolean {
   const trimmed = sql.trim();

@@ -79,9 +79,7 @@ export async function runDueSchedules(): Promise<number> {
     .where(eq(agentSchedule.enabled, true));
 
   let triggered = 0;
-  const due = schedules.filter((s) =>
-    isDue(s.kind, s.expression, s.lastRunAt)
-  );
+  const due = schedules.filter((s) => isDue(s.kind, s.expression, s.lastRunAt));
 
   await Promise.all(
     due.map(async (s) => {

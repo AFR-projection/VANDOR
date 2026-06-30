@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { WASocket, WAMessage } from "@whiskeysockets/baileys";
+import type { WAMessage, WASocket } from "@whiskeysockets/baileys";
 
 export type WhatsappOutboundAttachment = {
   kind: "image" | "video" | "audio" | "document" | "sticker";
@@ -46,7 +46,8 @@ function parseAttachmentFromToolOutput(
 
   const filename =
     (typeof o.filename === "string" && o.filename) ||
-    (typeof o.title === "string" && `${o.title.replace(/[^\w.-]+/g, "_")}.pdf`) ||
+    (typeof o.title === "string" &&
+      `${o.title.replace(/[^\w.-]+/g, "_")}.pdf`) ||
     "vandor-file";
 
   if (kind === "image") {

@@ -4,6 +4,7 @@ import { requireVaultUnlock } from "@/lib/security/vault-unlock";
 import { getVaultFileById } from "@/lib/vault/queries";
 import { decryptVaultFile } from "@/lib/vault/retrieve";
 import { requireVaultSession } from "@/lib/vault/route-auth";
+
 function clientIp(request: Request): string | undefined {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -41,13 +42,17 @@ export async function GET(
   }
 
   const file = await decryptVaultFile({
-    userId: vaultAuth.vaultUserId,    fileId: id,
+    userId: vaultAuth.vaultUserId,
+    fileId: id,
     ip: clientIp(request),
     auditDetail: { purpose: "chat_open" },
   });
 
   if (!file) {
-    return Response.json({ error: "Failed to open vault file" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to open vault file" },
+      { status: 500 }
+    );
   }
 
   return new Response(new Uint8Array(file.data), {

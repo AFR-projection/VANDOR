@@ -16,7 +16,11 @@ async function runShellGuarded(
   ctx.logger.debug(`shell verdict ${verdict.decision}`, command);
 
   if (verdict.decision === "deny") {
-    return { ok: false, error: `DITOLAK: ${verdict.reason}`, summary: "blocked" };
+    return {
+      ok: false,
+      error: `DITOLAK: ${verdict.reason}`,
+      summary: "blocked",
+    };
   }
   if (verdict.decision === "require_approval") {
     return {

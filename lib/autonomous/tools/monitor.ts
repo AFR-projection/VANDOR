@@ -1,11 +1,11 @@
 import { systemMetric } from "@/lib/db/schema";
-import { db } from "../db";
-import { collectMetrics, type SystemMetrics } from "../metrics";
-import { scanLogs } from "../logs";
 import { autonomousConfig } from "../config";
+import { db } from "../db";
+import { scanLogs } from "../logs";
+import { collectMetrics, type SystemMetrics } from "../metrics";
 import { collectServiceHealth } from "../services";
-import { checkUrls } from "../uptime";
 import type { ToolContext, ToolResult } from "../types";
+import { checkUrls } from "../uptime";
 import { registerTool } from "./index";
 
 /** Simpan snapshot metrik ke DB untuk dashboard/tren. */
@@ -21,7 +21,6 @@ export async function persistMetrics(m: SystemMetrics): Promise<void> {
       payload: m,
     });
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: surface metric persist failure
     console.error("persistMetrics failed:", error);
   }
 }

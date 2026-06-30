@@ -84,7 +84,8 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
   defineAgent({
     id: "memory",
     name: "Memory Agent",
-    description: "Gateway memori — short/long/conversation/project/user/knowledge.",
+    description:
+      "Gateway memori — short/long/conversation/project/user/knowledge.",
     capabilities: ["store", "retrieve", "merge", "scope"],
     tools: AGENT_TOOL_MAP.memory,
     memoryScopes: [
@@ -118,7 +119,8 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
   defineAgent({
     id: "fix",
     name: "Fix Agent",
-    description: "Analisa error, perbaiki, koordinasi re-test via orchestrator.",
+    description:
+      "Analisa error, perbaiki, koordinasi re-test via orchestrator.",
     capabilities: ["diagnose", "patch", "verify"],
     tools: AGENT_TOOL_MAP.fix,
     memoryScopes: ["project", "knowledge"],

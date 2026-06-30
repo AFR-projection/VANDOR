@@ -1,9 +1,5 @@
 import { and, desc, eq, lt } from "drizzle-orm";
-import {
-  type AgentRiskLevel,
-  agentApproval,
-  agentTask,
-} from "@/lib/db/schema";
+import { type AgentRiskLevel, agentApproval, agentTask } from "@/lib/db/schema";
 import { db } from "./db";
 
 export type CreateApprovalInput = {
@@ -34,7 +30,9 @@ export async function findPendingApprovalByShortId(shortId: string) {
     return matches[0];
   }
   if (matches.length > 1) {
-    return matches.find((row) => approvalShortId(row.id) === normalized) ?? null;
+    return (
+      matches.find((row) => approvalShortId(row.id) === normalized) ?? null
+    );
   }
   return null;
 }
@@ -105,9 +103,7 @@ export async function decideApproval(
   const res = await db
     .update(agentApproval)
     .set({ status: decision, decidedBy, decidedAt: new Date() })
-    .where(
-      and(eq(agentApproval.id, id), eq(agentApproval.status, "pending"))
-    )
+    .where(and(eq(agentApproval.id, id), eq(agentApproval.status, "pending")))
     .returning({ id: agentApproval.id });
   return res.length > 0;
 }
@@ -148,7 +144,7 @@ export async function markApprovalConsumed(id: string): Promise<void> {
 /** Setelah approval deploy/task — lanjutkan task antrian. */
 export async function resumeApprovedTask(approvalId: string): Promise<void> {
   const row = await getApproval(approvalId);
-  if (!row || row.status !== "approved" || !row.taskId) {
+  if (row?.status !== "approved" || !row?.taskId) {
     return;
   }
 

@@ -5,6 +5,7 @@ import {
 } from "@/lib/ai/model-tiers";
 
 import { apiBasePath } from "@/lib/app-url";
+
 const base = apiBasePath;
 
 export function setChatModelCookie(mode: string) {

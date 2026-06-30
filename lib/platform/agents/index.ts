@@ -1,8 +1,8 @@
-import { PLATFORM_AGENT_DEFINITIONS } from "./definitions";
 import {
   isAgentRegistryBootstrapped,
   registerAgent,
 } from "../core/agent-registry";
+import { PLATFORM_AGENT_DEFINITIONS } from "./definitions";
 
 export function registerPlatformAgents(): void {
   if (isAgentRegistryBootstrapped()) {

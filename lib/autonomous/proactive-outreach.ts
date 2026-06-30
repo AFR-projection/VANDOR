@@ -1,10 +1,9 @@
-import { autonomousConfig } from "./config";
 import { collectSystemAwareness } from "./awareness";
 import { composeOperatorWhatsappMessage } from "./compose-message";
+import { autonomousConfig } from "./config";
+import type { Issue, ObservationBundle } from "./healing/detectors";
 import type { HeartbeatSnapshot } from "./heartbeat";
 import { getLatestHeartbeat, touchProactiveHeartbeat } from "./heartbeat";
-import type { Issue } from "./healing/detectors";
-import type { ObservationBundle } from "./healing/detectors";
 import { createLogger } from "./logger";
 import { notify } from "./notify";
 
@@ -29,12 +28,15 @@ function fallbackAlert(issues: Issue[], obs: ObservationBundle): string {
   );
 }
 
-function fallbackCheckIn(hb: HeartbeatSnapshot | null, obs: ObservationBundle): string {
+function fallbackCheckIn(
+  hb: HeartbeatSnapshot | null,
+  obs: ObservationBundle
+): string {
   const m = obs.metrics;
   return (
     `Halo! Skor kesehatan ${hb?.healthScore ?? "?"}/100. ` +
     `CPU ${m.cpuPct}% · RAM ${m.memUsedPct}%.\n\n` +
-    `Ada yang perlu kubantu hari ini?`
+    "Ada yang perlu kubantu hari ini?"
   );
 }
 
@@ -87,8 +89,7 @@ export async function runProactiveOutreach(input: {
     log.info(`Proactive alert — ${input.issues.length} isu`);
   }
 
-  const dueCheckIn =
-    msSince(hb?.proactive?.lastCheckInAt) >= checkInCooldown;
+  const dueCheckIn = msSince(hb?.proactive?.lastCheckInAt) >= checkInCooldown;
 
   if (dueCheckIn && input.issues.length === 0) {
     let body =

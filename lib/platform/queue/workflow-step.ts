@@ -228,11 +228,5 @@ export async function allStepsCompleted(runId: string): Promise<boolean> {
 
 export async function hasPendingSteps(runId: string): Promise<boolean> {
   const counts = await countStepsByStatus(runId);
-  return (
-    counts.pending +
-      counts.queued +
-      counts.running +
-      counts.waiting >
-    0
-  );
+  return counts.pending + counts.queued + counts.running + counts.waiting > 0;
 }

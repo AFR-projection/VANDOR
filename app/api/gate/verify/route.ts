@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { signIn } from "@/app/(auth)/auth";
 
-import { useSecureCookies } from "@/lib/constants";
+import { shouldUseSecureCookies } from "@/lib/constants";
 
 import { ensureOwnerUser } from "@/lib/db/ensure-owner";
 import {
@@ -23,12 +23,11 @@ import {
   recordLoginHistory,
   registerSession,
 } from "@/lib/security/gate";
-
+import { formatGateBanDuration } from "@/lib/security/gate-edge";
 import {
   buildGateLoginSuccessJsonResponse,
   buildGateLoginSuccessResponse,
 } from "@/lib/security/gate-verify-response";
-import { formatGateBanDuration } from "@/lib/security/gate-edge";
 import { lookupGeoIp } from "@/lib/security/geo-ip";
 
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
@@ -142,7 +141,7 @@ export async function POST(request: Request) {
         failRes.cookies.set(DEVICE_COOKIE_NAME, deviceId, {
           httpOnly: true,
 
-          secure: useSecureCookies(),
+          secure: shouldUseSecureCookies(),
 
           sameSite: "lax",
 
@@ -169,7 +168,7 @@ export async function POST(request: Request) {
       failRes.cookies.set(DEVICE_COOKIE_NAME, deviceId, {
         httpOnly: true,
 
-        secure: useSecureCookies(),
+        secure: shouldUseSecureCookies(),
 
         sameSite: "lax",
 

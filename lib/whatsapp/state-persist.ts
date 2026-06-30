@@ -25,7 +25,9 @@ function parseStatus(raw: string): WhatsappStatus {
   return "idle";
 }
 
-export async function loadWhatsappState(userId: string): Promise<WhatsappState | null> {
+export async function loadWhatsappState(
+  userId: string
+): Promise<WhatsappState | null> {
   const rows = await db
     .select()
     .from(whatsappSessionState)
@@ -71,7 +73,9 @@ export async function saveWhatsappState(
 }
 
 export async function clearWhatsappState(userId: string): Promise<void> {
-  await db.delete(whatsappSessionState).where(eq(whatsappSessionState.userId, userId));
+  await db
+    .delete(whatsappSessionState)
+    .where(eq(whatsappSessionState.userId, userId));
 }
 
 export function mergeWhatsappStates(

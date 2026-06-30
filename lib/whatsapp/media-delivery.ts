@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { WASocket, WAMessage } from "@whiskeysockets/baileys";
+import type { WAMessage, WASocket } from "@whiskeysockets/baileys";
 import { parseMediaSlash } from "@/lib/chat/media-slash";
 import { downloadSocialMedia } from "@/lib/media/download";
 import type { MediaDownloadFormat } from "@/lib/media/types";
@@ -45,14 +45,12 @@ export async function deliverWhatsappMediaDownload(
     { quoted: msg }
   );
 
-  const result = await downloadSocialMedia(
-    {
-      url: slash.url,
-      format: slash.format,
-      platform: slash.platform,
-      retainBuffer: true,
-    }
-  );
+  const result = await downloadSocialMedia({
+    url: slash.url,
+    format: slash.format,
+    platform: slash.platform,
+    retainBuffer: true,
+  });
 
   recordMediaDownloadLog({
     userId,

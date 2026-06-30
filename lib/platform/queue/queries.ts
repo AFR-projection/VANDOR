@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
+import type { PlatformLogLevel } from "@/lib/db/schema";
 import {
   platformAgentRunLog,
   platformWorkflowRun,
   platformWorkflowStep,
 } from "@/lib/db/schema";
-import type { PlatformLogLevel } from "@/lib/db/schema";
 import { getPlatformDb } from "../db";
 
 export async function appendAgentRunLog(input: {

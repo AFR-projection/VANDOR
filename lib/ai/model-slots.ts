@@ -171,7 +171,8 @@ export const MODEL_SLOT_DEFINITIONS: ModelSlotDefinition[] = [
   {
     key: "transcriptionModel",
     label: "Transkripsi audio",
-    description: "Tool transcribeAudio & input mikrofon web. Kosong = pakai Vision/Chat Agent.",
+    description:
+      "Tool transcribeAudio & input mikrofon web. Kosong = pakai Vision/Chat Agent.",
     placeholder: "google/gemini-2.5-flash",
     group: "generate",
   },

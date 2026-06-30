@@ -1,16 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildHeuristicPlan } from "./planner/heuristic-planner";
-import {
-  bootstrapPlatformV2,
-  resetPlatformBootstrapForTests,
-} from "./init";
-import { clearAgentRegistry } from "./core/agent-registry";
-import {
-  listTools,
-  resetToolCatalogForTests,
-} from "./core/tool-registry";
 import { getTool } from "@/lib/autonomous/tools/index";
+import { clearAgentRegistry } from "./core/agent-registry";
+import { listTools, resetToolCatalogForTests } from "./core/tool-registry";
+import { bootstrapPlatformV2, resetPlatformBootstrapForTests } from "./init";
+import { buildHeuristicPlan } from "./planner/heuristic-planner";
 
 describe("platform phase 3 — bootstrap worker tools", () => {
   it("registers monitor and shell worker tools", () => {

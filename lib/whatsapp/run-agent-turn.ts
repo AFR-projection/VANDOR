@@ -1,22 +1,22 @@
 import "server-only";
 
-import { stepCountIs, type ModelMessage, type UserContent } from "ai";
+import { type ModelMessage, stepCountIs, type UserContent } from "ai";
 import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
-import { getCapabilities } from "@/lib/ai/models";
 import { buildGratisRotationChain } from "@/lib/ai/free-models";
 import { getOpenRouterContextForUser } from "@/lib/ai/integration-models";
-import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
-import { buildOwnerConversationFreedomBlock } from "@/lib/ai/system-security-fence";
+import { getCapabilities } from "@/lib/ai/models";
 import {
   formatOpenRouterUserError,
   openRouterErrorMessage,
 } from "@/lib/ai/openrouter-routing";
-import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
+import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
 import { systemPrompt } from "@/lib/ai/prompts";
+import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
 import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
+import { buildOwnerConversationFreedomBlock } from "@/lib/ai/system-security-fence";
+import { makeAgentWorkTool } from "@/lib/ai/tools/agent-work";
 import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
 import { makeCheckSystemTool } from "@/lib/ai/tools/check-system";
-import { makeAgentWorkTool } from "@/lib/ai/tools/agent-work";
 import { createDocx } from "@/lib/ai/tools/create-docx";
 import { createPdf } from "@/lib/ai/tools/create-pdf";
 import { createSpreadsheet } from "@/lib/ai/tools/create-spreadsheet";
@@ -34,6 +34,8 @@ import {
 } from "@/lib/ai/tools/media-tools";
 import { showMap } from "@/lib/ai/tools/show-map";
 import { makeWebSearch } from "@/lib/ai/tools/web-search";
+import { buildCachedAwarenessContextBlock } from "@/lib/autonomous/awareness";
+import { buildRecentAlertsContextBlock } from "@/lib/autonomous/recent-alerts";
 import {
   getChatById,
   getMessagesByChatId,
@@ -41,19 +43,19 @@ import {
   saveMessages,
 } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
-import { buildFilesContextBlock, type ExtractedFile } from "@/lib/files/extract";
+import {
+  buildFilesContextBlock,
+  type ExtractedFile,
+} from "@/lib/files/extract";
 import type { FileKind } from "@/lib/files/mime";
 import { buildMemoryContext } from "@/lib/memory/build-context";
 import {
   extractAndStoreMemories,
   preExtractUserMemories,
 } from "@/lib/memory/extract";
+import { VANDOR_UNIFIED_IDENTITY_BLOCK } from "@/lib/operator/identity-prompt";
 import { generateUUID } from "@/lib/utils";
 import { transcribeAudioBuffer } from "@/lib/voice/transcribe";
-import { buildCachedAwarenessContextBlock } from "@/lib/autonomous/awareness";
-import { buildRecentAlertsContextBlock } from "@/lib/autonomous/recent-alerts";
-import { VANDOR_UNIFIED_IDENTITY_BLOCK } from "@/lib/operator/identity-prompt";
-import { buildWhatsappOwnerToneBlock } from "./wa-tone";
 import { emitChatUpdated } from "./chat-push";
 import { getWhatsappModelId } from "./config";
 import { resolveDeploymentOwnerUser } from "./deployment-owner";
@@ -61,8 +63,9 @@ import {
   defaultPromptForMedia,
   type WhatsappInboundMedia,
 } from "./inbound-media";
-import { attachmentsFromToolResults } from "./outbound-media";
 import type { WhatsappOutboundAttachment } from "./outbound-media";
+import { attachmentsFromToolResults } from "./outbound-media";
+import { buildWhatsappOwnerToneBlock } from "./wa-tone";
 
 const MAX_HISTORY_MESSAGES = 12;
 const MAX_AGENT_STEPS = 6;
@@ -210,8 +213,7 @@ export async function runWhatsappAgentTurn({
     };
   }
 
-  const userText =
-    trimmed || (hasMedia ? defaultPromptForMedia(media) : "");
+  const userText = trimmed || (hasMedia ? defaultPromptForMedia(media) : "");
 
   const processedMedia = hasMedia
     ? await transcribeInboundAudio(userId, media)
@@ -238,9 +240,7 @@ export async function runWhatsappAgentTurn({
     });
   }
 
-  const history = existingChat
-    ? await getMessagesByChatId({ id: chatId })
-    : [];
+  const history = existingChat ? await getMessagesByChatId({ id: chatId }) : [];
 
   const recentHistory = history.slice(-MAX_HISTORY_MESSAGES);
   const modelMessages: ModelMessage[] = recentHistory
@@ -418,9 +418,8 @@ export async function runWhatsappAgentTurn({
     responseMode: "enhanced",
     activeTools: activeTools ? [...activeTools] : undefined,
     ownerAuthorityBlock,
-    ownerFreedomBlock: deploymentOwner?.id === userId
-      ? ownerFreedomBlock
-      : null,
+    ownerFreedomBlock:
+      deploymentOwner?.id === userId ? ownerFreedomBlock : null,
   });
 
   const assistantTools = makeAssistantTools(userId, chatId);

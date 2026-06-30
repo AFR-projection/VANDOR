@@ -1,5 +1,4 @@
 import { auth } from "@/app/(auth)/auth";
-import { bootstrapPlatformV2 } from "@/lib/platform/init";
 import { isPlatformV2Enabled } from "@/lib/platform/config";
 import {
   getPlatformDashboardSnapshot,
@@ -7,6 +6,7 @@ import {
   listWorkflowRunsForUser,
   type WorkflowRunFilter,
 } from "@/lib/platform/dashboard/service";
+import { bootstrapPlatformV2 } from "@/lib/platform/init";
 import { requireClientAccess } from "@/lib/security/client-access";
 
 const VALID_FILTERS = new Set<WorkflowRunFilter>([

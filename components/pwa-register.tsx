@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { apiBasePath } from "@/lib/app-url";
+
 const base = apiBasePath;
 
 export function PwaRegister() {

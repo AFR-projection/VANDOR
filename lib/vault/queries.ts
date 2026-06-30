@@ -41,7 +41,9 @@ function indexableText(input: {
 }): string {
   const tags = Array.isArray(input.tags) ? input.tags.join(", ") : "";
   const extracted = input.extractedText?.slice(0, MAX_INDEX_TEXT) ?? "";
-  return [input.fileName, input.summary, tags, extracted].filter(Boolean).join("\n");
+  return [input.fileName, input.summary, tags, extracted]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export async function resolveVaultFileTarget({
@@ -56,9 +58,7 @@ export async function resolveVaultFileTarget({
     return getVaultFileById({ userId, fileId: trimmed });
   }
 
-  const byName = await client<
-    { id: string }[]
-  >`
+  const byName = await client<{ id: string }[]>`
     SELECT id FROM "VaultFile"
     WHERE "userId" = ${userId}::uuid
       AND "deletedAt" IS NULL
@@ -140,7 +140,9 @@ export async function getVaultFileById({
     const rows = await db
       .select()
       .from(vaultFile)
-      .where(and(eq(vaultFile.id, fileId), eq(vaultFile.userId, userId), notDeleted))
+      .where(
+        and(eq(vaultFile.id, fileId), eq(vaultFile.userId, userId), notDeleted)
+      )
       .limit(1);
     return rows.at(0) ?? null;
   } catch {
@@ -188,9 +190,7 @@ export async function listVaultFiles({
       );
     }
     if (tag?.trim()) {
-      conditions.push(
-        sql`${vaultFile.tags}::text ILIKE ${`%${tag.trim()}%`}`
-      );
+      conditions.push(sql`${vaultFile.tags}::text ILIKE ${`%${tag.trim()}%`}`);
     }
     if (folder?.trim()) {
       conditions.push(eq(vaultFile.folder, folder.trim().slice(0, 64)));
@@ -375,11 +375,14 @@ export async function updateVaultFileMeta({
   }
 
   const nextName = name?.trim() || existing.fileName;
-  const nextSummary = summary !== undefined ? summary.trim() || null : existing.summary;
+  const nextSummary =
+    summary === undefined ? existing.summary : summary.trim() || null;
   const nextTags = tags ?? (existing.tags as string[] | null) ?? [];
   const nextPinned = pinned ?? existing.pinned;
   const nextFolder =
-    folder !== undefined ? folder?.trim().slice(0, 64) || null : existing.folder;
+    folder === undefined
+      ? existing.folder
+      : folder?.trim().slice(0, 64) || null;
 
   try {
     const embedOpts = await getEmbeddingOptionsForUser(userId);
@@ -558,7 +561,10 @@ export async function listVaultTrash({
       .select(vaultListSelect)
       .from(vaultFile)
       .where(
-        and(eq(vaultFile.userId, userId), sql`${vaultFile.deletedAt} IS NOT NULL`)
+        and(
+          eq(vaultFile.userId, userId),
+          sql`${vaultFile.deletedAt} IS NOT NULL`
+        )
       )
       .orderBy(desc(vaultFile.deletedAt))
       .limit(limit);
@@ -780,9 +786,7 @@ export async function bulkDeleteVaultByFilter({
     conditions.push(eq(vaultFile.fileType, fileType));
   }
   if (tag?.trim()) {
-    conditions.push(
-      sql`${vaultFile.tags}::text ILIKE ${`%${tag.trim()}%`}`
-    );
+    conditions.push(sql`${vaultFile.tags}::text ILIKE ${`%${tag.trim()}%`}`);
   }
 
   const rows = await db

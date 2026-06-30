@@ -1,12 +1,15 @@
-import { auth } from "@/app/(auth)/auth";
-import { extractKbText, indexDocument } from "@/lib/agent-skills/knowledge-base";
-import { listKbDocuments } from "@/lib/agent-skills/queries";
-import { ChatbotError } from "@/lib/errors";
-import { requireClientAccess } from "@/lib/security/client-access";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { auth } from "@/app/(auth)/auth";
+import {
+  extractKbText,
+  indexDocument,
+} from "@/lib/agent-skills/knowledge-base";
+import { listKbDocuments } from "@/lib/agent-skills/queries";
 import { knowledgeBaseDocument } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { ChatbotError } from "@/lib/errors";
+import { requireClientAccess } from "@/lib/security/client-access";
 
 const ALLOWED_TYPES = new Set([
   "application/pdf",
@@ -69,7 +72,9 @@ export async function POST(request: Request) {
 
   if (!allowed) {
     return Response.json(
-      { error: "Format tidak didukung. Gunakan PDF, DOCX, TXT, CSV, atau JSON." },
+      {
+        error: "Format tidak didukung. Gunakan PDF, DOCX, TXT, CSV, atau JSON.",
+      },
       { status: 400 }
     );
   }
@@ -117,8 +122,7 @@ export async function POST(request: Request) {
       .update(knowledgeBaseDocument)
       .set({
         status: "failed",
-        errorMessage:
-          error instanceof Error ? error.message : "Indexing gagal",
+        errorMessage: error instanceof Error ? error.message : "Indexing gagal",
         updatedAt: new Date(),
       })
       .where(eq(knowledgeBaseDocument.id, doc.id));

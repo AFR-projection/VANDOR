@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/app/(auth)/auth";
 import { z } from "zod";
+import { auth } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
-import { normalizeWhatsappNumber, validateGlobalPhoneInput } from "@/lib/whatsapp/phone";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
+import {
+  normalizeWhatsappNumber,
+  validateGlobalPhoneInput,
+} from "@/lib/whatsapp/phone";
 
 export const maxDuration = 15;
 

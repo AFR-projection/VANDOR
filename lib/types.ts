@@ -1,7 +1,7 @@
-import type { AgentActivityUpdate } from "./agent-activity/types";
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/components/chat/artifact";
+import type { AgentActivityUpdate } from "./agent-activity/types";
 import type { makeAssistantTools } from "./ai/tools/assistant-tools";
 import type { createDocument } from "./ai/tools/create-document";
 import type { createDocx } from "./ai/tools/create-docx";
@@ -22,22 +22,19 @@ import type { webSearch } from "./ai/tools/web-search";
 import type { Suggestion } from "./db/schema";
 import type { MediaDownloadProgressData } from "./media/types";
 import type { MemorySavedNotice } from "./memory/notice";
+import type { RichContent, WebSearchOutput } from "./search/types";
+import type { TurnUsageEstimate } from "./v4/turn-usage";
+import type { VaultModeExitNotice, VaultModeNotice } from "./vault/mode";
 import type {
   ShareToAiNotice,
   VaultDeniedNotice,
   VaultDetailNotice,
+  VaultHelpNotice,
   VaultListNotice,
   VaultOpenNotice,
   VaultReadNotice,
-  VaultHelpNotice,
   VaultUploadNotice,
 } from "./vault/notice";
-import type {
-  VaultModeExitNotice,
-  VaultModeNotice,
-} from "./vault/mode";
-import type { RichContent, WebSearchOutput } from "./search/types";
-import type { TurnUsageEstimate } from "./v4/turn-usage";
 import type { WeatherPanelPayload } from "./weather/fetch";
 
 export const messageMetadataSchema = z.object({

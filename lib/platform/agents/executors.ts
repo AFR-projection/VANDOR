@@ -1,17 +1,19 @@
+import { runAutoFixCommand } from "@/lib/autonomous/auto-fix";
 import {
   collectSystemAwareness,
   formatAwarenessForUser,
 } from "@/lib/autonomous/awareness";
+import { resolveAgentCwd, runCliCommand } from "@/lib/autonomous/cli/runner";
 import { analyzeCodeScan } from "@/lib/autonomous/coding-agent/analyze";
-import { runCodeScan, type CodeScanResult } from "@/lib/autonomous/coding-agent/scan";
-import { runCliCommand, resolveAgentCwd } from "@/lib/autonomous/cli/runner";
-import { runAutoFixCommand } from "@/lib/autonomous/auto-fix";
+import {
+  type CodeScanResult,
+  runCodeScan,
+} from "@/lib/autonomous/coding-agent/scan";
 import { canAutoFixCommand } from "@/lib/autonomous/rule-engine";
 import { detectFootballNeed } from "@/lib/football/detect";
 import type {
   AgentExecutionContext,
   AgentExecutionResult,
-  PlatformAgentId,
 } from "../core/types";
 import { runAgentTool } from "../tools/run-agent-tool";
 
@@ -27,7 +29,9 @@ function userText(ctx: AgentExecutionContext): string {
   ).trim();
 }
 
-function inferJobType(text: string): "code_scan" | "log_scan" | "monitor" | null {
+function inferJobType(
+  text: string
+): "code_scan" | "log_scan" | "monitor" | null {
   if (SCAN_CODEBASE_RE.test(text)) {
     return "code_scan";
   }
@@ -40,9 +44,7 @@ function inferJobType(text: string): "code_scan" | "log_scan" | "monitor" | null
   return null;
 }
 
-function scanFromPriorSteps(
-  ctx: AgentExecutionContext
-): CodeScanResult | null {
+function scanFromPriorSteps(ctx: AgentExecutionContext): CodeScanResult | null {
   for (const prior of ctx.priorSteps ?? []) {
     const scan = prior.output.scan as CodeScanResult | undefined;
     if (scan?.sessionId) {
@@ -215,7 +217,10 @@ export async function codingAgentExecute(
     };
   }
 
-  return { ok: false, error: "Coding agent: tidak ada permintaan yang dikenali" };
+  return {
+    ok: false,
+    error: "Coding agent: tidak ada permintaan yang dikenali",
+  };
 }
 
 export async function browserAgentExecute(
@@ -250,7 +255,9 @@ export async function browserAgentExecute(
     return { ok: false, error: result.error };
   }
 
-  const data = result.data as { sources?: Array<{ title?: string; url?: string }> };
+  const data = result.data as {
+    sources?: Array<{ title?: string; url?: string }>;
+  };
   const top = data.sources?.slice(0, 3).map((s) => s.title ?? s.url) ?? [];
 
   return {
@@ -498,8 +505,7 @@ export async function plannerAgentExecute(
     output: {
       plan: {
         summary: `Analisis: ${userRequest.slice(0, 200)}`,
-        notes:
-          "Planner in-workflow — rencana utama dibuat saat dispatch chat",
+        notes: "Planner in-workflow — rencana utama dibuat saat dispatch chat",
       },
     },
     summary: "Planner menganalisis permintaan",

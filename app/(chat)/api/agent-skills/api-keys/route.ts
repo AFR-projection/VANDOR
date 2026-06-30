@@ -34,7 +34,10 @@ export async function POST(request: Request) {
   const body = await request.json();
   const parsed = createApiKeySchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ error: "Data API key tidak valid" }, { status: 400 });
+    return Response.json(
+      { error: "Data API key tidak valid" },
+      { status: 400 }
+    );
   }
 
   const key = await createApiKey(

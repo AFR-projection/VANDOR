@@ -1,8 +1,8 @@
 import { desc } from "drizzle-orm";
 import {
   type AgentActionStatus,
-  agentAction,
   type AgentRiskLevel,
+  agentAction,
 } from "@/lib/db/schema";
 import { db } from "./db";
 
@@ -38,7 +38,6 @@ export async function recordAgentAction(
       durationMs: entry.durationMs ?? null,
     });
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: audit failure must surface in logs
     console.error("recordAgentAction failed:", error);
   }
 }

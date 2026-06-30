@@ -46,4 +46,4 @@ export function Preview() {
       </div>
     </div>
   );
-};
+}

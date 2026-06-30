@@ -5,13 +5,13 @@ import { classify, isExtractable } from "@/lib/files/mime";
 import { encryptBuffer } from "@/lib/security/file-crypto";
 import { logVaultAction } from "./audit";
 import { embedVaultFileRecord, insertVaultFileRow } from "./queries";
+import { toVaultSnapshot } from "./snapshot";
 import {
   buildVaultKey,
   putEncryptedBlob,
   vaultStorageAvailable,
 } from "./storage";
 import type { StoreVaultFileInput, VaultFileSnapshot } from "./types";
-import { toVaultSnapshot } from "./snapshot";
 
 const MAX_EXTRACT_CHARS = 8000;
 
@@ -46,7 +46,9 @@ function defaultSummary(fileName: string, fileType: string): string {
  */
 export async function storeVaultFile(
   input: StoreVaultFileInput
-): Promise<{ ok: true; file: VaultFileSnapshot } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; file: VaultFileSnapshot } | { ok: false; error: string }
+> {
   if (!(await vaultStorageAvailable())) {
     return {
       ok: false,

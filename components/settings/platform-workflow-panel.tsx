@@ -82,9 +82,12 @@ type RunDetailPayload = {
 };
 
 async function fetchRuns(filter: RunFilter): Promise<RunsPayload> {
-  const res = await fetch(`${base()}/api/platform/runs?status=${filter}&limit=20`, {
-    credentials: "include",
-  });
+  const res = await fetch(
+    `${base()}/api/platform/runs?status=${filter}&limit=20`,
+    {
+      credentials: "include",
+    }
+  );
   if (!res.ok) {
     throw new Error("Gagal memuat workflow");
   }
@@ -270,7 +273,10 @@ export function PlatformWorkflowPanel() {
           >
             <div className="flex items-center gap-2">
               <span
-                className={cn("size-2 rounded-full", agentStatusDot(agent.status))}
+                className={cn(
+                  "size-2 rounded-full",
+                  agentStatusDot(agent.status)
+                )}
               />
               <span className="truncate font-medium text-xs">{agent.name}</span>
             </div>
@@ -318,7 +324,8 @@ export function PlatformWorkflowPanel() {
                   <button
                     className={cn(
                       "w-full rounded-lg border border-border/40 bg-card/30 p-3 text-left transition-colors hover:bg-card/50",
-                      selectedRunId === run.id && "border-primary/40 bg-primary/5"
+                      selectedRunId === run.id &&
+                        "border-primary/40 bg-primary/5"
                     )}
                     onClick={() => setSelectedRunId(run.id)}
                     type="button"
@@ -415,7 +422,9 @@ export function PlatformWorkflowPanel() {
                           : ""}
                       </p>
                       {step.error ? (
-                        <p className="mt-1 text-[10px] text-red-400">{step.error}</p>
+                        <p className="mt-1 text-[10px] text-red-400">
+                          {step.error}
+                        </p>
                       ) : null}
                     </div>
                   </li>

@@ -47,8 +47,8 @@ async function wasRecentlyNotified(
         or(
           eq(agentNotification.title, key),
           ...(bodyPatterns.length > 0
-            ? bodyPatterns.map((p) =>
-                sql`${agentNotification.body} ILIKE ${`%${p}%`}`
+            ? bodyPatterns.map(
+                (p) => sql`${agentNotification.body} ILIKE ${`%${p}%`}`
               )
             : [])
         ),
@@ -205,10 +205,10 @@ export async function notifyApprovalRequest(input: {
     title: "Perlu persetujuan",
     body:
       `[${input.riskLevel.toUpperCase()}] ${input.summary}\n\n` +
-      `Balas dari WhatsApp:\n` +
+      "Balas dari WhatsApp:\n" +
       `✅ *SETUJU ${short}*\n` +
       `❌ *TOLAK ${short}*\n\n` +
-      `Atau buka Pengaturan → Operator.`,
+      "Atau buka Pengaturan → Operator.",
     level: "warn",
   });
 }

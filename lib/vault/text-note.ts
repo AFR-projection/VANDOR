@@ -18,7 +18,10 @@ export function buildVaultNoteFileName(content: string): string {
 }
 
 export function noteSummaryFromContent(content: string): string {
-  const first = content.split(/\r?\n/).find((line) => line.trim())?.trim();
+  const first = content
+    .split(/\r?\n/)
+    .find((line) => line.trim())
+    ?.trim();
   return (first ?? content).slice(0, 500);
 }
 

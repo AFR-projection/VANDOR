@@ -4,6 +4,7 @@ import { signOut } from "next-auth/react";
 import { useEffect, useRef } from "react";
 
 import { apiBasePath } from "@/lib/app-url";
+
 const base = apiBasePath;
 
 /** Poll session — perangkat lama cepat tahu kalau login terjadi di tempat lain. */

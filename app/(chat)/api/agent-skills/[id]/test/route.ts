@@ -1,6 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
-import { executeAgentSkill } from "@/lib/agent-skills/runner";
 import { getAgentSkillById } from "@/lib/agent-skills/queries";
+import { executeAgentSkill } from "@/lib/agent-skills/runner";
 import { testSkillSchema } from "@/lib/agent-skills/validation";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
@@ -25,7 +25,10 @@ export async function POST(request: Request, context: RouteContext) {
   const body = await request.json().catch(() => ({}));
   const parsed = testSkillSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ error: "Parameter test tidak valid" }, { status: 400 });
+    return Response.json(
+      { error: "Parameter test tidak valid" },
+      { status: 400 }
+    );
   }
 
   const result = await executeAgentSkill(

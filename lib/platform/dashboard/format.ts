@@ -40,7 +40,10 @@ export function stepStatusTone(
   return "muted";
 }
 
-export function formatDurationMs(start?: Date | string | null, end?: Date | string | null): string {
+export function formatDurationMs(
+  start?: Date | string | null,
+  end?: Date | string | null
+): string {
   if (!start) {
     return "—";
   }

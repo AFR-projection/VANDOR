@@ -6,7 +6,10 @@ export function GateScene() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+    >
       <div className="absolute inset-0 bg-background" />
 
       <div

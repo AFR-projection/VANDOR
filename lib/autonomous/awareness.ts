@@ -1,13 +1,13 @@
-import { detectIssues, type Issue } from "./healing/detectors";
+import { listRecentAgentTasks, summarizeTaskForChat } from "./chat-dispatch";
+import { autonomousConfig } from "./config";
 import { listRecentEvents } from "./events";
+import { detectIssues, type Issue } from "./healing/detectors";
 import { getLatestHeartbeat, type HeartbeatSnapshot } from "./heartbeat";
 import { collectMetrics, type SystemMetrics } from "./metrics";
 import { listPendingApprovals } from "./permission";
 import { collectServiceHealth, type ServiceStatus } from "./services";
 import { getAgentState } from "./state";
 import { checkUrls } from "./uptime";
-import { autonomousConfig } from "./config";
-import { listRecentAgentTasks, summarizeTaskForChat } from "./chat-dispatch";
 
 export type SystemAwarenessSnapshot = {
   at: string;
@@ -182,10 +182,7 @@ export async function buildCachedAwarenessContextBlock(): Promise<string> {
     block +=
       "\n\nAntrian worker aktif:\n" +
       taskLines
-        .map(
-          (t) =>
-            `- [${t.status}] ${t.title} (${t.shortId})`
-        )
+        .map((t) => `- [${t.status}] ${t.title} (${t.shortId})`)
         .join("\n");
   }
   block +=
@@ -208,7 +205,10 @@ export function formatAwarenessContextBlock(
       ? `Metrik: CPU ${snapshot.metrics.cpuPct}% · RAM ${snapshot.metrics.memUsedPct}% · Disk ${snapshot.metrics.diskUsedPct ?? "?"}%`
       : null,
     snapshot.issues.length > 0
-      ? `Isu: ${snapshot.issues.map((i) => i.title).slice(0, 4).join("; ")}`
+      ? `Isu: ${snapshot.issues
+          .map((i) => i.title)
+          .slice(0, 4)
+          .join("; ")}`
       : "Isu: tidak ada yang tercatat",
     snapshot.pendingApprovals > 0
       ? `Approval menunggu: ${snapshot.pendingApprovals}`

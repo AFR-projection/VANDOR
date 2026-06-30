@@ -14,12 +14,9 @@ import { config as loadEnv } from "dotenv";
 
 loadEnv({ path: ".env.local" });
 
+import { runCliCommand, runStatusSnapshot } from "../lib/autonomous/cli/runner";
 import { analyzeCodeScan } from "../lib/autonomous/coding-agent/analyze";
 import { runCodeScan } from "../lib/autonomous/coding-agent/scan";
-import {
-  runCliCommand,
-  runStatusSnapshot,
-} from "../lib/autonomous/cli/runner";
 import { runTick } from "../lib/autonomous/loop";
 import { listTerminalLogs } from "../lib/autonomous/terminal-log";
 
@@ -57,9 +54,7 @@ async function main(): Promise<void> {
     case "status": {
       process.stdout.write("=== VANDOR Status Snapshot ===\n");
       const res = await runStatusSnapshot({ echo: true });
-      process.stdout.write(
-        `\nSession: ${res.sessionId} | ok=${res.ok}\n`
-      );
+      process.stdout.write(`\nSession: ${res.sessionId} | ok=${res.ok}\n`);
       break;
     }
     case "scan": {
@@ -67,7 +62,11 @@ async function main(): Promise<void> {
       process.stdout.write(
         `=== Code Scan ${fullBuild ? "(+ build)" : ""} ===\n`
       );
-      const scan = await runCodeScan({ echo, fullBuild, includeUltracite: true });
+      const scan = await runCodeScan({
+        echo,
+        fullBuild,
+        includeUltracite: true,
+      });
       process.stdout.write(`\n${scan.summary}\n`);
       process.stdout.write(`Session: ${scan.sessionId}\n`);
       if (!scan.ok) {
@@ -96,7 +95,9 @@ async function main(): Promise<void> {
         break;
       }
       const res = await runCliCommand(cmd, { echo: true });
-      process.stdout.write(`\nSession: ${res.sessionId} exit=${res.exitCode}\n`);
+      process.stdout.write(
+        `\nSession: ${res.sessionId} exit=${res.exitCode}\n`
+      );
       if (!res.ok) {
         process.exitCode = 1;
       }

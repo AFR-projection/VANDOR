@@ -1,5 +1,5 @@
-import { isLlmConfigured, llmJson } from "./llm";
 import type { Issue } from "./healing/detectors";
+import { isLlmConfigured, llmJson } from "./llm";
 import type { SystemMetrics } from "./metrics";
 import type { ServiceStatus } from "./services";
 

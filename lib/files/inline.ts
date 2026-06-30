@@ -7,7 +7,10 @@ import {
   isPrivateR2Url,
   r2ChatKeyFromUrl,
 } from "@/lib/files/chat-file-url";
-import { isVaultOpenUrl, readVaultAttachment } from "@/lib/files/vault-attachment";
+import {
+  isVaultOpenUrl,
+  readVaultAttachment,
+} from "@/lib/files/vault-attachment";
 import type { ChatMessage } from "@/lib/types";
 
 const LOCAL_STORAGE_DIR = path.join(process.cwd(), "public", "storage");
@@ -128,10 +131,7 @@ export async function inlineLocalAttachments(
             return part;
           }
 
-          if (
-            isPrivateR2Url(part.url) ||
-            isChatFileServeUrl(part.url)
-          ) {
+          if (isPrivateR2Url(part.url) || isChatFileServeUrl(part.url)) {
             const dataUrl = await chatFileToDataUrl(part.url, part.mediaType);
             if (dataUrl) {
               return { ...part, url: dataUrl };

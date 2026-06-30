@@ -43,9 +43,7 @@ export async function storageSetupHint(): Promise<string> {
     return "Cloudflare R2 aktif.";
   }
   if (isServerlessRuntime()) {
-    return (
-      "Di Vercel/serverless wajib set Vercel Blob atau Cloudflare R2 di Pengaturan → API & integrasi."
-    );
+    return "Di Vercel/serverless wajib set Vercel Blob atau Cloudflare R2 di Pengaturan → API & integrasi.";
   }
   return "File disimpan di public/storage (development).";
 }

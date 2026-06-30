@@ -32,7 +32,12 @@ export type AgentActivityUpdate =
   | { kind: "step-start"; id: string; label: string; at?: number }
   | { kind: "step-complete"; id: string; at?: number }
   | { kind: "step-error"; id: string; message?: string; at?: number }
-  | { kind: "event"; message: string; level?: AgentActivityEventLevel; at?: number }
+  | {
+      kind: "event";
+      message: string;
+      level?: AgentActivityEventLevel;
+      at?: number;
+    }
   | { kind: "trace"; message: string; at?: number }
   | { kind: "progress"; value: number; at?: number }
   | { kind: "done"; at?: number };

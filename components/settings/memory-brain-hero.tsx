@@ -2,9 +2,9 @@
 
 import { BrainIcon, SparklesIcon } from "lucide-react";
 import { type RefObject, useEffect, useRef, useState } from "react";
+import { apiBasePath } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
 
-import { apiBasePath } from "@/lib/app-url";
 const base = apiBasePath;
 
 type MemoryBrainHeroProps = {

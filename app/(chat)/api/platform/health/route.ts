@@ -1,9 +1,9 @@
 import { auth } from "@/app/(auth)/auth";
-import { bootstrapPlatformV2 } from "@/lib/platform/init";
 import { isPlatformV2Enabled } from "@/lib/platform/config";
-import { getPlatformDashboardSnapshot } from "@/lib/platform/dashboard/service";
 import { listAgents } from "@/lib/platform/core/agent-registry";
 import { listTools } from "@/lib/platform/core/tool-registry";
+import { getPlatformDashboardSnapshot } from "@/lib/platform/dashboard/service";
+import { bootstrapPlatformV2 } from "@/lib/platform/init";
 import { countActiveWorkflowRuns } from "@/lib/platform/queue/claim-runs";
 import { requireClientAccess } from "@/lib/security/client-access";
 

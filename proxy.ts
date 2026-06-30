@@ -1,15 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { useSecureCookies } from "./lib/constants";
+import { shouldUseSecureCookies } from "./lib/constants";
 import {
   clearGateCookieOnResponse,
   getClientAccessSnapshot,
 } from "./lib/security/client-access";
+import { getLockoutKey, getLockoutStatus } from "./lib/security/gate";
 import {
   hasOwnerCredentials,
   isGateConfigured,
 } from "./lib/security/gate-edge";
-import { getLockoutKey, getLockoutStatus } from "./lib/security/gate";
 
 const PUBLIC_PATHS = [
   "/gate",
@@ -44,7 +44,7 @@ function isInternalAgentNotify(request: NextRequest): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const secureCookie = useSecureCookies();
+  const secureCookie = shouldUseSecureCookies();
 
   if (pathname.startsWith("/ping")) {
     return new Response("pong", { status: 200 });

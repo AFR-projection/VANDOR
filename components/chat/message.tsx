@@ -1,15 +1,15 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { GlobeIcon } from "lucide-react";
+import {
+  messageHasParlayCsCard,
+  shouldSuppressAssistantTextForParlay,
+} from "@/lib/chat/parlay-message";
 import type { Vote } from "@/lib/db/schema";
 import type { MemorySavedNotice } from "@/lib/memory/notice";
 import type { ChatMessage, ModelMeta } from "@/lib/types";
 import { cn, sanitizeChatMessageParts, sanitizeText } from "@/lib/utils";
 import type { TurnUsageEstimate } from "@/lib/v4/turn-usage";
-import {
-  messageHasParlayCsCard,
-  shouldSuppressAssistantTextForParlay,
-} from "@/lib/chat/parlay-message";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import {
   Tool,
@@ -29,6 +29,19 @@ import {
   getMediaDownloadProgressFromMessage,
   MediaDownloadProgressCard,
 } from "./media-download-progress";
+import { MessageActions } from "./message-actions";
+import { MessageReasoning } from "./message-reasoning";
+import { MessageTechRail } from "./message-tech-rail";
+import { ParlayCsCard } from "./parlay-cs-card";
+import { PreviewAttachment } from "./preview-attachment";
+import { RichContentBlocks } from "./rich/rich-content";
+import { SourcesSkeleton } from "./rich/skeletons";
+import {
+  getRichContentFromMessage,
+  getSearchStatusFromMessage,
+  getWebSourcesFromMessage,
+  WebSearchIndicator,
+} from "./search-sources";
 import {
   getVaultDetailFromMessage,
   getVaultListFromMessage,
@@ -53,19 +66,6 @@ import {
   VaultModeExitCard,
   VaultReadCard,
 } from "./vault-mode-cards";
-import { MessageActions } from "./message-actions";
-import { MessageReasoning } from "./message-reasoning";
-import { MessageTechRail } from "./message-tech-rail";
-import { ParlayCsCard } from "./parlay-cs-card";
-import { PreviewAttachment } from "./preview-attachment";
-import { RichContentBlocks } from "./rich/rich-content";
-import { SourcesSkeleton } from "./rich/skeletons";
-import {
-  getRichContentFromMessage,
-  getSearchStatusFromMessage,
-  getWebSourcesFromMessage,
-  WebSearchIndicator,
-} from "./search-sources";
 import { Weather } from "./weather";
 
 const PurePreviewMessage = ({
@@ -760,7 +760,11 @@ const PurePreviewMessage = ({
       const { toolCallId, state } = parlayPart;
       const output = parlayPart.output;
 
-      if (state === "output-available" && output?.ok && output.data?.memberMessage) {
+      if (
+        state === "output-available" &&
+        output?.ok &&
+        output.data?.memberMessage
+      ) {
         return (
           <ParlayCsCard
             actualOdds={output.data.actualOddsDisplay}
@@ -800,10 +804,7 @@ const PurePreviewMessage = ({
               <ToolInput input={parlayPart.input} />
             )}
             {state === "output-error" && (
-              <ToolOutput
-                errorText={parlayPart.errorText}
-                output={undefined}
-              />
+              <ToolOutput errorText={parlayPart.errorText} output={undefined} />
             )}
           </ToolContent>
         </Tool>
@@ -867,9 +868,7 @@ const PurePreviewMessage = ({
   );
 
   const showAgentActivity =
-    isAssistant &&
-    (isLoading || isThinking) &&
-    !showMediaProgressCard;
+    isAssistant && (isLoading || isThinking) && !showMediaProgressCard;
 
   const content = isThinking ? (
     <AgentActivityPanel isLoading message={message} />
@@ -895,15 +894,18 @@ const PurePreviewMessage = ({
       {showAgentActivity && !isThinking && (
         <AgentActivityPanel isLoading={isLoading} message={message} />
       )}
-      {isLoading && instantLabel && !showMediaProgressCard && !showAgentActivity && (
-        <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-          <span className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/50 opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-primary" />
-          </span>
-          {instantLabel}…
-        </div>
-      )}
+      {isLoading &&
+        instantLabel &&
+        !showMediaProgressCard &&
+        !showAgentActivity && (
+          <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+            <span className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/50 opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+            </span>
+            {instantLabel}…
+          </div>
+        )}
       {isWebSearching && !showAgentActivity && (
         <>
           <WebSearchIndicator query={searchStatus?.query} />

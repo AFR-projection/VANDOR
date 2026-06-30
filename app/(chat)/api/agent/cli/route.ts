@@ -1,9 +1,9 @@
 import { auth } from "@/app/(auth)/auth";
-import { runCodeScan } from "@/lib/autonomous/coding-agent/scan";
 import { runCliCommand } from "@/lib/autonomous/cli/runner";
+import { runCodeScan } from "@/lib/autonomous/coding-agent/scan";
+import { evaluateCommand } from "@/lib/autonomous/rule-engine";
 import { enqueueTask } from "@/lib/autonomous/tasks";
 import { requireClientAccess } from "@/lib/security/client-access";
-import { evaluateCommand } from "@/lib/autonomous/rule-engine";
 
 /** POST — jalankan perintah CLI nyata (log ke AgentTerminalLog). */
 export async function POST(request: Request) {
@@ -58,7 +58,10 @@ export async function POST(request: Request) {
 
   const command = body.command?.trim();
   if (!command) {
-    return Response.json({ error: "command atau action wajib" }, { status: 400 });
+    return Response.json(
+      { error: "command atau action wajib" },
+      { status: 400 }
+    );
   }
 
   const verdict = await evaluateCommand(command);

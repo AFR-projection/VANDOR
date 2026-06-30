@@ -33,7 +33,7 @@ export function toolingFailureDiagnosis(steps: CodeScanStep[]): string {
   const names = failed.map((s) => s.name).join(", ");
   return (
     `Scan gagal karena masalah tooling/konfigurasi (${names}) — bukan error runtime app. ` +
-    `Ultracite/Biome di server mungkin versi beda; auto-fix tidak bisa memperbaiki ini. ` +
-    `Perbaiki manual: \`npm update ultracite @biomejs/biome\` atau skip lint di agent.`
+    "Ultracite/Biome di server mungkin versi beda; auto-fix tidak bisa memperbaiki ini. " +
+    "Perbaiki manual: `npm update ultracite @biomejs/biome` atau skip lint di agent."
   );
 }

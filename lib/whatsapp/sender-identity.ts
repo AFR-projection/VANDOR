@@ -51,9 +51,8 @@ export async function resolveSenderIdentity(
     phone = normalizeWhatsappNumber(key.senderPn);
   } else {
     try {
-      const mapped = await sock.signalRepository.lidMapping.getPNForLID(
-        replyJid
-      );
+      const mapped =
+        await sock.signalRepository.lidMapping.getPNForLID(replyJid);
       if (mapped?.endsWith("@s.whatsapp.net")) {
         phone = digitsFromJid(mapped);
       }

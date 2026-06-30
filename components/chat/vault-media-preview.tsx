@@ -8,10 +8,10 @@ import {
   LockKeyholeIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { PinConfirmDialog } from "@/components/security/pin-confirm-dialog";
-import type { VaultFileSnapshot } from "@/lib/vault/types";
+import { Button } from "@/components/ui/button";
 import { cn, formatBytes } from "@/lib/utils";
+import type { VaultFileSnapshot } from "@/lib/vault/types";
 
 type VaultMediaPreviewProps = {
   file: VaultFileSnapshot;
@@ -186,11 +186,7 @@ export function VaultMediaPreview({
 
       {isPdf && blobUrl && (
         <div className="overflow-hidden rounded-xl border border-emerald-500/25 bg-muted/20">
-          <iframe
-            className="h-96 w-full"
-            src={blobUrl}
-            title={file.name}
-          />
+          <iframe className="h-96 w-full" src={blobUrl} title={file.name} />
         </div>
       )}
 
@@ -223,9 +219,7 @@ export function VaultMediaPreview({
           </div>
         )}
 
-      {loadError && (
-        <p className="text-xs text-destructive">{loadError}</p>
-      )}
+      {loadError && <p className="text-xs text-destructive">{loadError}</p>}
 
       <PinConfirmDialog
         onConfirmed={onPinConfirmed}

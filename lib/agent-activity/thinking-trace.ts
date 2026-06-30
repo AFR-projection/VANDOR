@@ -1,5 +1,8 @@
 const SAFE_TRACE_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
-  { pattern: /search|cari|sumber|source|web/i, label: "Mencari sumber relevan" },
+  {
+    pattern: /search|cari|sumber|source|web/i,
+    label: "Mencari sumber relevan",
+  },
   {
     pattern: /compar|banding|evaluat|analisa|analyze/i,
     label: "Membandingkan informasi",

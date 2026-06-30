@@ -1,4 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
+import { buildDeployApprovalSummary } from "@/lib/autonomous/deploy";
 import {
   createSchedule,
   deleteSchedule,
@@ -7,10 +8,9 @@ import {
   updateSchedule,
 } from "@/lib/autonomous/schedules-manage";
 import { enqueueTask } from "@/lib/autonomous/tasks";
-import { buildDeployApprovalSummary } from "@/lib/autonomous/deploy";
-import { requireClientAccess } from "@/lib/security/client-access";
 import type { AgentScheduleKind } from "@/lib/db/schema";
 import { agentScheduleKinds } from "@/lib/db/schema";
+import { requireClientAccess } from "@/lib/security/client-access";
 
 async function guard(request: Request) {
   const denied = await requireClientAccess(request);
@@ -57,7 +57,10 @@ export async function POST(request: Request) {
   if (body.action === "trigger" && typeof body.id === "string") {
     const ok = await triggerSchedule(body.id);
     if (!ok) {
-      return Response.json({ error: "Jadwal tidak ditemukan" }, { status: 404 });
+      return Response.json(
+        { error: "Jadwal tidak ditemukan" },
+        { status: 404 }
+      );
     }
     return Response.json({ ok: true });
   }
@@ -125,7 +128,8 @@ export async function PATCH(request: Request) {
       agentScheduleKinds.includes(body.kind as AgentScheduleKind)
         ? (body.kind as AgentScheduleKind)
         : undefined,
-    expression: typeof body.expression === "string" ? body.expression : undefined,
+    expression:
+      typeof body.expression === "string" ? body.expression : undefined,
     taskType: typeof body.taskType === "string" ? body.taskType : undefined,
     enabled: typeof body.enabled === "boolean" ? body.enabled : undefined,
   });

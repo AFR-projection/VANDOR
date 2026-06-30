@@ -303,7 +303,11 @@ export function parseVaultModeRead(text: string): string | null {
 export function parseVaultModeAdd(text: string): boolean {
   const t = text.trim().toLowerCase();
   return (
-    t === "add" || t === "upload" || t === "/add" || t === "/upload" || t === "up"
+    t === "add" ||
+    t === "upload" ||
+    t === "/add" ||
+    t === "/upload" ||
+    t === "up"
   );
 }
 

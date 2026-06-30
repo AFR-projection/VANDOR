@@ -6,15 +6,15 @@ import { requireClientAccess } from "@/lib/security/client-access";
 import { revokeAllGateSessions } from "@/lib/security/gate";
 import { GATE_PIN_LENGTH } from "@/lib/security/gate-edge";
 import { verifyNumpadPinForGate } from "@/lib/security/pin-gate";
-import { INTEGRATION_SECRET_KEYS } from "@/lib/settings/integration-secret-keys";
-import type { IntegrationSecretKey } from "@/lib/settings/integration-secret-keys";
 import { invalidateIntegrationRuntimeCache } from "@/lib/settings/integration-runtime";
+import type { IntegrationSecretKey } from "@/lib/settings/integration-secret-keys";
+import { INTEGRATION_SECRET_KEYS } from "@/lib/settings/integration-secret-keys";
 import { getUserSettings, updateUserSettings } from "@/lib/settings/queries";
-import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 import {
   getSecretsPublicView,
   updateUserSecrets,
 } from "@/lib/settings/secrets-queries";
+import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
 import {
   integrationsSettingsSchema,
   personaSettingsSchema,
@@ -49,9 +49,7 @@ const secretsPatchSchema = z.object({
   clearOpenrouter: z.boolean().optional(),
   clearTavily: z.boolean().optional(),
   extraSecrets: extraSecretsPatchSchema.optional(),
-  clearExtraSecrets: z
-    .array(z.enum(INTEGRATION_SECRET_KEYS))
-    .optional(),
+  clearExtraSecrets: z.array(z.enum(INTEGRATION_SECRET_KEYS)).optional(),
 });
 
 const settingsPatchSchema = z.object({
@@ -160,7 +158,9 @@ export async function PATCH(request: Request) {
       clearOpenrouter,
       clearTavily,
       extraSecrets,
-      clearExtraSecrets: clearExtraSecrets as IntegrationSecretKey[] | undefined,
+      clearExtraSecrets: clearExtraSecrets as
+        | IntegrationSecretKey[]
+        | undefined,
     });
 
     if (newPin) {
@@ -183,8 +183,7 @@ export async function PATCH(request: Request) {
   }
 
   const secrets = await getSecretsPublicView(settingsUserId);
-  const settings =
-    savedSettings ?? (await getUserSettings(settingsUserId));
+  const settings = savedSettings ?? (await getUserSettings(settingsUserId));
 
   return Response.json({
     ok: true,

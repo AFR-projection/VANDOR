@@ -440,11 +440,11 @@ function WeatherCard({
                   {weatherAtLocation.current_units.temperature_2m}
                 </span>
               </div>
-              {weatherAtLocation.feelsLike != null ? (
+              {weatherAtLocation.feelsLike == null ? null : (
                 <div className="text-white/70 text-xs">
                   Terasa {n(weatherAtLocation.feelsLike)}°
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
 
@@ -453,11 +453,11 @@ function WeatherCard({
               H: {n(currentHigh)}°
             </div>
             <div className="text-white/70 text-xs">L: {n(currentLow)}°</div>
-            {weatherAtLocation.humidity != null ? (
+            {weatherAtLocation.humidity == null ? null : (
               <div className="text-white/60 text-[11px]">
                 💧 {weatherAtLocation.humidity}%
               </div>
-            ) : null}
+            )}
           </div>
         </div>
 

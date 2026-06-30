@@ -1,11 +1,11 @@
 import { asc, eq } from "drizzle-orm";
 import {
+  type AgentRiskLevel,
   type AgentRule,
   type AgentRuleKind,
+  agentRiskLevels,
   agentRule,
   agentRuleKinds,
-  type AgentRiskLevel,
-  agentRiskLevels,
 } from "@/lib/db/schema";
 import { db } from "./db";
 

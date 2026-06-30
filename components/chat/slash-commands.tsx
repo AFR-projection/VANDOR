@@ -93,9 +93,7 @@ const SKILL_ICONS: Record<string, ReactNode> = {
 const VAULT_COMMANDS: SlashCommand[] = VAULT_SLASH_SKILLS.map((skill) => ({
   name: skill.name,
   description: skill.description,
-  icon: SKILL_ICONS[skill.name] ?? (
-    <FolderLockIcon className="size-3.5" />
-  ),
+  icon: SKILL_ICONS[skill.name] ?? <FolderLockIcon className="size-3.5" />,
   action:
     skill.kind === "ui" ? (skill.action ?? skill.name) : `skill:${skill.name}`,
   insertText: skill.insertText,

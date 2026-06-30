@@ -1,5 +1,8 @@
 "use client";
 
+import { CheckIcon, ChevronDownIcon, SparklesIcon, XIcon } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -15,14 +18,6 @@ import type {
 } from "@/lib/agent-activity/types";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  SparklesIcon,
-  XIcon,
-} from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Shimmer } from "../ai-elements/shimmer";
 
 function formatElapsed(ms: number): string {
@@ -294,15 +289,12 @@ function AgentActivityPanelInner({
                     {activity.steps.map((step, index) => {
                       const isLast = index === stepCount - 1;
                       const connectorActive =
-                        step.status === "completed" ||
-                        step.status === "error";
+                        step.status === "completed" || step.status === "error";
                       return (
                         <motion.li
                           animate={{ opacity: 1, y: 0 }}
                           className="relative flex gap-3 pb-3 last:pb-0"
-                          initial={
-                            reduceMotion ? false : { opacity: 0, y: 4 }
-                          }
+                          initial={reduceMotion ? false : { opacity: 0, y: 4 }}
                           key={step.id}
                           transition={{
                             duration: 0.2,

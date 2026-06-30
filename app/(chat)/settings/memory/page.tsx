@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import { Loader2Icon } from "lucide-react";
+import { Suspense } from "react";
 import { MemorySettingsPage } from "@/components/settings/memory-settings-page";
 
 function MemoryFallback() {

@@ -89,7 +89,6 @@ export async function processActiveGoals(maxGoals = 2): Promise<number> {
   const goals = await listActiveGoals(maxGoals);
   let total = 0;
   for (const goal of goals) {
-    // biome-ignore lint/nursery/noAwaitInLoop: goal kecil, berurutan
     total += await planTasksFromGoal(goal);
   }
   return total;

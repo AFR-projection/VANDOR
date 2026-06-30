@@ -16,8 +16,7 @@ import type { SenderIdentity } from "./sender-identity";
 
 const APPROVE_RE =
   /^(?:setuju|approve|ya|ok|ijin|izin)(?:\s+([a-f0-9]{4,8}))?$/i;
-const REJECT_RE =
-  /^(?:tolak|reject|tidak|batal|no|n)(?:\s+([a-f0-9]{4,8}))?$/i;
+const REJECT_RE = /^(?:tolak|reject|tidak|batal|no|n)(?:\s+([a-f0-9]{4,8}))?$/i;
 const LIST_RE = /^(?:antrian|pending|approval|persetujuan)$/i;
 
 export type OperatorCommandResult = {
@@ -51,7 +50,7 @@ function formatPendingList(
   return (
     `📋 *${rows.length} persetujuan menunggu:*\n\n` +
     `${lines.join("\n")}\n\n` +
-    `Balas: *SETUJU <kode>* atau *TOLAK <kode>*`
+    "Balas: *SETUJU <kode>* atau *TOLAK <kode>*"
   );
 }
 
@@ -70,13 +69,17 @@ export async function handleOperatorWhatsappCommand(
 
   const allowed = await canUseOperatorCommands(identity);
   if (!allowed) {
-    if (APPROVE_RE.test(trimmed) || REJECT_RE.test(trimmed) || LIST_RE.test(trimmed)) {
+    if (
+      APPROVE_RE.test(trimmed) ||
+      REJECT_RE.test(trimmed) ||
+      LIST_RE.test(trimmed)
+    ) {
       const primary = await getPrimaryWhatsappOwner();
       return {
         handled: true,
         reply:
           `🔒 Perintah Operator hanya untuk *owner utama* (+${primary ?? "?"}).\n\n` +
-          `Atur di Pengaturan → WhatsApp → Owner Utama.`,
+          "Atur di Pengaturan → WhatsApp → Owner Utama.",
       };
     }
     return { handled: false };
@@ -105,9 +108,7 @@ async function resolveDecision(
   shortId: string | undefined,
   identity: SenderIdentity
 ): Promise<OperatorCommandResult> {
-  let approval = shortId
-    ? await findPendingApprovalByShortId(shortId)
-    : null;
+  let approval = shortId ? await findPendingApprovalByShortId(shortId) : null;
 
   if (!approval) {
     const pending = await listPendingApprovals(10);
@@ -121,8 +122,7 @@ async function resolveDecision(
     } else {
       return {
         handled: true,
-        reply:
-          `⚠️ Beberapa persetujuan menunggu — sebut kode:\n\n${formatPendingList(pending)}`,
+        reply: `⚠️ Beberapa persetujuan menunggu — sebut kode:\n\n${formatPendingList(pending)}`,
       };
     }
   }

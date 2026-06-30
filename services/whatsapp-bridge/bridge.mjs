@@ -106,7 +106,9 @@ async function startWhatsapp() {
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
     if (qr) {
-      console.log("[bridge] Scan QR di log Railway / terminal (Perangkat tertaut).");
+      console.log(
+        "[bridge] Scan QR di log Railway / terminal (Perangkat tertaut)."
+      );
     }
     if (connection === "open") {
       const me = sock.user?.id?.split(":")[0];
@@ -118,7 +120,9 @@ async function startWhatsapp() {
         lastDisconnect?.error?.output?.payload?.statusCode;
       const loggedOut = code === DisconnectReason.loggedOut;
       if (loggedOut) {
-        console.error("[bridge] Logged out — hapus volume auth & scan QR lagi.");
+        console.error(
+          "[bridge] Logged out — hapus volume auth & scan QR lagi."
+        );
         process.exit(1);
       }
       console.log("[bridge] Putus, reconnect 3s…");
@@ -160,7 +164,8 @@ async function startWhatsapp() {
         if (result.ignored) {
           continue;
         }
-        const reply = typeof result.reply === "string" ? result.reply.trim() : "";
+        const reply =
+          typeof result.reply === "string" ? result.reply.trim() : "";
         if (reply) {
           const jid = `${from}@s.whatsapp.net`;
           await sock.sendMessage(jid, { text: reply });

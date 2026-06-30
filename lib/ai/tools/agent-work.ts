@@ -2,6 +2,7 @@ import "server-only";
 
 import { tool } from "ai";
 import { z } from "zod";
+import { collectSystemAwareness } from "@/lib/autonomous/awareness";
 import {
   CHAT_JOB_TYPES,
   describeJobTypes,
@@ -11,17 +12,13 @@ import {
   listTasksForChat,
   summarizeTaskForChat,
 } from "@/lib/autonomous/chat-dispatch";
-import { collectSystemAwareness } from "@/lib/autonomous/awareness";
 import { listPendingApprovals } from "@/lib/autonomous/permission";
 
 /**
  * Satu tool untuk dispatch & lacak pekerjaan worker dari chat.
  * Nyata — menulis ke AgentTask DB, worker PM2 yang menjalankan.
  */
-export function makeAgentWorkTool(input: {
-  userId: string;
-  chatId: string;
-}) {
+export function makeAgentWorkTool(input: { userId: string; chatId: string }) {
   return tool({
     description:
       "Kelola pekerjaan worker VANDOR (NYATA — antrian DB + PM2). " +

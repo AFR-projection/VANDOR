@@ -1,10 +1,7 @@
 import "server-only";
 
-import {
-  API_FOOTBALL_BASE_URL,
-  FOOTBALL_CACHE_TTL_MS,
-} from "./config";
 import { getFootballCache, setFootballCache } from "./cache";
+import { API_FOOTBALL_BASE_URL, FOOTBALL_CACHE_TTL_MS } from "./config";
 import type { ApiFootballEnvelope } from "./types";
 
 const MAX_RETRIES = 3;
@@ -26,7 +23,9 @@ function hasApiErrors(errors: ApiFootballEnvelope<unknown>["errors"]): boolean {
   return Object.keys(errors).length > 0;
 }
 
-function formatApiErrors(errors: ApiFootballEnvelope<unknown>["errors"]): string {
+function formatApiErrors(
+  errors: ApiFootballEnvelope<unknown>["errors"]
+): string {
   if (Array.isArray(errors)) {
     return errors.join("; ");
   }
@@ -96,7 +95,9 @@ export async function footballApiGet<T>(
       return { data: body, cached: false };
     } catch (error) {
       lastError =
-        error instanceof Error ? error : new Error("API-Football request failed");
+        error instanceof Error
+          ? error
+          : new Error("API-Football request failed");
       if (attempt < MAX_RETRIES - 1) {
         await sleep(500 * (attempt + 1));
       }

@@ -43,7 +43,10 @@ async function sampleCpuPct(): Promise<number> {
   if (totalDelta <= 0) {
     return 0;
   }
-  return Math.max(0, Math.min(100, Math.round((1 - idleDelta / totalDelta) * 100)));
+  return Math.max(
+    0,
+    Math.min(100, Math.round((1 - idleDelta / totalDelta) * 100))
+  );
 }
 
 async function linuxMem(): Promise<{ usedMb: number; totalMb: number } | null> {

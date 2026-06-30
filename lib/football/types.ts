@@ -68,7 +68,13 @@ export type FootballStandingLeague = {
 };
 
 export type FootballTeamSearch = {
-  team: { id: number; name: string; code?: string; country?: string; logo?: string };
+  team: {
+    id: number;
+    name: string;
+    code?: string;
+    country?: string;
+    logo?: string;
+  };
   venue?: { name?: string; city?: string };
 };
 

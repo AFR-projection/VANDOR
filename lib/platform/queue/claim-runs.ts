@@ -1,8 +1,5 @@
 import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
-import {
-  platformWorkflowRun,
-  platformWorkflowStep,
-} from "@/lib/db/schema";
+import { platformWorkflowRun, platformWorkflowStep } from "@/lib/db/schema";
 import type { WorkflowRunStatus } from "../core/types";
 import { getPlatformDb } from "../db";
 import { failWorkflowStep } from "./workflow-step";

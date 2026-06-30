@@ -1,15 +1,15 @@
 import { auth } from "@/app/(auth)/auth";
-import { ensureBuiltinSkills } from "@/lib/agent-skills/seed";
+import { formatZodFieldErrors } from "@/lib/agent-skills/format-api-error";
 import {
   createAgentSkill,
   listAgentSkills,
   listApiKeys,
 } from "@/lib/agent-skills/queries";
+import { ensureBuiltinSkills } from "@/lib/agent-skills/seed";
 import {
   createSkillSchema,
   validateSkillConfig,
 } from "@/lib/agent-skills/validation";
-import { formatZodFieldErrors } from "@/lib/agent-skills/format-api-error";
 import { ChatbotError } from "@/lib/errors";
 import { requireClientAccess } from "@/lib/security/client-access";
 import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
@@ -35,9 +35,7 @@ export async function GET(request: Request) {
     return Response.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Gagal memuat agent skills",
+          error instanceof Error ? error.message : "Gagal memuat agent skills",
       },
       { status: 503 }
     );
@@ -69,7 +67,9 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error:
-          error instanceof Error ? error.message : "Konfigurasi skill tidak valid",
+          error instanceof Error
+            ? error.message
+            : "Konfigurasi skill tidak valid",
       },
       { status: 400 }
     );

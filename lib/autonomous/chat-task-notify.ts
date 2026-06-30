@@ -1,10 +1,10 @@
 import type { AgentTask } from "@/lib/db/schema";
-import { composeOperatorWhatsappMessage } from "./compose-message";
 import { collectSystemAwareness } from "./awareness";
 import type { ChatTaskPayload } from "./chat-dispatch";
+import { composeOperatorWhatsappMessage } from "./compose-message";
+import { createLogger } from "./logger";
 import { notify } from "./notify";
 import { recordChatTaskEvent } from "./operator-memory";
-import { createLogger } from "./logger";
 
 const log = createLogger("chat-task");
 
@@ -43,7 +43,7 @@ export async function notifyChatTaskOutcome(input: {
   error?: string;
 }): Promise<void> {
   const payload = input.task.payload as ChatTaskPayload | null;
-  if (!payload || payload.requestedBy !== "chat") {
+  if (payload?.requestedBy !== "chat") {
     return;
   }
   if (payload.notifyOnComplete === false) {

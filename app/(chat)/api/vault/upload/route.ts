@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { ChatbotError } from "@/lib/errors";
 import { classify, isMimeAllowed, MAX_UPLOAD_BYTES } from "@/lib/files/mime";
 import { requireClientAccess } from "@/lib/security/client-access";
-import { storeVaultFile } from "@/lib/vault/store";
 import { requireVaultSession } from "@/lib/vault/route-auth";
+import { storeVaultFile } from "@/lib/vault/store";
 
 export const maxDuration = 60;
 
@@ -63,7 +63,10 @@ export async function POST(request: Request) {
     const summaryRaw = formData.get("summary");
     const tags =
       typeof tagsRaw === "string" && tagsRaw.trim()
-        ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean)
+        ? tagsRaw
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
         : undefined;
     const summary =
       typeof summaryRaw === "string" && summaryRaw.trim()

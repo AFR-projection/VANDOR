@@ -3,7 +3,10 @@ import "server-only";
 import { generateText, type UserContent } from "ai";
 import { z } from "zod";
 import { getOpenRouterContextForUser } from "@/lib/ai/integration-models";
-import { getLanguageModel, resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
+import {
+  getLanguageModel,
+  resolveOpenRouterApiKeyForUser,
+} from "@/lib/ai/providers";
 import type { VaultFileType } from "@/lib/db/schema";
 
 const MAX_VISION_BYTES = 4 * 1024 * 1024;
@@ -23,7 +26,9 @@ Aturan:
 - tags: 2-6 tag lowercase, singkat, relevan (tipe file, topik, warna, lokasi, dll)
 - Jangan sertakan tag generik seperti "file" atau "upload"`;
 
-function parseAutoTagJson(text: string): { summary: string; tags: string[] } | null {
+function parseAutoTagJson(
+  text: string
+): { summary: string; tags: string[] } | null {
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) {
     return null;
@@ -94,10 +99,7 @@ export async function suggestVaultMetadata(input: {
 
   let userContent: UserContent;
 
-  if (
-    input.fileType === "image" &&
-    input.data.byteLength <= MAX_VISION_BYTES
-  ) {
+  if (input.fileType === "image" && input.data.byteLength <= MAX_VISION_BYTES) {
     userContent = [
       {
         type: "image",

@@ -1,10 +1,9 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-
+import { resolveIntegrationModels } from "@/lib/ai/integration-models";
 import { getIntegrationRuntimeConfig } from "@/lib/settings/integration-runtime";
 import { getUserSettings } from "@/lib/settings/queries";
-import { resolveIntegrationModels } from "@/lib/ai/integration-models";
 import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
 import {
   isLikelyDialablePhone,
@@ -110,7 +109,11 @@ export async function getWhatsappModelId(): Promise<string> {
     }
     const tierModels = resolveIntegrationModels(settings.integrations);
     const fromTier = tierModels.chatModel?.trim();
-    if (fromTier && !fromTier.endsWith(":free") && fromTier !== "openrouter/free") {
+    if (
+      fromTier &&
+      !fromTier.endsWith(":free") &&
+      fromTier !== "openrouter/free"
+    ) {
       return fromTier;
     }
   }

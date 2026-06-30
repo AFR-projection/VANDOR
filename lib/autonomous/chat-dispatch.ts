@@ -1,9 +1,9 @@
 import { desc, eq, sql } from "drizzle-orm";
-import { agentTask } from "@/lib/db/schema";
 import type { AgentTask } from "@/lib/db/schema";
+import { agentTask } from "@/lib/db/schema";
 import { db } from "./db";
-import { enqueueTask } from "./tasks";
 import { recordChatTaskEvent } from "./operator-memory";
+import { enqueueTask } from "./tasks";
 
 /** Metadata task yang diminta dari chat (web/WA). */
 export type ChatTaskPayload = {
@@ -201,8 +201,7 @@ export function summarizeTaskForChat(task: AgentTask): {
       } else if (r.scan && typeof r.scan === "object") {
         const scan = r.scan as { summary?: string; ok?: boolean };
         resultSummary =
-          scan.summary?.slice(0, 300) ??
-          (scan.ok ? "Scan OK" : "Scan gagal");
+          scan.summary?.slice(0, 300) ?? (scan.ok ? "Scan OK" : "Scan gagal");
       } else if (typeof r.ok === "boolean") {
         resultSummary = r.ok ? "Selesai OK" : "Selesai dengan masalah";
       } else if (r.sessionId) {

@@ -24,10 +24,7 @@ function truncate(text: string): { text: string; truncated: boolean } {
   };
 }
 
-async function fetchBuffer(
-  url: string,
-  userId?: string
-): Promise<Buffer> {
+async function fetchBuffer(url: string, userId?: string): Promise<Buffer> {
   if (userId) {
     const { isVaultOpenUrl, readVaultAttachment } = await import(
       "./vault-attachment"

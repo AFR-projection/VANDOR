@@ -10,10 +10,7 @@ export function computeRetryDelayMs(
   maxMs = platformConfig.retryBackoffMaxMs
 ): number {
   const safeAttempt = Math.max(1, attempt);
-  const exponential = Math.min(
-    baseMs * 2 ** (safeAttempt - 1),
-    maxMs
-  );
+  const exponential = Math.min(baseMs * 2 ** (safeAttempt - 1), maxMs);
   const jitter = Math.floor(exponential * 0.1 * Math.random());
   return exponential + jitter;
 }

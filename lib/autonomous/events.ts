@@ -32,7 +32,6 @@ export async function emitEvent(input: AgentEventInput): Promise<void> {
       payload: input.payload ?? null,
     });
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: surface event persist failure
     console.error("emitEvent persist failed:", error);
   }
 
@@ -43,7 +42,6 @@ export async function emitEvent(input: AgentEventInput): Promise<void> {
   await Promise.all(
     handlers.map((h) =>
       Promise.resolve(h(input)).catch((err) => {
-        // biome-ignore lint/suspicious/noConsole: trigger error must surface
         console.error(`Trigger for '${input.type}' failed:`, err);
       })
     )

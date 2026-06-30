@@ -33,7 +33,9 @@ export function onChatUpdated(
 }
 
 /** Subscribe to any WA chat update (for sidebar). Returns unsubscribe fn. */
-export function onAnyWaChatUpdated(listener: (chatId: string) => void): () => void {
+export function onAnyWaChatUpdated(
+  listener: (chatId: string) => void
+): () => void {
   const emitter = getEmitter();
   emitter.on("wa:any", listener);
   return () => emitter.off("wa:any", listener);

@@ -1,7 +1,10 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { runFootballTool } from "@/lib/football/service";
-import type { FootballServiceResult, FootballToolAction } from "@/lib/football/types";
+import type {
+  FootballServiceResult,
+  FootballToolAction,
+} from "@/lib/football/types";
 
 const footballActionSchema = z.enum([
   "live_scores",

@@ -1,6 +1,5 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { autonomousConfig } from "./config";
 import { emitEvent } from "./events";
 import { enqueueTask } from "./tasks";
 
@@ -81,11 +80,9 @@ export async function runRemoteHealthChecks(): Promise<number> {
 
   let down = 0;
   for (const host of hosts) {
-    // biome-ignore lint/nursery/noAwaitInLoop: host terbatas
     const result = await checkRemoteHost(host);
     if (!result.ok) {
       down += 1;
-      // biome-ignore lint/nursery/noAwaitInLoop: event berurutan
       await emitEvent({
         type: "remote-host-down",
         severity: "error",

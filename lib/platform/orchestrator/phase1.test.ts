@@ -1,16 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import {
-  computeRetryDelayMs,
-  retryAfterDate,
-} from "./retry";
+import { computeRetryDelayMs, retryAfterDate } from "./retry";
 import { StepTimeoutError, withStepTimeout } from "./timeout";
 
 describe("platform retry backoff", () => {
   it("increases delay with attempt", () => {
-    const a1 = computeRetryDelayMs(1, 1000, 60000);
-    const a2 = computeRetryDelayMs(2, 1000, 60000);
-    const a3 = computeRetryDelayMs(3, 1000, 60000);
+    const a1 = computeRetryDelayMs(1, 1000, 60_000);
+    const a2 = computeRetryDelayMs(2, 1000, 60_000);
+    const a3 = computeRetryDelayMs(3, 1000, 60_000);
     assert.ok(a1 >= 1000 && a1 <= 1100);
     assert.ok(a2 >= 2000 && a2 <= 2200);
     assert.ok(a3 >= 4000 && a3 <= 4400);

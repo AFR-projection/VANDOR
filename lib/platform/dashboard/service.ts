@@ -1,17 +1,21 @@
-import { and, asc, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, type SQL } from "drizzle-orm";
 import {
-  platformEvent,
-  platformWorkflowRun,
   type PlatformWorkflowRun,
   type PlatformWorkflowStep,
+  platformEvent,
+  platformWorkflowRun,
 } from "@/lib/db/schema";
-import { listAgents } from "../core/agent-registry";
 import { isPlatformV2Enabled } from "../config";
+import { listAgents } from "../core/agent-registry";
 import { getPlatformDb } from "../db";
 import { listEventsForRun } from "../events/bus";
-import { listStepsForRun } from "../queue/queries";
 import { countActiveWorkflowRuns } from "../queue/claim-runs";
-import { ACTIVE_RUN_STATUSES, formatTimeAgo, isActiveRunStatus } from "./format";
+import { listStepsForRun } from "../queue/queries";
+import {
+  ACTIVE_RUN_STATUSES,
+  formatTimeAgo,
+  isActiveRunStatus,
+} from "./format";
 
 export type WorkflowRunFilter = "active" | "completed" | "failed" | "all";
 
@@ -82,9 +86,7 @@ function toRunListItem(
   const completedSteps = steps.filter((s) => s.status === "completed").length;
   const running = steps.find(
     (s) =>
-      s.status === "running" ||
-      s.status === "queued" ||
-      s.status === "waiting"
+      s.status === "running" || s.status === "queued" || s.status === "waiting"
   );
   const plan = run.planJson as { summary?: string } | null;
 
@@ -168,7 +170,7 @@ export async function listWorkflowRunsForUser(
   const limit = input.limit ?? 20;
   const status = input.status ?? "all";
 
-  let statusFilter;
+  let statusFilter: SQL | undefined;
   if (status === "active") {
     statusFilter = inArray(platformWorkflowRun.status, ACTIVE_RUN_STATUSES);
   } else if (status === "completed") {

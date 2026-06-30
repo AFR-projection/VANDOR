@@ -174,8 +174,7 @@ export async function getActiveOwners(userId: string) {
 export async function getActiveOwnersForDisplay(userId: string) {
   const rows = await getActiveOwners(userId);
   return rows.filter(
-    (r) =>
-      r.label !== "whatsapp-lid-only" && !isWhatsappLidDigits(r.phone)
+    (r) => r.label !== "whatsapp-lid-only" && !isWhatsappLidDigits(r.phone)
   );
 }
 

@@ -1,34 +1,38 @@
 export { isPlatformV2Enabled, platformConfig } from "./config";
-export { bootstrapPlatformV2, isPlatformBootstrapped } from "./init";
-export {
-  listAgents,
-  getAgent,
-  requireAgent,
-} from "./core/agent-registry";
 export type { AgentDefinition } from "./core/agent-definition";
 export { defineAgent } from "./core/agent-definition";
+export {
+  getAgent,
+  listAgents,
+  requireAgent,
+} from "./core/agent-registry";
+export {
+  executePlatformTool,
+  listTools,
+  listToolsForAgent,
+} from "./core/tool-registry";
 export type {
-  PlatformAgentId,
   ExecutionPlan,
   PlanStep,
+  PlatformAgentId,
   PlatformToolMeta,
 } from "./core/types";
-export { listTools, listToolsForAgent, executePlatformTool } from "./core/tool-registry";
-export { publishPlatformEvent, onPlatformEvent } from "./events/bus";
-export { createWorkflowRun } from "./queue/workflow-run";
-export { processWorkflowRun } from "./orchestrator/engine";
-export { runPlatformOrchestratorTick } from "./orchestrator/tick";
-export { computeRetryDelayMs } from "./orchestrator/retry";
-export { runPingWorkflow } from "./smoke/ping-workflow";
+export type {
+  PlatformDashboardSnapshot,
+  WorkflowRunDetail,
+  WorkflowRunListItem,
+} from "./dashboard/service";
 export {
   getPlatformDashboardSnapshot,
-  listWorkflowRunsForUser,
   getWorkflowRunDetailForUser,
   listRecentEventsForUser,
+  listWorkflowRunsForUser,
   pollPlatformEventsForUser,
 } from "./dashboard/service";
-export type {
-  WorkflowRunListItem,
-  WorkflowRunDetail,
-  PlatformDashboardSnapshot,
-} from "./dashboard/service";
+export { onPlatformEvent, publishPlatformEvent } from "./events/bus";
+export { bootstrapPlatformV2, isPlatformBootstrapped } from "./init";
+export { processWorkflowRun } from "./orchestrator/engine";
+export { computeRetryDelayMs } from "./orchestrator/retry";
+export { runPlatformOrchestratorTick } from "./orchestrator/tick";
+export { createWorkflowRun } from "./queue/workflow-run";
+export { runPingWorkflow } from "./smoke/ping-workflow";

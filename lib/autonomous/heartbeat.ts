@@ -1,10 +1,9 @@
-import type { ObservationBundle } from "./healing/detectors";
-import type { Issue } from "./healing/detectors";
+import { eq, sql } from "drizzle-orm";
+import { agentState } from "@/lib/db/schema";
+import { db } from "./db";
+import type { Issue, ObservationBundle } from "./healing/detectors";
 import { pingNotifyChannel } from "./notify-ping";
 import { getAgentState } from "./state";
-import { db } from "./db";
-import { agentState } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
 
 export type HeartbeatSubsystemStatus =
   | "ok"
@@ -54,7 +53,9 @@ export type HeartbeatSnapshot = {
   summary: string;
 };
 
-function parseStoredNote(note: string | null): Partial<HeartbeatSnapshot> | null {
+function parseStoredNote(
+  note: string | null
+): Partial<HeartbeatSnapshot> | null {
   if (!note?.trim().startsWith("{")) {
     return null;
   }
@@ -78,10 +79,7 @@ function gradeFromScore(score: number): HeartbeatSnapshot["grade"] {
   return "critical";
 }
 
-function computeHealthScore(
-  obs: ObservationBundle,
-  issues: Issue[]
-): number {
+function computeHealthScore(obs: ObservationBundle, issues: Issue[]): number {
   let score = 100;
   const { metrics, services, uptime } = obs;
 
@@ -245,7 +243,7 @@ export async function touchProactiveHeartbeat(
 ): Promise<void> {
   const state = await getAgentState();
   const prev = parseStoredNote(state.note);
-  if (!prev || prev.v !== 1) {
+  if (prev?.v !== 1) {
     return;
   }
   const now = new Date().toISOString();

@@ -1,6 +1,6 @@
 import type { VaultFile } from "@/lib/db/schema";
-import type { VaultFileSnapshot } from "./types";
 import { resolveVaultDisplayName } from "./display-name";
+import type { VaultFileSnapshot } from "./types";
 
 /** Strip sensitive fields — LLM receives only this shape. */
 export function toVaultSnapshot(
@@ -40,6 +40,6 @@ export function toVaultSnapshot(
     sourceType: row.sourceType as VaultFileSnapshot["sourceType"],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt?.toISOString(),
-    ...(similarity !== undefined ? { similarity } : {}),
+    ...(similarity === undefined ? {} : { similarity }),
   };
 }

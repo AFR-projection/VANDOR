@@ -1,0 +1,185 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> vandor@3.2.0 check C:\Users\User\Documents\VANDOR
+> ultracite check
+
+components\chat\multimodal-input.tsx:227:9 lint/complexity/useOptionalChain  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Change to an optional chain.
+  
+    225 Γöé     if (!messages.length) return;
+    226 Γöé     const last = messages.at(-1);
+  > 227 Γöé     if (!last || last.role !== "assistant") return;
+        Γöé         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    228 Γöé     const hasAddPrompt = last.parts?.some(
+    229 Γöé       (p: { type?: string }) => p.type === "data-vault-add-prompt"
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    225 225 Γöé       if (!messages.length) return;
+    226 226 Γöé       const last = messages.at(-1);
+    227     Γöé - ┬╖┬╖┬╖┬╖if┬╖(!last┬╖||┬╖last.role┬╖!==┬╖"assistant")┬╖return;
+        227 Γöé + ┬╖┬╖┬╖┬╖if┬╖(last?.role┬╖!==┬╖"assistant")┬╖return;
+    228 228 Γöé       const hasAddPrompt = last.parts?.some(
+    229 229 Γöé         (p: { type?: string }) => p.type === "data-vault-add-prompt"
+  
+
+components\chat\shell.tsx:137:9 lint/complexity/useOptionalChain  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Change to an optional chain.
+  
+    135 Γöé     if (!messages.length) return;
+    136 Γöé     const last = messages.at(-1);
+  > 137 Γöé     if (!last || last.role !== "assistant") return;
+        Γöé         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    138 Γöé     for (const part of last.parts ?? []) {
+    139 Γöé       if (!part || typeof part !== "object" || !("type" in part)) {
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    135 135 Γöé       if (!messages.length) return;
+    136 136 Γöé       const last = messages.at(-1);
+    137     Γöé - ┬╖┬╖┬╖┬╖if┬╖(!last┬╖||┬╖last.role┬╖!==┬╖"assistant")┬╖return;
+        137 Γöé + ┬╖┬╖┬╖┬╖if┬╖(last?.role┬╖!==┬╖"assistant")┬╖return;
+    138 138 Γöé       for (const part of last.parts ?? []) {
+    139 139 Γöé         if (!part || typeof part !== "object" || !("type" in part)) {
+  
+
+lib\media\download.ts:33:8 lint/correctness/noUnusedImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This import is unused.
+  
+    31 Γöé   MediaPlatform,
+    32 Γöé } from "@/lib/media/types";
+  > 33 Γöé import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
+       Γöé        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    34 Γöé import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
+    35 Γöé import {
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Safe fix: Remove the unused imports.
+  
+     31  31 Γöé     MediaPlatform,
+     32  32 Γöé   } from "@/lib/media/types";
+     33     Γöé - import┬╖{┬╖downloadYoutubeViaFallback┬╖}┬╖from┬╖"@/lib/media/youtube-fallback";
+     34  33 Γöé   import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
+     35  34 Γöé   import {
+  
+
+lib\media\download.ts:34:8 lint/correctness/noUnusedImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This import is unused.
+  
+    32 Γöé } from "@/lib/media/types";
+    33 Γöé import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
+  > 34 Γöé import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
+       Γöé        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    35 Γöé import {
+    36 Γöé   downloadWithYtdlpApi,
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Safe fix: Remove the unused imports.
+  
+     32  32 Γöé   } from "@/lib/media/types";
+     33  33 Γöé   import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
+     34     Γöé - import┬╖{┬╖downloadWithInnertube┬╖}┬╖from┬╖"@/lib/media/youtube-innertube";
+     35  34 Γöé   import {
+     36  35 Γöé     downloadWithYtdlpApi,
+  
+
+lib\media\download.ts:35:8 lint/correctness/noUnusedImports  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This import is unused.
+  
+    33 Γöé import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
+    34 Γöé import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
+  > 35 Γöé import {
+       Γöé        ^
+  > 36 Γöé   downloadWithYtdlpApi,
+  > 37 Γöé   hasYtdlpApiBackend,
+  > 38 Γöé } from "@/lib/media/youtube-ytdlp-api";
+       Γöé ^
+    39 Γöé import {
+    40 Γöé   hasYoutubeCookiesConfigured,
+  
+  i Unused imports might be the result of an incomplete refactoring.
+  
+  i Safe fix: Remove the unused imports.
+  
+     33  33 Γöé   import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
+     34  34 Γöé   import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
+     35     Γöé - import┬╖{
+     36     Γöé - ┬╖┬╖downloadWithYtdlpApi,
+     37     Γöé - ┬╖┬╖hasYtdlpApiBackend,
+     38     Γöé - }┬╖from┬╖"@/lib/media/youtube-ytdlp-api";
+     39  35 Γöé   import {
+     40  36 Γöé     hasYoutubeCookiesConfigured,
+  
+
+lib\media\download.ts:61:16 lint/correctness/noUnusedVariables  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This function listYoutubeCobaltSources is unused.
+  
+    59 Γöé }
+    60 Γöé 
+  > 61 Γöé async function listYoutubeCobaltSources(): Promise<CobaltRequestOptions[]> {
+       Γöé                ^^^^^^^^^^^^^^^^^^^^^^^^
+    62 Γöé   const { getIntegrationRuntimeConfig } = await import(
+    63 Γöé     "@/lib/settings/integration-runtime"
+  
+  i Unused variables are often the result of typos, incomplete refactors, or other sources of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend listYoutubeCobaltSources with an underscore.
+  
+     59  59 Γöé   }
+     60  60 Γöé   
+     61     Γöé - async┬╖function┬╖listYoutubeCobaltSources():┬╖Promise<CobaltRequestOptions[]>┬╖{
+         61 Γöé + async┬╖function┬╖_listYoutubeCobaltSources():┬╖Promise<CobaltRequestOptions[]>┬╖{
+     62  62 Γöé     const { getIntegrationRuntimeConfig } = await import(
+     63  63 Γöé       "@/lib/settings/integration-runtime"
+  
+
+Checked 584 files in 351ms. No fixes applied.
+Found 6 errors.
+check ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Some errors were emitted while running checks.
+  
+
+Error: Lint errors found
+    at file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/ultracite@7.0.11_typescript@5.8.2/node_modules/ultraci
+te/dist/index.js:313:13045
+    at async resolveMiddleware (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescrip
+t@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:221:17)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async procedure (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/
+node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:281:18)
+    at async file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_module
+s/@trpc/server/dist/tracked-D4V22yc5.mjs:298:13
+    at async Command.<anonymous> (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve
+_387680dd8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:355:32)
+    at async Command.parseAsync 
+(C:\Users\User\Documents\VANDOR\node_modules\.pnpm\commander@14.0.2\node_modules\commander\lib\command.js:1122:5)
+    at async Object.run (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve_387680dd
+8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:461:9)
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

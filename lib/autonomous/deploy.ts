@@ -2,7 +2,12 @@ import { autonomousConfig } from "./config";
 
 export type DeployResult = {
   ok: boolean;
-  steps: Array<{ command: string; ok: boolean; output?: string; error?: string }>;
+  steps: Array<{
+    command: string;
+    ok: boolean;
+    output?: string;
+    error?: string;
+  }>;
   rollbackHint?: string;
 };
 
@@ -74,7 +79,9 @@ export function buildDeployApprovalSummary(): string {
   ].join(" ");
 }
 
-export function describeDeployRemoteCheck(output: string): DeployRemoteStatus | null {
+export function describeDeployRemoteCheck(
+  output: string
+): DeployRemoteStatus | null {
   const lines = output.split("\n").map((l) => l.trim());
   const read = (prefix: string): string => {
     const line = lines.find((l) => l.startsWith(`${prefix}=`));

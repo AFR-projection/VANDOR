@@ -20,13 +20,10 @@ import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type {
-  AgentSkillCategory,
-  AgentSkillType,
-} from "@/lib/db/schema";
-import { cn } from "@/lib/utils";
 import { formatApiError } from "@/lib/agent-skills/format-api-error";
 import { apiBasePath } from "@/lib/app-url";
+import type { AgentSkillCategory, AgentSkillType } from "@/lib/db/schema";
+import { cn } from "@/lib/utils";
 
 const base = apiBasePath;
 
@@ -207,7 +204,10 @@ function SkillForm({
     <div className="space-y-4 rounded-xl border border-border/60 bg-muted/20 p-4">
       {!initial && (
         <div>
-          <label className="mb-1 block text-xs text-muted-foreground" htmlFor="skill-slug">
+          <label
+            className="mb-1 block text-xs text-muted-foreground"
+            htmlFor="skill-slug"
+          >
             Slug (unik, lowercase)
           </label>
           <Input
@@ -219,7 +219,10 @@ function SkillForm({
         </div>
       )}
       <div>
-        <label className="mb-1 block text-xs text-muted-foreground" htmlFor="skill-name">
+        <label
+          className="mb-1 block text-xs text-muted-foreground"
+          htmlFor="skill-name"
+        >
           Nama Skill
         </label>
         <Input
@@ -229,7 +232,10 @@ function SkillForm({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs text-muted-foreground" htmlFor="skill-desc">
+        <label
+          className="mb-1 block text-xs text-muted-foreground"
+          htmlFor="skill-desc"
+        >
           Deskripsi (AI baca ini untuk memilih tool)
         </label>
         <Textarea
@@ -241,7 +247,10 @@ function SkillForm({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-xs text-muted-foreground" htmlFor="skill-category">
+          <label
+            className="mb-1 block text-xs text-muted-foreground"
+            htmlFor="skill-category"
+          >
             Kategori
           </label>
           <select
@@ -258,7 +267,10 @@ function SkillForm({
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs text-muted-foreground" htmlFor="skill-type">
+          <label
+            className="mb-1 block text-xs text-muted-foreground"
+            htmlFor="skill-type"
+          >
             Tipe
           </label>
           <select
@@ -305,7 +317,10 @@ function SkillForm({
         </div>
       </div>
       <div>
-        <label className="mb-1 block text-xs text-muted-foreground" htmlFor="skill-config">
+        <label
+          className="mb-1 block text-xs text-muted-foreground"
+          htmlFor="skill-config"
+        >
           Konfigurasi JSON
         </label>
         <Textarea
@@ -317,7 +332,10 @@ function SkillForm({
         />
       </div>
       <div>
-        <label className="mb-1 block text-xs text-muted-foreground" htmlFor="skill-rate">
+        <label
+          className="mb-1 block text-xs text-muted-foreground"
+          htmlFor="skill-rate"
+        >
           Rate limit (/jam)
         </label>
         <Input
@@ -384,7 +402,9 @@ export function AgentSkillsPanel() {
       mutate();
       toast({
         type: "success",
-        description: skill.isActive ? "Skill dinonaktifkan" : "Skill diaktifkan",
+        description: skill.isActive
+          ? "Skill dinonaktifkan"
+          : "Skill diaktifkan",
       });
     }
   };
@@ -407,7 +427,10 @@ export function AgentSkillsPanel() {
       try {
         params = JSON.parse(testParams) as Record<string, unknown>;
       } catch {
-        toast({ type: "error", description: "Parameter test JSON tidak valid" });
+        toast({
+          type: "error",
+          description: "Parameter test JSON tidak valid",
+        });
         return;
       }
       const res = await fetch(`${base()}/api/agent-skills/${skill.id}/test`, {
@@ -422,7 +445,10 @@ export function AgentSkillsPanel() {
           description: `Test OK (${result.executionTimeMs}ms)`,
         });
       } else {
-        toast({ type: "error", description: formatApiError(result.error, "Test gagal") });
+        toast({
+          type: "error",
+          description: formatApiError(result.error, "Test gagal"),
+        });
       }
       mutateLogs();
     } finally {
@@ -442,7 +468,10 @@ export function AgentSkillsPanel() {
         });
         const data = await res.json();
         if (!res.ok) {
-          toast({ type: "error", description: formatApiError(data.error, "Upload gagal") });
+          toast({
+            type: "error",
+            description: formatApiError(data.error, "Upload gagal"),
+          });
           return;
         }
         toast({ type: "success", description: "Dokumen diindeks" });
@@ -502,8 +531,8 @@ export function AgentSkillsPanel() {
             Agent Skills & Tools
           </h2>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Kelola tool kustom untuk AI Agent. Skill aktif otomatis tersedia saat
-            chat — AI memilih tool yang relevan berdasarkan deskripsi.
+            Kelola tool kustom untuk AI Agent. Skill aktif otomatis tersedia
+            saat chat — AI memilih tool yang relevan berdasarkan deskripsi.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -584,7 +613,8 @@ export function AgentSkillsPanel() {
             </h3>
             <p className="mb-3 text-xs text-muted-foreground">
               Simpan token/API key atau connection string DB. Referensikan via{" "}
-              <code>apiKeyId</code> / <code>connectionApiKeyId</code> di config skill.
+              <code>apiKeyId</code> / <code>connectionApiKeyId</code> di config
+              skill.
             </p>
             <div className="mb-3 flex flex-wrap gap-2">
               {apiKeys.map((k) => (
@@ -619,7 +649,8 @@ export function AgentSkillsPanel() {
           <div className="space-y-2">
             {skills.length === 0 && (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                Belum ada skill. Tambah skill HTTP API atau aktifkan skill bawaan.
+                Belum ada skill. Tambah skill HTTP API atau aktifkan skill
+                bawaan.
               </p>
             )}
             {skills.map((skill) => (
@@ -637,7 +668,9 @@ export function AgentSkillsPanel() {
                   <ZapIcon
                     className={cn(
                       "size-4 shrink-0",
-                      skill.isActive ? "text-emerald-400" : "text-muted-foreground"
+                      skill.isActive
+                        ? "text-emerald-400"
+                        : "text-muted-foreground"
                     )}
                   />
                   <div className="min-w-0 flex-1">
@@ -756,8 +789,8 @@ export function AgentSkillsPanel() {
         <div className="space-y-4">
           <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
             <p className="mb-3 text-sm text-muted-foreground">
-              Unggah PDF, DOCX, TXT, CSV, atau JSON. Dokumen di-chunk dan diindeks
-              untuk semantic search via skill{" "}
+              Unggah PDF, DOCX, TXT, CSV, atau JSON. Dokumen di-chunk dan
+              diindeks untuk semantic search via skill{" "}
               <code>knowledge_base_search</code>.
             </p>
             <input

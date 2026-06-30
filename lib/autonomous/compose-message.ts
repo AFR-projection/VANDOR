@@ -1,8 +1,7 @@
-import type { Issue } from "./healing/detectors";
-import type { ObservationBundle } from "./healing/detectors";
-import { isLlmConfigured, llmChat } from "./llm";
 import type { SystemAwarenessSnapshot } from "./awareness";
 import { formatAwarenessForUser } from "./awareness";
+import type { Issue, ObservationBundle } from "./healing/detectors";
+import { isLlmConfigured, llmChat } from "./llm";
 
 const SYSTEM = `Kamu VANDOR — satu AI agent (bukan "Operator" terpisah). Tulis pesan WhatsApp ke owner deployment.
 
@@ -63,11 +62,15 @@ export async function composeOperatorWhatsappMessage(input: {
   };
 
   const kindHint: Record<OperatorMessageKind, string> = {
-    alert: "Ada isu/error/critical — beri tahu owner, singkat & jelas, tawarkan bantu investigasi.",
-    checkin: "Check-in proaktif — sistem relatif sehat, tanya apa yang perlu dibantu hari ini.",
-    startup: "Worker baru online — sapa singkat, konfirmasi kamu memantau 24/7.",
+    alert:
+      "Ada isu/error/critical — beri tahu owner, singkat & jelas, tawarkan bantu investigasi.",
+    checkin:
+      "Check-in proaktif — sistem relatif sehat, tanya apa yang perlu dibantu hari ini.",
+    startup:
+      "Worker baru online — sapa singkat, konfirmasi kamu memantau 24/7.",
     code_fix_ok: "Auto-fix codebase berhasil — kabari sukses singkat.",
-    code_fix_failed: "Auto-fix gagal — jelaskan masalah tanpa spam, arahkan cek Operator jika perlu.",
+    code_fix_failed:
+      "Auto-fix gagal — jelaskan masalah tanpa spam, arahkan cek Operator jika perlu.",
   };
 
   const prompt = `${kindHint[input.kind]}

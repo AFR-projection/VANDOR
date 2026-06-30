@@ -5,6 +5,7 @@ import { vaultDownloadFileName } from "@/lib/vault/display-name";
 import { getVaultFileById } from "@/lib/vault/queries";
 import { downloadVaultFile } from "@/lib/vault/retrieve";
 import { requireVaultSession } from "@/lib/vault/route-auth";
+
 function clientIp(request: Request): string | undefined {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??

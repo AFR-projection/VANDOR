@@ -59,11 +59,17 @@ export async function DELETE(request: Request) {
     const body = (await request.json()) as { phone?: string };
     phone = (body.phone ?? "").trim();
   } catch {
-    return NextResponse.json({ error: "Body JSON tidak valid." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Body JSON tidak valid." },
+      { status: 400 }
+    );
   }
 
   if (!phone) {
-    return NextResponse.json({ error: "Field phone wajib diisi." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Field phone wajib diisi." },
+      { status: 400 }
+    );
   }
 
   await revokeWhatsappOwner(ownerUser.id, phone);

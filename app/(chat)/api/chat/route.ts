@@ -10,6 +10,23 @@ import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
+import {
+  agentDone,
+  agentEvent,
+  agentProgress,
+  agentStatus,
+  agentStepComplete,
+  agentStepStart,
+  agentTrace,
+} from "@/lib/agent-activity/emit";
+import { toolActivityLabel } from "@/lib/agent-activity/labels";
+import {
+  buildSkillPromptLines,
+  buildSkillTools,
+} from "@/lib/agent-skills/build-tools";
+import { listActiveAgentSkills } from "@/lib/agent-skills/queries";
+import { ensureBuiltinSkills } from "@/lib/agent-skills/seed";
+import { toSkillToolName } from "@/lib/agent-skills/types";
 import { autoSelectModel, fallbacksFor } from "@/lib/ai/auto-select";
 import { isFreeTier, isOrchestratorTier } from "@/lib/ai/chat-modes";
 import {
@@ -31,22 +48,23 @@ import {
   planOrchestrator,
   resolveFreeModeModel,
 } from "@/lib/ai/orchestrator";
+import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
 import { polishResponse } from "@/lib/ai/polish";
 import { systemPrompt } from "@/lib/ai/prompts";
-import { buildOwnerAuthorityBlock } from "@/lib/ai/owner-authority-prompt";
-import { buildOwnerConversationFreedomBlock } from "@/lib/ai/system-security-fence";
 import { resolveOpenRouterApiKeyForUser } from "@/lib/ai/providers";
 import { classifyTaskIntent } from "@/lib/ai/router";
 import { streamTextWithModelFallback } from "@/lib/ai/stream-with-fallback";
+import { buildOwnerConversationFreedomBlock } from "@/lib/ai/system-security-fence";
+import { makeAgentWorkTool } from "@/lib/ai/tools/agent-work";
 import { makeAssistantTools } from "@/lib/ai/tools/assistant-tools";
 import { makeCheckSystemTool } from "@/lib/ai/tools/check-system";
-import { makeAgentWorkTool } from "@/lib/ai/tools/agent-work";
 import { createDocument } from "@/lib/ai/tools/create-document";
 import { createDocx } from "@/lib/ai/tools/create-docx";
 import { createPdf } from "@/lib/ai/tools/create-pdf";
 import { createSpreadsheet } from "@/lib/ai/tools/create-spreadsheet";
 import { makeDownloadMediaTool } from "@/lib/ai/tools/download-media";
 import { editDocument } from "@/lib/ai/tools/edit-document";
+import { makeFootballApi } from "@/lib/ai/tools/football-api";
 import { getCurrentTime } from "@/lib/ai/tools/get-current-time";
 import { makeGetLocation } from "@/lib/ai/tools/get-location";
 import { getWeather } from "@/lib/ai/tools/get-weather";
@@ -61,8 +79,8 @@ import {
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { showMap } from "@/lib/ai/tools/show-map";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { makeFootballApi } from "@/lib/ai/tools/football-api";
 import { makeWebSearch } from "@/lib/ai/tools/web-search";
+import { buildCachedAwarenessContextBlock } from "@/lib/autonomous/awareness";
 import {
   getCachedResponse,
   setCachedResponse,
@@ -86,6 +104,9 @@ import { ChatbotError } from "@/lib/errors";
 import { buildFilesContextBlock, extractAll } from "@/lib/files/extract";
 import { inlineLocalAttachments } from "@/lib/files/inline";
 import { classify, type FileKind } from "@/lib/files/mime";
+import { detectFootballNeed } from "@/lib/football/detect";
+import { buildFootballContextBlock } from "@/lib/football/format";
+import { preloadFootballContext } from "@/lib/football/service";
 import { createMediaDownloadStreamResponse } from "@/lib/media/chat-stream";
 import { buildMemoryContext } from "@/lib/memory/build-context";
 import {
@@ -97,22 +118,11 @@ import { memorySavedDataPart } from "@/lib/memory/notice";
 import { isExplicitRememberRequest } from "@/lib/memory/remember";
 import { maybeSummarizeChat } from "@/lib/memory/summarize";
 import { captureVisualMemories } from "@/lib/memory/visual-memory";
-import {
-  agentDone,
-  agentEvent,
-  agentProgress,
-  agentStatus,
-  agentStepComplete,
-  agentStepStart,
-  agentTrace,
-} from "@/lib/agent-activity/emit";
-import { toolActivityLabel } from "@/lib/agent-activity/labels";
 import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
 import { recordActivityLog, recordToolEvent } from "@/lib/observability/record";
+import { VANDOR_UNIFIED_IDENTITY_BLOCK } from "@/lib/operator/identity-prompt";
+import { tryPlatformChatWorkflow } from "@/lib/platform/chat/dispatch";
 import { checkIpRateLimit } from "@/lib/ratelimit";
-import { detectFootballNeed } from "@/lib/football/detect";
-import { buildFootballContextBlock } from "@/lib/football/format";
-import { preloadFootballContext } from "@/lib/football/service";
 import { getWebSearchSynthesisModel } from "@/lib/search/config";
 import {
   buildWebSearchContextBlock,
@@ -133,9 +143,6 @@ import { requireClientAccess } from "@/lib/security/client-access";
 import { resolveClientGeo } from "@/lib/security/geo";
 import { getUserSettings } from "@/lib/settings/queries";
 import { resolveSettingsUserId } from "@/lib/settings/settings-scope";
-import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
-import { buildCachedAwarenessContextBlock } from "@/lib/autonomous/awareness";
-import { VANDOR_UNIFIED_IDENTITY_BLOCK } from "@/lib/operator/identity-prompt";
 import type { ChatMessage } from "@/lib/types";
 import {
   convertToUIMessages,
@@ -146,7 +153,6 @@ import { executeDirectCommand, parseDirectCommand } from "@/lib/v4/commands";
 import { V4_MAX_ACTIVE_TOOLS, V4_MAX_AGENT_STEPS } from "@/lib/v4/constants";
 import { createFastTextStreamResponse } from "@/lib/v4/fast-stream";
 import { resolveVandorIntent } from "@/lib/v4/intent";
-import { tryPlatformChatWorkflow } from "@/lib/platform/chat/dispatch";
 import { V4_JARVIS_OS_BLOCK } from "@/lib/v4/jarvis-prompt";
 import { applyV4ModelBias } from "@/lib/v4/model-pick";
 import {
@@ -157,13 +163,7 @@ import {
 import { selectActiveTools } from "@/lib/v4/tool-router";
 import { trimUiMessagesForModel } from "@/lib/v4/trim-messages";
 import { estimateTurnUsage } from "@/lib/v4/turn-usage";
-import {
-  buildSkillPromptLines,
-  buildSkillTools,
-} from "@/lib/agent-skills/build-tools";
-import { listActiveAgentSkills } from "@/lib/agent-skills/queries";
-import { ensureBuiltinSkills } from "@/lib/agent-skills/seed";
-import { toSkillToolName } from "@/lib/agent-skills/types";
+import { resolveDeploymentOwnerUser } from "@/lib/whatsapp/deployment-owner";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
@@ -427,20 +427,23 @@ export async function POST(request: Request) {
     }
 
     // HARD ISOLATION: vault session — jalankan command vault langsung (tanpa LLM).
-    if (vaultModeActive && !isToolApprovalFlow && directCmd) {
-      if (directCmd.kind !== "vault_exit") {
-        const executed = await executeDirectCommand(directCmd, {
-          userId: session.user.id,
-          chatId: id,
-        });
-        return createFastTextStreamResponse({
-          chatId: id,
-          instant: { label: executed.instantLabel, phase: "start" },
-          text: executed.text,
-          extraParts: executed.extraParts,
-          consumeSseStream,
-        });
-      }
+    if (
+      vaultModeActive &&
+      !isToolApprovalFlow &&
+      directCmd &&
+      directCmd.kind !== "vault_exit"
+    ) {
+      const executed = await executeDirectCommand(directCmd, {
+        userId: session.user.id,
+        chatId: id,
+      });
+      return createFastTextStreamResponse({
+        chatId: id,
+        instant: { label: executed.instantLabel, phase: "start" },
+        text: executed.text,
+        extraParts: executed.extraParts,
+        consumeSseStream,
+      });
     }
 
     if (vaultModeActive && !isToolApprovalFlow) {
@@ -474,7 +477,8 @@ export async function POST(request: Request) {
       )
       .map((p) => ({
         url: p.url,
-        name: (p as { filename?: string; name?: string }).filename ??
+        name:
+          (p as { filename?: string; name?: string }).filename ??
           (p as { name?: string }).name ??
           "file",
         mime: p.mediaType,
@@ -486,11 +490,7 @@ export async function POST(request: Request) {
       /^\/?v\s+(list|get|del|up|open|uploaded)\b/i.test(lastUserText.trim()) ||
       /^\/?(?:share-to-ai|ai-read|share2ai)\s+/i.test(lastUserText.trim()) ||
       vaultModeActive;
-    if (
-      attachedFiles.length === 0 &&
-      activeVault &&
-      !isVaultSlash
-    ) {
+    if (attachedFiles.length === 0 && activeVault && !isVaultSlash) {
       attachedFiles.push({
         url: activeVault.openUrl,
         name: activeVault.file.name,
@@ -525,9 +525,8 @@ export async function POST(request: Request) {
         operatorContextBlock = "";
       }
     }
-    const openRouterApiKey = await resolveOpenRouterApiKeyForUser(
-      settingsUserId
-    );
+    const openRouterApiKey =
+      await resolveOpenRouterApiKeyForUser(settingsUserId);
 
     if (!openRouterApiKey?.trim()) {
       return new ChatbotError(
@@ -569,7 +568,11 @@ export async function POST(request: Request) {
     const footballDetection =
       !isToolApprovalFlow && lastUserText.trim()
         ? detectFootballNeed(lastUserText)
-        : { needed: false as const, reason: "skipped", confidence: "low" as const };
+        : {
+            needed: false as const,
+            reason: "skipped",
+            confidence: "low" as const,
+          };
 
     const v4Intent = resolveVandorIntent({
       userText: lastUserText,
@@ -605,11 +608,7 @@ export async function POST(request: Request) {
         "http://localhost:3000",
     };
 
-    if (
-      !isToolApprovalFlow &&
-      !vaultModeActive &&
-      lastUserText.trim()
-    ) {
+    if (!isToolApprovalFlow && !vaultModeActive && lastUserText.trim()) {
       try {
         const platformResult = await tryPlatformChatWorkflow({
           userId: session.user.id,
@@ -946,7 +945,11 @@ export async function POST(request: Request) {
           lastUserText.trim() &&
           footballDetection.needed
         ) {
-          agentStepStart(dataStream, "football-api", "Mengambil data sepak bola");
+          agentStepStart(
+            dataStream,
+            "football-api",
+            "Mengambil data sepak bola"
+          );
           agentStatus(dataStream, "Mengambil data sepak bola");
           const footballResult = await preloadFootballContext(
             session.user.id,
@@ -956,11 +959,7 @@ export async function POST(request: Request) {
             footballContextBlock = buildFootballContextBlock(
               footballResult.formatted
             );
-            agentEvent(
-              dataStream,
-              footballResult.summary,
-              "success"
-            );
+            agentEvent(dataStream, footballResult.summary, "success");
           }
           agentStepComplete(dataStream, "football-api");
           agentProgress(dataStream, 24);

@@ -2,12 +2,9 @@ import "server-only";
 
 import type { VandorIntent } from "@/lib/v4/intent";
 import { bootstrapPlatformV2 } from "../init";
-import { generateExecutionPlan } from "../planner/generate-plan";
 import { processWorkflowRunToCompletion } from "../orchestrator/engine";
-import {
-  getWorkflowRunById,
-  listStepsForRun,
-} from "../queue/queries";
+import { generateExecutionPlan } from "../planner/generate-plan";
+import { getWorkflowRunById, listStepsForRun } from "../queue/queries";
 import { createWorkflowRun } from "../queue/workflow-run";
 import { formatPlatformWorkflowReply } from "./format-response";
 import {

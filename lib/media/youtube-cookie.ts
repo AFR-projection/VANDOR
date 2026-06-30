@@ -4,7 +4,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 /** Netscape cookies.txt → header `name=value; name2=value2` */
-export function normalizeYoutubeCookie(raw: string | undefined): string | undefined {
+export function normalizeYoutubeCookie(
+  raw: string | undefined
+): string | undefined {
   const trimmed = raw?.trim();
   if (!trimmed) {
     return undefined;

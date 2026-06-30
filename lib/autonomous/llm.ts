@@ -30,32 +30,29 @@ export async function llmChat(
   );
 
   try {
-    const res = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-          ...(autonomousConfig.appUrl
-            ? { "HTTP-Referer": autonomousConfig.appUrl }
-            : {}),
-          "X-Title": "VANDOR Autonomous",
-        },
-        body: JSON.stringify({
-          model: autonomousConfig.plannerModel,
-          temperature: options.temperature ?? 0.2,
-          max_tokens: options.maxTokens ?? 800,
-          messages: [
-            ...(options.system
-              ? [{ role: "system", content: options.system }]
-              : []),
-            { role: "user", content: prompt },
-          ],
-        }),
-      }
-    );
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        ...(autonomousConfig.appUrl
+          ? { "HTTP-Referer": autonomousConfig.appUrl }
+          : {}),
+        "X-Title": "VANDOR Autonomous",
+      },
+      body: JSON.stringify({
+        model: autonomousConfig.plannerModel,
+        temperature: options.temperature ?? 0.2,
+        max_tokens: options.maxTokens ?? 800,
+        messages: [
+          ...(options.system
+            ? [{ role: "system", content: options.system }]
+            : []),
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
 
     if (!res.ok) {
       return null;

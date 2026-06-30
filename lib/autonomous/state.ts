@@ -99,9 +99,7 @@ export async function renewLease(
   const res = await db
     .update(agentState)
     .set({ leaseExpiresAt: new Date(now.getTime() + ttlMs), updatedAt: now })
-    .where(
-      and(eq(agentState.id, STATE_ID), eq(agentState.leaseOwner, owner))
-    )
+    .where(and(eq(agentState.id, STATE_ID), eq(agentState.leaseOwner, owner)))
     .returning({ id: agentState.id });
   return res.length > 0;
 }
@@ -110,7 +108,5 @@ export async function releaseLease(owner: string): Promise<void> {
   await db
     .update(agentState)
     .set({ leaseOwner: null, leaseExpiresAt: null, updatedAt: new Date() })
-    .where(
-      and(eq(agentState.id, STATE_ID), eq(agentState.leaseOwner, owner))
-    );
+    .where(and(eq(agentState.id, STATE_ID), eq(agentState.leaseOwner, owner)));
 }

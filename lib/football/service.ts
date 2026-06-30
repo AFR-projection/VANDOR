@@ -6,10 +6,7 @@ import {
   getApiFootballApiKey,
   isApiFootballConfigured,
 } from "./config";
-import {
-  extractTeamSearchQuery,
-  inferFootballAction,
-} from "./detect";
+import { extractTeamSearchQuery, inferFootballAction } from "./detect";
 import {
   formatFixtures,
   formatLeagues,
@@ -134,10 +131,7 @@ export async function runFootballFixturesByDate(
 ): Promise<FootballServiceResult> {
   const apiKey = await getApiFootballApiKey(userId);
   if (!isApiFootballConfigured(apiKey)) {
-    return failResult(
-      "fixtures_by_date",
-      "API-Football belum dikonfigurasi."
-    );
+    return failResult("fixtures_by_date", "API-Football belum dikonfigurasi.");
   }
 
   const params: Record<string, string | number | undefined> = {
@@ -292,7 +286,10 @@ export async function runFootballMatchDetail(
 
   const match = data.response.at(0);
   if (!match) {
-    return failResult("match_detail", `Pertandingan ID ${fixtureId} tidak ditemukan.`);
+    return failResult(
+      "match_detail",
+      `Pertandingan ID ${fixtureId} tidak ditemukan.`
+    );
   }
 
   const formatted = formatMatchDetail(match);
@@ -319,10 +316,10 @@ export async function runFootballSmartQuery(
     case "top_scorers":
       return runFootballTopScorers(userId, undefined, undefined, queryText);
     case "team_info": {
-      const teamQuery = extractTeamSearchQuery(queryText) ?? queryText.slice(0, 60);
+      const teamQuery =
+        extractTeamSearchQuery(queryText) ?? queryText.slice(0, 60);
       return runFootballTeamSearch(userId, teamQuery);
     }
-    case "fixtures_today":
     default:
       return runFootballFixturesByDate(userId);
   }
@@ -358,7 +355,12 @@ export async function runFootballTool(input: {
       case "live_scores":
         return runFootballLiveScores(userId);
       case "fixtures_today":
-        return runFootballFixturesByDate(userId, todayUtcDate(), leagueId, teamId);
+        return runFootballFixturesByDate(
+          userId,
+          todayUtcDate(),
+          leagueId,
+          teamId
+        );
       case "fixtures_by_date":
         return runFootballFixturesByDate(userId, date, leagueId, teamId);
       case "standings":
@@ -370,10 +372,7 @@ export async function runFootballTool(input: {
           season
         );
       case "team_info":
-        return runFootballTeamSearch(
-          userId,
-          teamName ?? query ?? "team"
-        );
+        return runFootballTeamSearch(userId, teamName ?? query ?? "team");
       case "league_info": {
         const apiKey = await getApiFootballApiKey(userId);
         if (!isApiFootballConfigured(apiKey)) {
@@ -402,13 +401,19 @@ export async function runFootballTool(input: {
         );
       case "match_detail":
         if (!fixtureId) {
-          return failResult("match_detail", "fixtureId wajib untuk match_detail.");
+          return failResult(
+            "match_detail",
+            "fixtureId wajib untuk match_detail."
+          );
         }
         return runFootballMatchDetail(userId, fixtureId);
       case "head_to_head": {
         const apiKey = await getApiFootballApiKey(userId);
         if (!isApiFootballConfigured(apiKey)) {
-          return failResult("head_to_head", "API-Football belum dikonfigurasi.");
+          return failResult(
+            "head_to_head",
+            "API-Football belum dikonfigurasi."
+          );
         }
         if (!teamId) {
           const teamQ = teamName ?? extractTeamSearchQuery(query ?? "");
@@ -430,7 +435,6 @@ export async function runFootballTool(input: {
           cached
         );
       }
-      case "smart_query":
       default:
         return runFootballSmartQuery(userId, query ?? "");
     }

@@ -1,9 +1,8 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckIcon,
-  DownloadIcon,
   FileAudioIcon,
   FileIcon,
   FileImageIcon,
@@ -34,10 +33,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { vaultFileTypes } from "@/lib/db/schema";
-import type { VaultFileSnapshot } from "@/lib/vault/types";
-import { cn, formatBytes } from "@/lib/utils";
 import { apiBasePath } from "@/lib/app-url";
+import { vaultFileTypes } from "@/lib/db/schema";
+import { cn, formatBytes } from "@/lib/utils";
+import type { VaultFileSnapshot } from "@/lib/vault/types";
 
 type VaultPayload = {
   files: VaultFileSnapshot[];
@@ -148,7 +147,8 @@ export function VaultPanel() {
   const files = data?.files ?? [];
   const total = data?.total ?? 0;
   const filterActive = search.trim().length > 0 || typeFilter !== "all";
-  const filteredEmpty = !isLoading && files.length === 0 && total > 0 && filterActive;
+  const filteredEmpty =
+    !isLoading && files.length === 0 && total > 0 && filterActive;
   const trulyEmpty = !isLoading && total === 0;
   const selected = useMemo(
     () => files.find((f) => f.id === selectedId) ?? null,
@@ -253,7 +253,10 @@ export function VaultPanel() {
   const openInChat = useCallback(() => {
     if (!selected) return;
     void navigator.clipboard.writeText(`/share-to-ai ${selected.id}`);
-    toast({ type: "success", description: "Perintah disalin — tempel di chat" });
+    toast({
+      type: "success",
+      description: "Perintah disalin — tempel di chat",
+    });
   }, [selected]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -494,20 +497,7 @@ export function VaultPanel() {
         {/* Detail Panel */}
         <div className="min-h-[20rem] rounded-2xl border border-border/30 bg-card/10 lg:col-span-3">
           <AnimatePresence mode="wait">
-            {!selected ? (
-              <motion.div
-                animate={{ opacity: 1 }}
-                className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center"
-                exit={{ opacity: 0 }}
-                initial={{ opacity: 0 }}
-                key="empty"
-              >
-                <FolderLockIcon className="size-10 text-muted-foreground/20" />
-                <p className="text-sm text-muted-foreground">
-                  Pilih file untuk melihat detail, edit, atau membuka di chat.
-                </p>
-              </motion.div>
-            ) : (
+            {selected ? (
               <motion.div
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-4 p-4"
@@ -521,7 +511,8 @@ export function VaultPanel() {
                   <div
                     className={cn(
                       "flex size-12 shrink-0 items-center justify-center rounded-xl",
-                      typeColors[selected.type] ?? "text-gray-500 bg-gray-500/10"
+                      typeColors[selected.type] ??
+                        "text-gray-500 bg-gray-500/10"
                     )}
                   >
                     {(() => {
@@ -674,12 +665,24 @@ export function VaultPanel() {
                 </div>
 
                 <p className="text-[11px] text-muted-foreground/60">
-                  AI hanya melihat metadata di atas, bukan isi file.{" "}
-                  Gunakan{" "}
+                  AI hanya melihat metadata di atas, bukan isi file. Gunakan{" "}
                   <span className="font-mono text-foreground/50">
                     /share-to-ai {selected.id.slice(0, 8)}…
                   </span>{" "}
                   di chat untuk analisis isi.
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                animate={{ opacity: 1 }}
+                className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center"
+                exit={{ opacity: 0 }}
+                initial={{ opacity: 0 }}
+                key="empty"
+              >
+                <FolderLockIcon className="size-10 text-muted-foreground/20" />
+                <p className="text-sm text-muted-foreground">
+                  Pilih file untuk melihat detail, edit, atau membuka di chat.
                 </p>
               </motion.div>
             )}

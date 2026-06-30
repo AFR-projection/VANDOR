@@ -5,12 +5,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { IntegrationSecretKey } from "@/lib/settings/integration-secret-keys";
-import type { IntegrationsSettings } from "@/lib/settings/types";
 import type {
   SecretFieldView,
   SecretSource,
   SecretsPublicView,
 } from "@/lib/settings/secrets-types";
+import type { IntegrationsSettings } from "@/lib/settings/types";
 import { cn } from "@/lib/utils";
 
 function SourceBadge({ source }: { source: SecretSource }) {
@@ -245,9 +245,7 @@ export function ApiIntegrationsPanel({
             label="Tavily API key"
             onChange={(v) => onDraftChange("tavily", v)}
             onClear={() => onSaveSecrets({ clearTavily: true })}
-            onSave={() =>
-              onSaveSecrets({ tavilyApiKey: draftSecrets.tavily })
-            }
+            onSave={() => onSaveSecrets({ tavilyApiKey: draftSecrets.tavily })}
             placeholder="tvly-…"
             value={draftSecrets.tavily}
           />
@@ -260,7 +258,9 @@ export function ApiIntegrationsPanel({
                 memoryEmbeddingModel: int.memoryEmbeddingModel,
               })
             }
-            onChange={(v) => onIntegrationsFieldChange({ memoryEmbeddingModel: v })}
+            onChange={(v) =>
+              onIntegrationsFieldChange({ memoryEmbeddingModel: v })
+            }
             placeholder="openai/text-embedding-3-small"
             value={int.memoryEmbeddingModel}
           />
@@ -270,9 +270,13 @@ export function ApiIntegrationsPanel({
               id="appn"
               label="Nama app"
               onBlur={() =>
-                onPatchIntegrations({ openrouterAppName: int.openrouterAppName })
+                onPatchIntegrations({
+                  openrouterAppName: int.openrouterAppName,
+                })
               }
-              onChange={(v) => onIntegrationsFieldChange({ openrouterAppName: v })}
+              onChange={(v) =>
+                onIntegrationsFieldChange({ openrouterAppName: v })
+              }
               value={int.openrouterAppName}
             />
             <ConfigField
@@ -281,7 +285,9 @@ export function ApiIntegrationsPanel({
               onBlur={() =>
                 onPatchIntegrations({ openrouterAppUrl: int.openrouterAppUrl })
               }
-              onChange={(v) => onIntegrationsFieldChange({ openrouterAppUrl: v })}
+              onChange={(v) =>
+                onIntegrationsFieldChange({ openrouterAppUrl: v })
+              }
               placeholder="https://…"
               value={int.openrouterAppUrl}
             />
@@ -426,7 +432,9 @@ export function ApiIntegrationsPanel({
             description="URL instance Cobalt sendiri (Railway/VPS). Kosong = api.cobalt.tools."
             id="cobalt-url"
             label="Cobalt API URL"
-            onBlur={() => onPatchIntegrations({ cobaltApiUrl: int.cobaltApiUrl })}
+            onBlur={() =>
+              onPatchIntegrations({ cobaltApiUrl: int.cobaltApiUrl })
+            }
             onChange={(v) => onIntegrationsFieldChange({ cobaltApiUrl: v })}
             placeholder="https://cobalt-api….railway.app"
             value={int.cobaltApiUrl}
@@ -436,7 +444,9 @@ export function ApiIntegrationsPanel({
               checked={int.cobaltAllowPublic}
               className="size-3.5 rounded border-border"
               onChange={(e) => {
-                onIntegrationsFieldChange({ cobaltAllowPublic: e.target.checked });
+                onIntegrationsFieldChange({
+                  cobaltAllowPublic: e.target.checked,
+                });
                 onPatchIntegrations({ cobaltAllowPublic: e.target.checked });
               }}
               type="checkbox"
@@ -450,7 +460,9 @@ export function ApiIntegrationsPanel({
             label="Cobalt API key"
             minLength={4}
             onChange={(v) => onDraftChange("cobaltApiKey", v)}
-            onClear={() => onSaveSecrets({ clearExtraSecrets: ["cobaltApiKey"] })}
+            onClear={() =>
+              onSaveSecrets({ clearExtraSecrets: ["cobaltApiKey"] })
+            }
             onSave={() =>
               onSaveSecrets({
                 extraSecrets: { cobaltApiKey: draftSecrets.cobaltApiKey },

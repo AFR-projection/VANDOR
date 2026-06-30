@@ -1,7 +1,7 @@
-import type { AgentRiskLevel } from "@/lib/db/schema";
 import { createLogger } from "@/lib/autonomous/logger";
 import { runTool as runWorkerTool } from "@/lib/autonomous/tools/index";
 import type { ToolContext } from "@/lib/autonomous/types";
+import type { AgentRiskLevel } from "@/lib/db/schema";
 import { buildStaticToolCatalog } from "./tool-catalog";
 import type {
   PlatformAgentId,
@@ -68,13 +68,17 @@ export function listTools(filter?: {
   }
   if (filter?.agentId) {
     items = items.filter(
-      (t) => t.agents.length === 0 || t.agents.includes(filter.agentId as PlatformAgentId)
+      (t) =>
+        t.agents.length === 0 ||
+        t.agents.includes(filter.agentId as PlatformAgentId)
     );
   }
   return items.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function listToolsForAgent(agentId: PlatformAgentId): PlatformToolMeta[] {
+export function listToolsForAgent(
+  agentId: PlatformAgentId
+): PlatformToolMeta[] {
   return listTools({ agentId });
 }
 

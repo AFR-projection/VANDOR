@@ -43,8 +43,7 @@ export async function POST(request: Request) {
   if (!url || !platform) {
     return NextResponse.json(
       {
-        error:
-          "Butuh url + platform, atau text slash (/tt, /ig <link>).",
+        error: "Butuh url + platform, atau text slash (/tt, /ig <link>).",
       },
       { status: 400 }
     );

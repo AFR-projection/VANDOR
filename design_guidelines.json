@@ -57,8 +57,14 @@
   },
   "motion": {
     "spring": { "type": "spring", "stiffness": 300, "damping": 30 },
-    "fade_up": { "initial": { "opacity": 0, "y": 10 }, "animate": { "opacity": 1, "y": 0 } },
-    "message_enter": { "initial": { "opacity": 0, "scale": 0.98, "y": 10 }, "animate": { "opacity": 1, "scale": 1, "y": 0 } }
+    "fade_up": {
+      "initial": { "opacity": 0, "y": 10 },
+      "animate": { "opacity": 1, "y": 0 }
+    },
+    "message_enter": {
+      "initial": { "opacity": 0, "scale": 0.98, "y": 10 },
+      "animate": { "opacity": 1, "scale": 1, "y": 0 }
+    }
   },
   "icons": {
     "library": "@phosphor-icons/react",

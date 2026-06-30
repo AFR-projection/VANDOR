@@ -7,16 +7,16 @@ import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { toast } from "@/components/chat/toast";
 import { Button } from "@/components/ui/button";
+import { apiBasePath } from "@/lib/app-url";
 import { type MemoryCategory, memoryCategories } from "@/lib/db/schema";
 import type { UserSettings } from "@/lib/settings/types";
 import { MemoryBrainHero } from "./memory-brain-hero";
 import { MemoryManager } from "./memory-manager";
 import { SettingSlider, SettingToggle } from "./setting-row";
-import { SettingsShell } from "./settings-shell";
 import type { MemoryTabId } from "./settings-nav-config";
+import { SettingsShell } from "./settings-shell";
 import { TokenUsagePanel } from "./token-usage-panel";
 
-import { apiBasePath } from "@/lib/app-url";
 const base = apiBasePath;
 
 type SettingsPayload = {
@@ -55,10 +55,14 @@ const categoryLabels: Record<MemoryCategory, string> = {
 export function MemorySettingsPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const { data, mutate, isLoading } = useSWR("user-settings-memory", fetchSettings, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-  });
+  const { data, mutate, isLoading } = useSWR(
+    "user-settings-memory",
+    fetchSettings,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    }
+  );
   const [tab, setTab] = useState<MemoryTabId>(() =>
     validMemoryTabs.includes(tabParam as MemoryTabId)
       ? (tabParam as MemoryTabId)
@@ -120,310 +124,304 @@ export function MemorySettingsPage() {
       saving={saving}
     >
       <MemoryBrainHero memoryEnabled={m.enabled} visualEnabled={v.enabled} />
-            {tab === "memory" && (
-              <>
-                <section className="space-y-3">
-                  <h2 className="text-sm font-semibold">
-                    Memori jangka panjang
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Model embedding:{" "}
-                    <code className="rounded bg-muted px-1">
-                      {env.embeddingModel}
-                    </code>
-                    {!env.postgresConfigured && (
-                      <span className="text-destructive">
-                        {" "}
-                        · Postgres tidak terkonfigurasi
-                      </span>
-                    )}
-                  </p>
-                  <SettingToggle
-                    checked={m.enabled}
-                    description="Nonaktifkan untuk tidak menyimpan atau mengingat memori sama sekali."
-                    id="memory-enabled"
-                    label="Aktifkan memori"
-                    onCheckedChange={(enabled) =>
-                      patch({ memory: { ...m, enabled } })
-                    }
-                  />
-                  <SettingToggle
-                    checked={m.autoExtract}
-                    description="Otomatis mengekstrak fakta dari percakapan setelah setiap balasan."
-                    id="memory-auto"
-                    label="Ekstraksi otomatis"
-                    onCheckedChange={(autoExtract) =>
-                      patch({ memory: { ...m, autoExtract } })
-                    }
-                  />
-                  <SettingToggle
-                    checked={m.preExtractFromUser !== false}
-                    description="Ambil fakta dari pesan user sebelum jawaban (paralel). Wajib tunggu jika kamu bilang “ingat”."
-                    id="memory-pre"
-                    label="Pre-extract (Memory v2)"
-                    onCheckedChange={(preExtractFromUser) =>
-                      patch({ memory: { ...m, preExtractFromUser } })
-                    }
-                  />
-                  <SettingToggle
-                    checked={m.mergeSimilarMemories !== false}
-                    description="Gabungkan atau perbarui memori mirip, bukan duplikat."
-                    id="memory-merge"
-                    label="Gabung memori serupa"
-                    onCheckedChange={(mergeSimilarMemories) =>
-                      patch({ memory: { ...m, mergeSimilarMemories } })
-                    }
-                  />
-                  <SettingToggle
-                    checked={m.autoHygiene !== false}
-                    description="Setelah ekstraksi: gabung duplikat, turunkan memori usang, dan rapikan otomatis."
-                    id="memory-hygiene"
-                    label="Perawatan memori otomatis"
-                    onCheckedChange={(autoHygiene) =>
-                      patch({ memory: { ...m, autoHygiene } })
-                    }
-                  />
-                  <SettingToggle
-                    checked={m.injectInPrompt}
-                    description="Sisipkan memori relevan ke konteks AI sebelum menjawab."
-                    id="memory-inject"
-                    label="Gunakan memori saat menjawab"
-                    onCheckedChange={(injectInPrompt) =>
-                      patch({ memory: { ...m, injectInPrompt } })
-                    }
-                  />
-                </section>
+      {tab === "memory" && (
+        <>
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold">Memori jangka panjang</h2>
+            <p className="text-xs text-muted-foreground">
+              Model embedding:{" "}
+              <code className="rounded bg-muted px-1">
+                {env.embeddingModel}
+              </code>
+              {!env.postgresConfigured && (
+                <span className="text-destructive">
+                  {" "}
+                  · Postgres tidak terkonfigurasi
+                </span>
+              )}
+            </p>
+            <SettingToggle
+              checked={m.enabled}
+              description="Nonaktifkan untuk tidak menyimpan atau mengingat memori sama sekali."
+              id="memory-enabled"
+              label="Aktifkan memori"
+              onCheckedChange={(enabled) =>
+                patch({ memory: { ...m, enabled } })
+              }
+            />
+            <SettingToggle
+              checked={m.autoExtract}
+              description="Otomatis mengekstrak fakta dari percakapan setelah setiap balasan."
+              id="memory-auto"
+              label="Ekstraksi otomatis"
+              onCheckedChange={(autoExtract) =>
+                patch({ memory: { ...m, autoExtract } })
+              }
+            />
+            <SettingToggle
+              checked={m.preExtractFromUser !== false}
+              description="Ambil fakta dari pesan user sebelum jawaban (paralel). Wajib tunggu jika kamu bilang “ingat”."
+              id="memory-pre"
+              label="Pre-extract (Memory v2)"
+              onCheckedChange={(preExtractFromUser) =>
+                patch({ memory: { ...m, preExtractFromUser } })
+              }
+            />
+            <SettingToggle
+              checked={m.mergeSimilarMemories !== false}
+              description="Gabungkan atau perbarui memori mirip, bukan duplikat."
+              id="memory-merge"
+              label="Gabung memori serupa"
+              onCheckedChange={(mergeSimilarMemories) =>
+                patch({ memory: { ...m, mergeSimilarMemories } })
+              }
+            />
+            <SettingToggle
+              checked={m.autoHygiene !== false}
+              description="Setelah ekstraksi: gabung duplikat, turunkan memori usang, dan rapikan otomatis."
+              id="memory-hygiene"
+              label="Perawatan memori otomatis"
+              onCheckedChange={(autoHygiene) =>
+                patch({ memory: { ...m, autoHygiene } })
+              }
+            />
+            <SettingToggle
+              checked={m.injectInPrompt}
+              description="Sisipkan memori relevan ke konteks AI sebelum menjawab."
+              id="memory-inject"
+              label="Gunakan memori saat menjawab"
+              onCheckedChange={(injectInPrompt) =>
+                patch({ memory: { ...m, injectInPrompt } })
+              }
+            />
+          </section>
 
-                <section className="space-y-3">
-                  <h2 className="text-sm font-semibold">Retrieval</h2>
-                  <SettingSlider
-                    description="Jumlah hasil pencarian semantik per pertanyaan."
-                    id="semantic-limit"
-                    label="Batas pencarian semantik"
-                    max={24}
-                    min={1}
-                    onChange={(semanticSearchLimit) =>
-                      patch({ memory: { ...m, semanticSearchLimit } })
-                    }
-                    value={m.semanticSearchLimit}
-                  />
-                  <SettingSlider
-                    description="Memori terbaru yang selalu dipertimbangkan."
-                    id="recent-limit"
-                    label="Memori terbaru"
-                    max={24}
-                    min={0}
-                    onChange={(recentMemoriesLimit) =>
-                      patch({ memory: { ...m, recentMemoriesLimit } })
-                    }
-                    value={m.recentMemoriesLimit}
-                  />
-                  <SettingSlider
-                    description="Ambang kemiripan vektor (lebih tinggi = lebih ketat)."
-                    id="min-sim"
-                    label="Min. similarity"
-                    max={0.95}
-                    min={0.4}
-                    onChange={(minSimilarity) =>
-                      patch({ memory: { ...m, minSimilarity } })
-                    }
-                    step={0.01}
-                    value={m.minSimilarity}
-                  />
-                  <SettingSlider
-                    description="Maksimum memori baru per giliran chat."
-                    id="max-extract"
-                    label="Ekstraksi per balasan"
-                    max={5}
-                    min={0}
-                    onChange={(maxExtractPerTurn) =>
-                      patch({ memory: { ...m, maxExtractPerTurn } })
-                    }
-                    value={m.maxExtractPerTurn}
-                  />
-                </section>
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold">Retrieval</h2>
+            <SettingSlider
+              description="Jumlah hasil pencarian semantik per pertanyaan."
+              id="semantic-limit"
+              label="Batas pencarian semantik"
+              max={24}
+              min={1}
+              onChange={(semanticSearchLimit) =>
+                patch({ memory: { ...m, semanticSearchLimit } })
+              }
+              value={m.semanticSearchLimit}
+            />
+            <SettingSlider
+              description="Memori terbaru yang selalu dipertimbangkan."
+              id="recent-limit"
+              label="Memori terbaru"
+              max={24}
+              min={0}
+              onChange={(recentMemoriesLimit) =>
+                patch({ memory: { ...m, recentMemoriesLimit } })
+              }
+              value={m.recentMemoriesLimit}
+            />
+            <SettingSlider
+              description="Ambang kemiripan vektor (lebih tinggi = lebih ketat)."
+              id="min-sim"
+              label="Min. similarity"
+              max={0.95}
+              min={0.4}
+              onChange={(minSimilarity) =>
+                patch({ memory: { ...m, minSimilarity } })
+              }
+              step={0.01}
+              value={m.minSimilarity}
+            />
+            <SettingSlider
+              description="Maksimum memori baru per giliran chat."
+              id="max-extract"
+              label="Ekstraksi per balasan"
+              max={5}
+              min={0}
+              onChange={(maxExtractPerTurn) =>
+                patch({ memory: { ...m, maxExtractPerTurn } })
+              }
+              value={m.maxExtractPerTurn}
+            />
+          </section>
 
-                <section className="space-y-2">
-                  <h2 className="text-sm font-semibold">Kategori aktif</h2>
-                  {memoryCategories.map((cat) => (
-                    <SettingToggle
-                      checked={m.enabledCategories[cat]}
-                      id={`cat-${cat}`}
-                      key={cat}
-                      label={categoryLabels[cat]}
-                      onCheckedChange={(on) =>
-                        patch({
-                          memory: {
-                            ...m,
-                            enabledCategories: {
-                              ...m.enabledCategories,
-                              [cat]: on,
-                            },
-                          },
-                        })
-                      }
-                    />
-                  ))}
-                </section>
-              </>
-            )}
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold">Kategori aktif</h2>
+            {memoryCategories.map((cat) => (
+              <SettingToggle
+                checked={m.enabledCategories[cat]}
+                id={`cat-${cat}`}
+                key={cat}
+                label={categoryLabels[cat]}
+                onCheckedChange={(on) =>
+                  patch({
+                    memory: {
+                      ...m,
+                      enabledCategories: {
+                        ...m.enabledCategories,
+                        [cat]: on,
+                      },
+                    },
+                  })
+                }
+              />
+            ))}
+          </section>
+        </>
+      )}
 
-            {tab === "visual" && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold">Visual Memory</h2>
-                <p className="text-xs text-muted-foreground">
-                  Menyimpan konteks saat kamu mengunggah gambar di chat (nama
-                  file + pesan kamu). Berguna untuk mengingat referensi visual.
-                </p>
-                <SettingToggle
-                  checked={v.enabled}
-                  id="visual-enabled"
-                  label="Aktifkan visual memory"
-                  onCheckedChange={(enabled) =>
-                    patch({ visualMemory: { ...v, enabled } })
-                  }
-                />
-                <SettingToggle
-                  checked={v.autoCaptureFromImages}
-                  description="Simpan otomatis setelah kamu kirim pesan dengan lampiran gambar."
-                  id="visual-auto"
-                  label="Tangkap otomatis dari upload"
-                  onCheckedChange={(autoCaptureFromImages) =>
-                    patch({ visualMemory: { ...v, autoCaptureFromImages } })
-                  }
-                />
-                <SettingToggle
-                  checked={v.includeInRecall}
-                  description="Sertakan memori visual saat AI mencari memori relevan."
-                  id="visual-recall"
-                  label="Gunakan saat recall"
-                  onCheckedChange={(includeInRecall) =>
-                    patch({ visualMemory: { ...v, includeInRecall } })
-                  }
-                />
-                <SettingSlider
-                  description="Batas maksimum entri visual yang disimpan."
-                  id="visual-max"
-                  label="Maks. memori visual"
-                  max={100}
-                  min={5}
-                  onChange={(maxVisualMemories) =>
-                    patch({ visualMemory: { ...v, maxVisualMemories } })
-                  }
-                  value={v.maxVisualMemories}
-                />
-              </section>
-            )}
+      {tab === "visual" && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold">Visual Memory</h2>
+          <p className="text-xs text-muted-foreground">
+            Menyimpan konteks saat kamu mengunggah gambar di chat (nama file +
+            pesan kamu). Berguna untuk mengingat referensi visual.
+          </p>
+          <SettingToggle
+            checked={v.enabled}
+            id="visual-enabled"
+            label="Aktifkan visual memory"
+            onCheckedChange={(enabled) =>
+              patch({ visualMemory: { ...v, enabled } })
+            }
+          />
+          <SettingToggle
+            checked={v.autoCaptureFromImages}
+            description="Simpan otomatis setelah kamu kirim pesan dengan lampiran gambar."
+            id="visual-auto"
+            label="Tangkap otomatis dari upload"
+            onCheckedChange={(autoCaptureFromImages) =>
+              patch({ visualMemory: { ...v, autoCaptureFromImages } })
+            }
+          />
+          <SettingToggle
+            checked={v.includeInRecall}
+            description="Sertakan memori visual saat AI mencari memori relevan."
+            id="visual-recall"
+            label="Gunakan saat recall"
+            onCheckedChange={(includeInRecall) =>
+              patch({ visualMemory: { ...v, includeInRecall } })
+            }
+          />
+          <SettingSlider
+            description="Batas maksimum entri visual yang disimpan."
+            id="visual-max"
+            label="Maks. memori visual"
+            max={100}
+            min={5}
+            onChange={(maxVisualMemories) =>
+              patch({ visualMemory: { ...v, maxVisualMemories } })
+            }
+            value={v.maxVisualMemories}
+          />
+        </section>
+      )}
 
-            {tab === "advanced" && (
-              <section className="space-y-3">
-                <TokenUsagePanel />
-                <h2 className="text-sm font-semibold">Pengaturan lanjutan</h2>
-                <p className="text-xs text-muted-foreground">
-                  Postgres:{" "}
-                  {env.postgresConfigured ? "terhubung" : "tidak dikonfigurasi"}{" "}
-                  · OpenRouter: {env.openrouterConfigured ? "OK" : "tidak ada"}{" "}
-                  · API key di menu{" "}
-                  <Link className="underline" href={`${base()}/settings`}>
-                    Pengaturan
-                  </Link>
-                </p>
-                <SettingToggle
-                  checked={a.webSearchAuto}
-                  description="Deteksi otomatis kapan perlu mencari web (berita, harga, dll.)."
-                  id="web-auto"
-                  label="Web search otomatis"
-                  onCheckedChange={(webSearchAuto) =>
-                    patch({ advanced: { ...a, webSearchAuto } })
+      {tab === "advanced" && (
+        <section className="space-y-3">
+          <TokenUsagePanel />
+          <h2 className="text-sm font-semibold">Pengaturan lanjutan</h2>
+          <p className="text-xs text-muted-foreground">
+            Postgres:{" "}
+            {env.postgresConfigured ? "terhubung" : "tidak dikonfigurasi"} ·
+            OpenRouter: {env.openrouterConfigured ? "OK" : "tidak ada"} · API
+            key di menu{" "}
+            <Link className="underline" href={`${base()}/settings`}>
+              Pengaturan
+            </Link>
+          </p>
+          <SettingToggle
+            checked={a.webSearchAuto}
+            description="Deteksi otomatis kapan perlu mencari web (berita, harga, dll.)."
+            id="web-auto"
+            label="Web search otomatis"
+            onCheckedChange={(webSearchAuto) =>
+              patch({ advanced: { ...a, webSearchAuto } })
+            }
+          />
+          <div className="rounded-xl border border-border/40 bg-card/30 px-4 py-3">
+            <p className="mb-2 text-sm font-medium">Tingkat rich content</p>
+            <p className="mb-3 text-[12px] text-muted-foreground">
+              Kontrol kartu, galeri, dan pertanyaan lanjutan di jawaban.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["minimal", "Minimal — hanya teks"],
+                  ["auto", "Otomatis (disarankan)"],
+                  ["rich", "Sama dengan auto saat search"],
+                ] as const
+              ).map(([value, label]) => (
+                <Button
+                  key={value}
+                  onClick={() =>
+                    patch({
+                      advanced: {
+                        ...a,
+                        richContentLevel: value,
+                      },
+                    })
                   }
-                />
-                <div className="rounded-xl border border-border/40 bg-card/30 px-4 py-3">
-                  <p className="mb-2 text-sm font-medium">
-                    Tingkat rich content
-                  </p>
-                  <p className="mb-3 text-[12px] text-muted-foreground">
-                    Kontrol kartu, galeri, dan pertanyaan lanjutan di jawaban.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {(
-                      [
-                        ["minimal", "Minimal — hanya teks"],
-                        ["auto", "Otomatis (disarankan)"],
-                        ["rich", "Sama dengan auto saat search"],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <Button
-                        key={value}
-                        onClick={() =>
-                          patch({
-                            advanced: {
-                              ...a,
-                              richContentLevel: value,
-                            },
-                          })
-                        }
-                        size="sm"
-                        type="button"
-                        variant={
-                          a.richContentLevel === value ? "default" : "outline"
-                        }
-                      >
-                        {label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <SettingToggle
-                  checked={a.responsePolish}
-                  description="Perhalus gaya bahasa jawaban setelah streaming selesai."
-                  id="polish"
-                  label="Response polish"
-                  onCheckedChange={(responsePolish) =>
-                    patch({ advanced: { ...a, responsePolish } })
-                  }
-                />
-                <SettingToggle
-                  checked={a.responseCache}
-                  description="Cache jawaban untuk pertanyaan sederhana yang berulang."
-                  id="cache"
-                  label="Response cache"
-                  onCheckedChange={(responseCache) =>
-                    patch({ advanced: { ...a, responseCache } })
-                  }
-                />
-                <SettingToggle
-                  checked={a.conversationSummary}
-                  description="Ringkas percakapan panjang untuk konteks memori."
-                  id="summary"
-                  label="Ringkasan percakapan"
-                  onCheckedChange={(conversationSummary) =>
-                    patch({ advanced: { ...a, conversationSummary } })
-                  }
-                />
-                <SettingSlider
-                  description="Setiap berapa pesan dibuat ringkasan."
-                  id="summary-interval"
-                  label="Interval ringkasan (pesan)"
-                  max={50}
-                  min={5}
-                  onChange={(summaryInterval) =>
-                    patch({ advanced: { ...a, summaryInterval } })
-                  }
-                  value={a.summaryInterval}
-                />
-              </section>
-            )}
+                  size="sm"
+                  type="button"
+                  variant={a.richContentLevel === value ? "default" : "outline"}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <SettingToggle
+            checked={a.responsePolish}
+            description="Perhalus gaya bahasa jawaban setelah streaming selesai."
+            id="polish"
+            label="Response polish"
+            onCheckedChange={(responsePolish) =>
+              patch({ advanced: { ...a, responsePolish } })
+            }
+          />
+          <SettingToggle
+            checked={a.responseCache}
+            description="Cache jawaban untuk pertanyaan sederhana yang berulang."
+            id="cache"
+            label="Response cache"
+            onCheckedChange={(responseCache) =>
+              patch({ advanced: { ...a, responseCache } })
+            }
+          />
+          <SettingToggle
+            checked={a.conversationSummary}
+            description="Ringkas percakapan panjang untuk konteks memori."
+            id="summary"
+            label="Ringkasan percakapan"
+            onCheckedChange={(conversationSummary) =>
+              patch({ advanced: { ...a, conversationSummary } })
+            }
+          />
+          <SettingSlider
+            description="Setiap berapa pesan dibuat ringkasan."
+            id="summary-interval"
+            label="Interval ringkasan (pesan)"
+            max={50}
+            min={5}
+            onChange={(summaryInterval) =>
+              patch({ advanced: { ...a, summaryInterval } })
+            }
+            value={a.summaryInterval}
+          />
+        </section>
+      )}
 
-            {tab === "manage" && (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  Semua ingatan VANDOR — edit, hapus, atau tambah manual.
-                  Setelah chat, toast &quot;VANDOR mengingat…&quot; muncul jika
-                  ada fakta baru tersimpan.
-                </p>
-                <MemoryManager />
-              </>
-            )}
+      {tab === "manage" && (
+        <>
+          <p className="text-xs text-muted-foreground">
+            Semua ingatan VANDOR — edit, hapus, atau tambah manual. Setelah
+            chat, toast &quot;VANDOR mengingat…&quot; muncul jika ada fakta baru
+            tersimpan.
+          </p>
+          <MemoryManager />
+        </>
+      )}
     </SettingsShell>
   );
 }

@@ -1,6 +1,6 @@
-import { config as loadEnv } from "dotenv";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { config as loadEnv } from "dotenv";
 
 const envLocal = join(process.cwd(), ".env.local");
 if (existsSync(envLocal)) {
@@ -48,17 +48,16 @@ export const autonomousConfig = {
   enabled: process.env.VANDOR_AGENT_ENABLED !== "false",
 
   /** URL aplikasi Next internal (untuk kirim notifikasi via web process). */
-  internalApiUrl:
-    envTrim("VANDOR_INTERNAL_API_URL") || "http://127.0.0.1:3000",
+  internalApiUrl: envTrim("VANDOR_INTERNAL_API_URL") || "http://127.0.0.1:3000",
   /** Secret bersama worker<->web untuk endpoint internal. */
   internalSecret: envTrim("VANDOR_AGENT_INTERNAL_SECRET"),
 
   /** OpenRouter (reasoning/planner). Kosong = fallback heuristik. */
   openrouterApiKey: process.env.OPENROUTER_API_KEY ?? "",
   plannerModel:
-    process.env.VANDOR_AGENT_MODEL ??
-    "meta-llama/llama-3.3-70b-instruct:free",
-  appUrl: process.env.OPENROUTER_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "",
+    process.env.VANDOR_AGENT_MODEL ?? "meta-llama/llama-3.3-70b-instruct:free",
+  appUrl:
+    process.env.OPENROUTER_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "",
 
   /** Ambang batas peringatan & kritis (persen). */
   thresholds: {
@@ -77,9 +76,7 @@ export const autonomousConfig = {
   /** Container Docker yang dipantau (kosong = semua). */
   dockerContainers: envList("VANDOR_AGENT_DOCKER", []),
   /** Target uptime HTTP yang dicek. */
-  uptimeTargets: envList("VANDOR_AGENT_UPTIME", [
-    "http://127.0.0.1:3000/ping",
-  ]),
+  uptimeTargets: envList("VANDOR_AGENT_UPTIME", ["http://127.0.0.1:3000/ping"]),
   /** File log yang dibaca/di-scan error. */
   logPaths: envList("VANDOR_AGENT_LOGS", [
     "/var/log/vandor-error.log",

@@ -7,52 +7,49 @@ import type {
   WASocket,
 } from "@whiskeysockets/baileys";
 import { getOwnerCredentials } from "@/lib/security/gate";
-import { resolveDeploymentOwnerUser } from "./deployment-owner";
-import {
-  deriveWhatsappChatId,
-  getOwnerWhatsappNumbers,
-  getPrimaryWhatsappOwner,
-  normalizeWhatsappNumber,
-} from "./config";
-import {
-  addWhatsappOwner,
-  getActiveOwnerPhones,
-  revokeWhatsappOwner,
-  validateAndConsumeCode,
-} from "./queries";
-import { sendTextToPhone } from "./jid";
-import { runWhatsappAgentTurn } from "./run-agent-turn";
-import { formatWaAgentError } from "./format-agent-error";
-import { deliverWhatsappMediaDownload } from "./media-delivery";
-import {
-  extractInboundMedia,
-  hasInboundMedia,
-} from "./inbound-media";
-import {
-  extractPlainText,
-  extractTextWithReplyContext,
-} from "./extract-message-text";
-import { isWhatsappVaultSaveCommand } from "./vault-ingest";
-import { deliverWhatsappOutboundMedia } from "./outbound-media";
+import { getWhatsappAuthDir, isWhatsappServerlessHost } from "./auth-path";
 import {
   clearPersistedWhatsappAuth,
   hydrateAuthDir,
   persistAuthDir,
   wipeAuthDir,
 } from "./auth-persist";
-import { getWhatsappAuthDir, isWhatsappServerlessHost } from "./auth-path";
+import {
+  deriveWhatsappChatId,
+  getOwnerWhatsappNumbers,
+  getPrimaryWhatsappOwner,
+  normalizeWhatsappNumber,
+} from "./config";
+import { resolveDeploymentOwnerUser } from "./deployment-owner";
+import {
+  extractPlainText,
+  extractTextWithReplyContext,
+} from "./extract-message-text";
+import { formatWaAgentError } from "./format-agent-error";
+import { extractInboundMedia, hasInboundMedia } from "./inbound-media";
+import { sendTextToPhone } from "./jid";
+import { deliverWhatsappMediaDownload } from "./media-delivery";
+import { deliverWhatsappOutboundMedia } from "./outbound-media";
+import {
+  addWhatsappOwner,
+  getActiveOwnerPhones,
+  revokeWhatsappOwner,
+  validateAndConsumeCode,
+} from "./queries";
+import { runWhatsappAgentTurn } from "./run-agent-turn";
+import {
+  matchesOwnerList,
+  resolveSenderIdentity,
+  type SenderIdentity,
+  senderOwnerKeys,
+} from "./sender-identity";
 import {
   clearWhatsappState,
   loadWhatsappState,
   mergeWhatsappStates,
   saveWhatsappState,
 } from "./state-persist";
-import {
-  matchesOwnerList,
-  resolveSenderIdentity,
-  senderOwnerKeys,
-  type SenderIdentity,
-} from "./sender-identity";
+import { isWhatsappVaultSaveCommand } from "./vault-ingest";
 
 export type WhatsappStatus =
   | "idle"
@@ -301,23 +298,25 @@ async function tryHandleVerifCode(
 
   let reply: string;
   if (result.ok) {
-    if (result.userId !== ownerUser.id) {
-      reply =
-        "❌ *Kode valid tapi akun tidak cocok.*\n\nGenerate kode dari akun owner yang sama dengan VANDOR_OWNER_EMAIL di website.";
-    } else {
+    if (result.userId === ownerUser.id) {
       await registerOwnerKeys(ownerUser.id, identity);
       const label = identity.phone
         ? `+${identity.phone}`
         : `LID ${identity.lid}`;
+      reply = `✅ *Verifikasi berhasil!*\n\nWhatsApp kamu (${label}) sudah terdaftar sebagai Owner VANDOR.\n\nMulai sekarang kamu bisa memberikan perintah langsung dari WhatsApp ini. Ketik apa saja untuk memulai!`;
+    } else {
       reply =
-        `✅ *Verifikasi berhasil!*\n\nWhatsApp kamu (${label}) sudah terdaftar sebagai Owner VANDOR.\n\nMulai sekarang kamu bisa memberikan perintah langsung dari WhatsApp ini. Ketik apa saja untuk memulai!`;
+        "❌ *Kode valid tapi akun tidak cocok.*\n\nGenerate kode dari akun owner yang sama dengan VANDOR_OWNER_EMAIL di website.";
     }
   } else if (result.reason === "expired") {
-    reply = `⏰ *Kode kedaluwarsa.*\n\nKode sudah tidak berlaku. Buka website VANDOR → Pengaturan → WhatsApp → Generate kode baru.`;
+    reply =
+      "⏰ *Kode kedaluwarsa.*\n\nKode sudah tidak berlaku. Buka website VANDOR → Pengaturan → WhatsApp → Generate kode baru.";
   } else if (result.reason === "used") {
-    reply = `🚫 *Kode sudah dipakai.*\n\nKode hanya bisa digunakan satu kali. Buka website VANDOR → Pengaturan → WhatsApp → Generate kode baru.`;
+    reply =
+      "🚫 *Kode sudah dipakai.*\n\nKode hanya bisa digunakan satu kali. Buka website VANDOR → Pengaturan → WhatsApp → Generate kode baru.";
   } else {
-    reply = `❌ *Kode tidak dikenali.*\n\nPastikan kamu mengirim kode yang benar (format: XXXX-XXXX). Buka website VANDOR → Pengaturan → WhatsApp → Generate kode baru.`;
+    reply =
+      "❌ *Kode tidak dikenali.*\n\nPastikan kamu mengirim kode yang benar (format: XXXX-XXXX). Buka website VANDOR → Pengaturan → WhatsApp → Generate kode baru.";
   }
 
   await sock.sendMessage(identity.replyJid, { text: reply }, { quoted: msg });
@@ -363,7 +362,9 @@ async function handleIncoming(
     await sock
       .sendMessage(
         jid,
-        { text: "❌ Terjadi kesalahan saat memvalidasi kode. Coba lagi sebentar." },
+        {
+          text: "❌ Terjadi kesalahan saat memvalidasi kode. Coba lagi sebentar.",
+        },
         { quoted: msg }
       )
       .catch(() => {
@@ -506,9 +507,8 @@ async function handleIncoming(
   }
 
   let reply = "Maaf, ada error saat memproses pesan. Coba lagi ya.";
-  let outbound: Awaited<
-    ReturnType<typeof runWhatsappAgentTurn>
-  >["outbound"] = [];
+  let outbound: Awaited<ReturnType<typeof runWhatsappAgentTurn>>["outbound"] =
+    [];
   try {
     const result = await runWhatsappAgentTurn({
       userId: ownerUser.id,
@@ -599,7 +599,9 @@ async function wireSocket(
 
     if (connection === "close") {
       const statusCode = (
-        lastDisconnect?.error as { output?: { statusCode?: number } } | undefined
+        lastDisconnect?.error as
+          | { output?: { statusCode?: number } }
+          | undefined
       )?.output?.statusCode;
       const loggedOut = statusCode === DisconnectReason.loggedOut;
       const m = getManager();
@@ -628,13 +630,7 @@ async function wireSocket(
 
   sock.ev.on(
     "messages.upsert",
-    async ({
-      messages,
-      type,
-    }: {
-      messages: WAMessage[];
-      type: string;
-    }) => {
+    async ({ messages, type }: { messages: WAMessage[]; type: string }) => {
       console.log(`[wa] messages.upsert type=${type} count=${messages.length}`);
 
       // "notify" = new real-time message; "append" = history sync on connect.
@@ -657,14 +653,16 @@ async function wireSocket(
         const msgTimestamp =
           (typeof msg.messageTimestamp === "number"
             ? msg.messageTimestamp
-            : msg.messageTimestamp?.toNumber?.() ?? 0) * 1000;
+            : (msg.messageTimestamp?.toNumber?.() ?? 0)) * 1000;
 
         if (isHistory && msgTimestamp < cutoff) {
           continue; // Skip old history
         }
 
         const logText = extractPlainText(msg.message);
-        console.log(`[wa] incoming from=${msg.key.remoteJid} text="${logText.slice(0, 60)}"`);
+        console.log(
+          `[wa] incoming from=${msg.key.remoteJid} text="${logText.slice(0, 60)}"`
+        );
 
         try {
           await handleIncoming(sock, msg, ownerUser);
@@ -720,7 +718,6 @@ export async function connectWhatsapp(options?: {
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
     const sock = makeWASocket({
       auth: state,
-      // biome-ignore lint/suspicious/noExplicitAny: pino logger shape differs across versions
       logger: pino({ level: "silent" }) as any,
       printQRInTerminal: false,
       syncFullHistory: false,
@@ -743,8 +740,7 @@ export async function connectWhatsapp(options?: {
     m.sock = null;
     setState({
       status: "error",
-      error:
-        error instanceof Error ? error.message : "Gagal connect WhatsApp.",
+      error: error instanceof Error ? error.message : "Gagal connect WhatsApp.",
     });
     return await getWhatsappPublicState();
   }

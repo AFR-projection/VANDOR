@@ -8,6 +8,7 @@ import {
 } from "@/lib/vault/queries";
 import { requireVaultSession } from "@/lib/vault/route-auth";
 import { toVaultSnapshot } from "@/lib/vault/snapshot";
+
 const patchSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   summary: z.string().max(500).optional(),

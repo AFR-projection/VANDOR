@@ -3,18 +3,18 @@ import {
   formatAwarenessForUser,
 } from "@/lib/autonomous/awareness";
 import {
+  type ChatJobType,
   dispatchFromChat,
   isChatJobType,
-  type ChatJobType,
 } from "@/lib/autonomous/chat-dispatch";
+import { runFootballTool } from "@/lib/football/service";
+import type { FootballToolAction } from "@/lib/football/types";
 import {
   getMemoryById,
   listRecentMemories,
   saveMemory,
   searchAllUserData,
 } from "@/lib/memory/queries";
-import { runFootballTool } from "@/lib/football/service";
-import type { FootballToolAction } from "@/lib/football/types";
 import { runWebSearch } from "@/lib/search/engine";
 import type {
   PlatformToolContext,
@@ -131,8 +131,7 @@ export async function executeChatToolForPlatform(
         query,
         limit: Number(input.limit ?? 8),
       });
-      const hits =
-        (data.memories?.length ?? 0) + (data.tasks?.length ?? 0);
+      const hits = (data.memories?.length ?? 0) + (data.tasks?.length ?? 0);
       return {
         ok: true,
         data,

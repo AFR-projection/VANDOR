@@ -7,11 +7,9 @@ function ts(): string {
 function emit(level: LogLevel, scope: string, msg: string, extra?: unknown) {
   const prefix = `[${ts()}] [agent:${scope}] ${level.toUpperCase()}`;
   if (extra === undefined) {
-    // biome-ignore lint/suspicious/noConsole: worker process logs to stdout/PM2
     console.log(`${prefix} ${msg}`);
     return;
   }
-  // biome-ignore lint/suspicious/noConsole: worker process logs to stdout/PM2
   console.log(`${prefix} ${msg}`, extra);
 }
 

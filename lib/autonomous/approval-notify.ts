@@ -1,8 +1,5 @@
-import {
-  approvalShortId,
-  listPendingApprovals,
-} from "./permission";
 import { notify } from "./notify";
+import { approvalShortId, listPendingApprovals } from "./permission";
 
 let lastDigestAt = 0;
 const DIGEST_COOLDOWN_MS = 10 * 60_000;
@@ -20,7 +17,7 @@ function formatDigest(
   return (
     `📋 *${rows.length} persetujuan menunggu:*\n\n` +
     `${lines.join("\n\n")}\n\n` +
-    `Atau buka Pengaturan → Operator di web.`
+    "Atau buka Pengaturan → Operator di web."
   );
 }
 

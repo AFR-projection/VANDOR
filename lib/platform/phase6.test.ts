@@ -46,9 +46,8 @@ describe("platform phase 6 — definitions", () => {
   it("all 12 agents registered including deploy", async () => {
     const prev = process.env.PLATFORM_V2_ENABLED;
     process.env.PLATFORM_V2_ENABLED = "true";
-    const { resetPlatformBootstrapForTests, bootstrapPlatformV2 } = await import(
-      "./init"
-    );
+    const { resetPlatformBootstrapForTests, bootstrapPlatformV2 } =
+      await import("./init");
     const { listAgents } = await import("./core/agent-registry");
     resetPlatformBootstrapForTests();
     bootstrapPlatformV2();

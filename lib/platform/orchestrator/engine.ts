@@ -1,11 +1,9 @@
 import { platformChatMaxSteps, platformConfig } from "../config";
-import {
-  requireAgent,
-  setAgentRuntimeStatus,
-} from "../core/agent-registry";
+import { requireAgent, setAgentRuntimeStatus } from "../core/agent-registry";
 import type { AgentExecutionResult, PlatformAgentId } from "../core/types";
 import { publishPlatformEvent } from "../events/bus";
 import { appendAgentRunLog, listStepsForRun } from "../queue/queries";
+import { updateWorkflowRunStatus } from "../queue/workflow-run";
 import {
   allStepsCompleted,
   claimNextRunnableStep,
@@ -15,7 +13,6 @@ import {
   hasPendingSteps,
   markStepRunning,
 } from "../queue/workflow-step";
-import { updateWorkflowRunStatus } from "../queue/workflow-run";
 import { StepTimeoutError, withStepTimeout } from "./timeout";
 
 export type ProcessWorkflowResult = {

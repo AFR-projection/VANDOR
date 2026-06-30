@@ -2,16 +2,13 @@ import { registerBuiltinTools as registerWorkerBuiltinTools } from "@/lib/autono
 import { registerMonitorTools } from "@/lib/autonomous/tools/monitor";
 import { registerShellTools } from "@/lib/autonomous/tools/shell";
 import { registerPlatformAgents } from "./agents";
-import {
-  isAgentRegistryBootstrapped,
-  listAgents,
-} from "./core/agent-registry";
+import { isPlatformV2Enabled } from "./config";
+import { isAgentRegistryBootstrapped, listAgents } from "./core/agent-registry";
 import {
   isToolCatalogBootstrapped,
   listTools,
   registerBuiltinPlatformTools,
 } from "./core/tool-registry";
-import { isPlatformV2Enabled } from "./config";
 
 let bootstrapped = false;
 

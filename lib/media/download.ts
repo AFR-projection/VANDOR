@@ -6,15 +6,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { isUrlForPlatform } from "@/lib/chat/media-slash";
 import {
+  type CobaltRequestOptions,
+  isCobaltTunnelLink,
+  requestCobaltDownload,
+} from "@/lib/media/cobalt-resolve";
+import {
   hasCobaltBackend,
   normalizeHttpUrl,
   resolveCobaltApiBase,
 } from "@/lib/media/cobalt-shared";
-import {
-  isCobaltTunnelLink,
-  requestCobaltDownload,
-  type CobaltRequestOptions,
-} from "@/lib/media/cobalt-resolve";
 import {
   baseProgress,
   reportProgress,
@@ -30,8 +30,6 @@ import type {
   MediaDownloadResult,
   MediaPlatform,
 } from "@/lib/media/types";
-import { downloadYoutubeViaFallback } from "@/lib/media/youtube-fallback";
-import { downloadWithInnertube } from "@/lib/media/youtube-innertube";
 import {
   hasYoutubeCookiesConfigured,
   isYoutubeBotBlockError,
@@ -40,10 +38,6 @@ import {
   YOUTUBE_VPS_COOKIE_HINT,
   youtubePoTokenExtractorArg,
 } from "@/lib/media/youtube-ytdlp-cookies";
-import {
-  downloadWithYtdlpApi,
-  hasYtdlpApiBackend,
-} from "@/lib/media/youtube-ytdlp-api";
 import { putFile, StorageNotConfiguredError } from "@/lib/storage/blob";
 import { toErrorMessage } from "@/lib/utils/error-message";
 
@@ -52,35 +46,8 @@ const MIN_BYTES = 1024;
 const YTDLP_TIMEOUT_MS = 120_000;
 const FETCH_TIMEOUT_MS = 120_000;
 
-const PUBLIC_COBALT_BASE = "https://api.cobalt.tools";
-
 function isSelfHostedRuntime(): boolean {
   return !process.env.VERCEL;
-}
-
-async function listYoutubeCobaltSources(): Promise<CobaltRequestOptions[]> {
-  const { getIntegrationRuntimeConfig } = await import(
-    "@/lib/settings/integration-runtime"
-  );
-  const cfg = await getIntegrationRuntimeConfig();
-  const sources: CobaltRequestOptions[] = [];
-  if (cfg.cobalt.apiUrl) {
-    sources.push({
-      base: normalizeHttpUrl(cfg.cobalt.apiUrl, "Cobalt API URL").replace(
-        /\/$/,
-        ""
-      ),
-      apiKey: cfg.cobalt.apiKey ?? undefined,
-      label: "Cobalt (UI)",
-    });
-  }
-  if (cfg.cobalt.allowPublic || process.env.COBALT_ALLOW_PUBLIC === "1") {
-    sources.push({
-      base: PUBLIC_COBALT_BASE,
-      label: "Cobalt publik",
-    });
-  }
-  return sources;
 }
 
 async function shouldTryYtDlpFirst(): Promise<boolean> {
@@ -337,12 +304,7 @@ async function runYtdlpAttempt(input: {
           extractorArgs,
         ]
       : platform === "youtube"
-        ? [
-            "-f",
-            "bv*+ba/b[ext=mp4]/b",
-            "--merge-output-format",
-            "mp4",
-          ]
+        ? ["-f", "bv*+ba/b[ext=mp4]/b", "--merge-output-format", "mp4"]
         : platform === "tiktok"
           ? ["-f", "b", "--merge-output-format", "mp4"]
           : ["-f", "b", "--merge-output-format", "mp4"];
@@ -561,76 +523,6 @@ async function downloadWithCobalt(
     title: resolved.title,
     filename: resolved.filename,
   };
-}
-
-type YoutubeBackend = "ytdlp" | "innertube" | "cobalt" | "piped" | "invidious";
-
-async function downloadYoutube(
-  url: string,
-  format: MediaDownloadFormat,
-  onProgress: MediaDownloadProgressReporter | undefined
-): Promise<{
-  buffer: Buffer;
-  title: string;
-  filename?: string;
-  backend: YoutubeBackend;
-}> {
-  const errors: string[] = [];
-
-  if (isSelfHostedRuntime() && process.env.VANDOR_DISABLE_YTDLP !== "1") {
-    const local = await downloadWithYtDlp(url, format, onProgress, "youtube");
-    if (local && local.buffer.length > 0) {
-      return { ...local, backend: "ytdlp" };
-    }
-    errors.push(
-      hasYoutubeCookiesConfigured()
-        ? "yt-dlp lokal gagal — cookies mungkin expired, export ulang cookies/youtube.txt"
-        : `yt-dlp lokal gagal. ${YOUTUBE_VPS_COOKIE_HINT}`
-    );
-  }
-
-  if (!process.env.VERCEL) {
-    try {
-      const innertube = await downloadWithInnertube(url, format, onProgress);
-      return { ...innertube, backend: "innertube" };
-    } catch (err) {
-      errors.push(`InnerTube: ${toErrorMessage(err)}`);
-    }
-  }
-
-  for (const source of await listYoutubeCobaltSources()) {
-    try {
-      const cobalt = await downloadWithCobalt(
-        url,
-        format,
-        onProgress,
-        "youtube",
-        source
-      );
-      return { ...cobalt, backend: "cobalt" };
-    } catch (err) {
-      errors.push(toErrorMessage(err));
-    }
-  }
-
-  if (hasYtdlpApiBackend()) {
-    try {
-      const ytdlp = await downloadWithYtdlpApi(url, format, onProgress);
-      return { ...ytdlp, backend: "ytdlp" };
-    } catch (err) {
-      errors.push(`yt-dlp: ${toErrorMessage(err)}`);
-    }
-  }
-
-  try {
-    return await downloadYoutubeViaFallback(url, format, onProgress);
-  } catch (err) {
-    errors.push(`Fallback: ${toErrorMessage(err)}`);
-  }
-
-  throw new Error(
-    `${errors.join(". ")}. Coba perbarui yt-dlp di VPS: bash deploy/hostinger/install-ytdlp.sh`
-  );
 }
 
 export async function downloadSocialMedia(

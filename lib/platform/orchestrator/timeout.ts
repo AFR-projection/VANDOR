@@ -1,10 +1,12 @@
 export class StepTimeoutError extends Error {
-  constructor(
-    readonly timeoutMs: number,
-    readonly agentId: string
-  ) {
+  readonly timeoutMs: number;
+  readonly agentId: string;
+
+  constructor(timeoutMs: number, agentId: string) {
     super(`Step timeout setelah ${timeoutMs}ms (agent: ${agentId})`);
     this.name = "StepTimeoutError";
+    this.timeoutMs = timeoutMs;
+    this.agentId = agentId;
   }
 }
 

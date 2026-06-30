@@ -41,9 +41,12 @@ export async function POST(request: Request) {
   try {
     body = (await request.json()) as IngestBody;
   } catch {
-    return NextResponse.json({ error: "Body JSON tidak valid." }, {
-      status: 400,
-    });
+    return NextResponse.json(
+      { error: "Body JSON tidak valid." },
+      {
+        status: 400,
+      }
+    );
   }
 
   const from = (body.from ?? "").trim();

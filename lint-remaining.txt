@@ -1,0 +1,397 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> vandor@3.2.0 check C:\Users\User\Documents\VANDOR
+> ultracite check
+
+lib\autonomous\audit.ts:41:5 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    39 Γöé     });
+    40 Γöé   } catch (error) {
+  > 41 Γöé     // biome-ignore lint/suspicious/noConsole: audit failure must surface in logs
+       Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    42 Γöé     console.error("recordAgentAction failed:", error);
+    43 Γöé   }
+  
+
+lib\autonomous\events.ts:35:5 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    33 Γöé     });
+    34 Γöé   } catch (error) {
+  > 35 Γöé     // biome-ignore lint/suspicious/noConsole: surface event persist failure
+       Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    36 Γöé     console.error("emitEvent persist failed:", error);
+    37 Γöé   }
+  
+
+lib\autonomous\events.ts:46:9 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    44 Γöé     handlers.map((h) =>
+    45 Γöé       Promise.resolve(h(input)).catch((err) => {
+  > 46 Γöé         // biome-ignore lint/suspicious/noConsole: trigger error must surface
+       Γöé         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    47 Γöé         console.error(`Trigger for '${input.type}' failed:`, err);
+    48 Γöé       })
+  
+
+lib\autonomous\logger.ts:10:5 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+     8 Γöé   const prefix = `[${ts()}] [agent:${scope}] ${level.toUpperCase()}`;
+     9 Γöé   if (extra === undefined) {
+  > 10 Γöé     // biome-ignore lint/suspicious/noConsole: worker process logs to stdout/PM2
+       Γöé     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    11 Γöé     console.log(`${prefix} ${msg}`);
+    12 Γöé     return;
+  
+
+lib\autonomous\logger.ts:14:3 suppressions/unused ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ! Suppression comment has no effect. Remove the suppression or make sure you are suppressing the correct rule.
+  
+    12 Γöé     return;
+    13 Γöé   }
+  > 14 Γöé   // biome-ignore lint/suspicious/noConsole: worker process logs to stdout/PM2
+       Γöé   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    15 Γöé   console.log(`${prefix} ${msg}`, extra);
+    16 Γöé }
+  
+
+app\api\gate\verify\route.ts:144:19 lint/correctness/useHookAtTopLevel 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This hook is being called conditionally, but all hooks must be called in the exact same order in every component 
+render.
+  
+    142 Γöé           httpOnly: true,
+    143 Γöé 
+  > 144 Γöé           secure: useSecureCookies(),
+        Γöé                   ^^^^^^^^^^^^^^^^
+    145 Γöé 
+    146 Γöé           sameSite: "lax",
+  
+  i For React to preserve state between calls, hooks needs to be called unconditionally and always in the same order.
+  
+  i See https://react.dev/reference/rules/rules-of-hooks
+  
+
+app\api\gate\verify\route.ts:171:17 lint/correctness/useHookAtTopLevel 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This hook is being called conditionally, but all hooks must be called in the exact same order in every component 
+render.
+  
+    169 Γöé         httpOnly: true,
+    170 Γöé 
+  > 171 Γöé         secure: useSecureCookies(),
+        Γöé                 ^^^^^^^^^^^^^^^^
+    172 Γöé 
+    173 Γöé         sameSite: "lax",
+  
+  i For React to preserve state between calls, hooks needs to be called unconditionally and always in the same order.
+  
+  i See https://react.dev/reference/rules/rules-of-hooks
+  
+
+components\chat\multimodal-input.tsx:226:18 lint/style/useAtIndex  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Prefer X.at(-Y) over X[X.length - Y].
+  
+    224 Γöé   useEffect(() => {
+    225 Γöé     if (!messages.length) return;
+  > 226 Γöé     const last = messages[messages.length - 1];
+        Γöé                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    227 Γöé     if (last.role !== "assistant") return;
+    228 Γöé     const hasAddPrompt = last.parts?.some(
+  
+  i Using .at() is more convenient and is easier to read.
+  
+  i Unsafe fix: Use .at().
+  
+    224 224 Γöé     useEffect(() => {
+    225 225 Γöé       if (!messages.length) return;
+    226     Γöé - ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages[messages.length┬╖-┬╖1];
+        226 Γöé + ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages.at(-1);
+    227 227 Γöé       if (last.role !== "assistant") return;
+    228 228 Γöé       const hasAddPrompt = last.parts?.some(
+  
+
+components\chat\multimodal-input.tsx:67:3 lint/correctness/noUnusedFunctionParameters 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This parameter selectedVisibilityType is unused.
+  
+    65 Γöé   sendMessage,
+    66 Γöé   className,
+  > 67 Γöé   selectedVisibilityType,
+       Γöé   ^^^^^^^^^^^^^^^^^^^^^^
+    68 Γöé   selectedModelId,
+    69 Γöé   onModelChange,
+  
+  i Unused parameters might be the result of an incomplete refactoring.
+  
+
+components\chat\multimodal-input.tsx:72:3 lint/correctness/noUnusedFunctionParameters 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This parameter isLoading is unused.
+  
+    70 Γöé   editingMessage,
+    71 Γöé   onCancelEdit,
+  > 72 Γöé   isLoading,
+       Γöé   ^^^^^^^^^
+    73 Γöé }: {
+    74 Γöé   chatId: string;
+  
+  i Unused parameters might be the result of an incomplete refactoring.
+  
+
+components\chat\shell.tsx:136:18 lint/style/useAtIndex  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Prefer X.at(-Y) over X[X.length - Y].
+  
+    134 Γöé   useEffect(() => {
+    135 Γöé     if (!messages.length) return;
+  > 136 Γöé     const last = messages[messages.length - 1];
+        Γöé                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    137 Γöé     if (last.role !== "assistant") return;
+    138 Γöé     for (const part of last.parts ?? []) {
+  
+  i Using .at() is more convenient and is easier to read.
+  
+  i Unsafe fix: Use .at().
+  
+    134 134 Γöé     useEffect(() => {
+    135 135 Γöé       if (!messages.length) return;
+    136     Γöé - ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages[messages.length┬╖-┬╖1];
+        136 Γöé + ┬╖┬╖┬╖┬╖const┬╖last┬╖=┬╖messages.at(-1);
+    137 137 Γöé       if (last.role !== "assistant") return;
+    138 138 Γöé       for (const part of last.parts ?? []) {
+  
+
+components\settings\whatsapp-panel.tsx:202:9 lint/correctness/noUnusedVariables  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This variable pct is unused.
+  
+    200 Γöé }) {
+    201 Γöé   const remaining = useCountdown(active?.expiresAt ?? null);
+  > 202 Γöé   const pct = active
+        Γöé         ^^^
+    203 Γöé     ? Math.round(
+    204 Γöé         (remaining /
+  
+  i Unused variables are often the result of typos, incomplete refactors, or other sources of bugs.
+  
+  i Unsafe fix: If this is intentional, prepend pct with an underscore.
+  
+    200 200 Γöé   }) {
+    201 201 Γöé     const remaining = useCountdown(active?.expiresAt ?? null);
+    202     Γöé - ┬╖┬╖const┬╖pct┬╖=┬╖active
+        202 Γöé + ┬╖┬╖const┬╖_pct┬╖=┬╖active
+    203 203 Γöé       ? Math.round(
+    204 204 Γöé           (remaining /
+  
+
+lib\autonomous\chat-task-notify.ts:46:7 lint/complexity/useOptionalChain  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Change to an optional chain.
+  
+    44 Γöé }): Promise<void> {
+    45 Γöé   const payload = input.task.payload as ChatTaskPayload | null;
+  > 46 Γöé   if (!payload || payload.requestedBy !== "chat") {
+       Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    47 Γöé     return;
+    48 Γöé   }
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    44 44 Γöé   }): Promise<void> {
+    45 45 Γöé     const payload = input.task.payload as ChatTaskPayload | null;
+    46    Γöé - ┬╖┬╖if┬╖(!payload┬╖||┬╖payload.requestedBy┬╖!==┬╖"chat")┬╖{
+       46 Γöé + ┬╖┬╖if┬╖(payload?.requestedBy┬╖!==┬╖"chat")┬╖{
+    47 47 Γöé       return;
+    48 48 Γöé     }
+  
+
+lib\autonomous\cli\runner.ts:216:21 suppressions/parse ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Failed to parse category "lint/nursery/noAwaitInLoop"
+  
+    215 Γöé   for (const command of commands) {
+  > 216 Γöé     // biome-ignore lint/nursery/noAwaitInLoop: status berurutan agar log terbaca
+        Γöé                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    217 Γöé     last = await runCliCommand(command, {
+    218 Γöé       ...options,
+  
+  i Biome can't recognize the category, usually it's because it doesn't match the expected ones.
+  
+  i Example of suppression: // biome-ignore lint: reason
+  
+
+lib\autonomous\db.ts:4:8 lint/performance/noNamespaceImport ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Avoid namespace imports, it can prevent efficient tree shaking and increase bundle size.
+  
+    2 Γöé import { drizzle } from "drizzle-orm/postgres-js";
+    3 Γöé import postgres from "postgres";
+  > 4 Γöé import * as schema from "@/lib/db/schema";
+      Γöé        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    5 Γöé 
+    6 Γöé config({ path: ".env.local" });
+  
+  i Use named imports instead.
+  
+
+lib\autonomous\executor.ts:42:21 suppressions/parse ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Failed to parse category "lint/nursery/noAwaitInLoop"
+  
+    41 Γöé   for (const command of commands) {
+  > 42 Γöé     // biome-ignore lint/nursery/noAwaitInLoop: deploy berurutan
+       Γöé                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    43 Γöé     const result = await execApprovedCommand(command);
+    44 Γöé     if (command.includes("git rev-parse") && result.ok && result.data) {
+  
+  i Biome can't recognize the category, usually it's because it doesn't match the expected ones.
+  
+  i Example of suppression: // biome-ignore lint: reason
+  
+
+lib\autonomous\executor.ts:256:21 suppressions/parse ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Failed to parse category "lint/nursery/noAwaitInLoop"
+  
+    255 Γöé   for (const task of tasks) {
+  > 256 Γöé     // biome-ignore lint/nursery/noAwaitInLoop: task harus berurutan, dibatasi kecil
+        Γöé                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    257 Γöé     await markTaskRunning(task.id);
+    258 Γöé     try {
+  
+  i Biome can't recognize the category, usually it's because it doesn't match the expected ones.
+  
+  i Example of suppression: // biome-ignore lint: reason
+  
+
+lib\autonomous\heartbeat.ts:246:7 lint/complexity/useOptionalChain  FIXABLE  
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Change to an optional chain.
+  
+    244 Γöé   const state = await getAgentState();
+    245 Γöé   const prev = parseStoredNote(state.note);
+  > 246 Γöé   if (!prev || prev.v !== 1) {
+        Γöé       ^^^^^^^^^^^^^^^^^^^^^
+    247 Γöé     return;
+    248 Γöé   }
+  
+  i Unsafe fix: Change to an optional chain.
+  
+    244 244 Γöé     const state = await getAgentState();
+    245 245 Γöé     const prev = parseStoredNote(state.note);
+    246     Γöé - ┬╖┬╖if┬╖(!prev┬╖||┬╖prev.v┬╖!==┬╖1)┬╖{
+        246 Γöé + ┬╖┬╖if┬╖(prev?.v┬╖!==┬╖1)┬╖{
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 29.
+Checked 584 files in 461ms. No fixes applied.
+Found 42 errors.
+Found 7 warnings.
+    247 247 Γöé       return;
+    248 248 Γöé     }
+  
+
+proxy.ts:47:24 lint/correctness/useHookAtTopLevel ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This hook is being called from within a function or method that is not a hook or component.
+  
+    45 Γöé   const { pathname } = request.nextUrl;
+    46 Γöé   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+  > 47 Γöé   const secureCookie = useSecureCookies();
+       Γöé                        ^^^^^^^^^^^^^^^^
+    48 Γöé 
+    49 Γöé   if (pathname.startsWith("/ping")) {
+  
+  i Move the hook call into the top level of a hook or component in order to use it.
+  
+  i See https://react.dev/reference/rules/rules-of-hooks
+  
+
+services\whatsapp-bridge\bridge.mjs:95:38 lint/correctness/useHookAtTopLevel 
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù This hook is being called indirectly and conditionally, but all hooks must be called in the exact same order in 
+every component render.
+  
+    93 Γöé async function startWhatsapp() {
+    94 Γöé   await mkdir(AUTH_DIR, { recursive: true });
+  > 95 Γöé   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+       Γöé                                      ^^^^^^^^^^^^^^^^^^^^^
+    96 Γöé   const sock = makeWASocket({
+    97 Γöé     auth: state,
+  
+  i This is the call path until the hook.
+  
+    203 Γöé   }`
+    204 Γöé );
+  > 205 Γöé void startWhatsapp();
+        Γöé      ^^^^^^^^^^^^^^^
+    206 Γöé 
+  
+  i For React to preserve state between calls, hooks needs to be called unconditionally and always in the same order.
+  
+  i See https://react.dev/reference/rules/rules-of-hooks
+  
+
+check ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓö
+üΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓ
+öüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+
+  ├ù Some errors were emitted while running checks.
+  
+
+Error: Lint errors found
+    at file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/ultracite@7.0.11_typescript@5.8.2/node_modules/ultraci
+te/dist/index.js:313:13045
+    at async resolveMiddleware (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescrip
+t@5.8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:221:17)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async callRecursive (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.
+8.2/node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:256:18)
+    at async procedure (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/
+node_modules/@trpc/server/dist/initTRPC-T5bbc89W.mjs:281:18)
+    at async file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/@trpc+server@11.8.1_typescript@5.8.2/node_module
+s/@trpc/server/dist/tracked-D4V22yc5.mjs:298:13
+    at async Command.<anonymous> (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve
+_387680dd8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:355:32)
+    at async Command.parseAsync 
+(C:\Users\User\Documents\VANDOR\node_modules\.pnpm\commander@14.0.2\node_modules\commander\lib\command.js:1122:5)
+    at async Object.run (file:///C:/Users/User/Documents/VANDOR/node_modules/.pnpm/trpc-cli@0.12.2_@trpc+serve_387680dd
+8e39674e8b3c6491f4867763/node_modules/trpc-cli/dist/index.js:461:9)
+ΓÇëELIFECYCLEΓÇë Command failed with exit code 1.

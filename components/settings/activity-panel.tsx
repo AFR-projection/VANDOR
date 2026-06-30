@@ -9,9 +9,9 @@ import {
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
+import { apiBasePath } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
 
-import { apiBasePath } from "@/lib/app-url";
 const base = apiBasePath;
 
 type LogLevel = "info" | "warn" | "error" | "success";
@@ -233,7 +233,7 @@ export function ActivityPanel() {
         <div className="flex items-center justify-between border-[#30363d] border-t bg-[#161b22] px-3 py-1.5 font-mono text-[#6e7681] text-[10px]">
           <span>
             {filtered.length} baris
-            {filter !== "all" ? ` (filter: ${filter})` : ""}
+            {filter === "all" ? "" : ` (filter: ${filter})`}
           </span>
           <span className="flex items-center gap-1">
             <Trash2Icon className="size-3 opacity-50" />
