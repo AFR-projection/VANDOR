@@ -5,6 +5,7 @@ export const INTEGRATION_SECRET_KEYS = [
   "r2SecretAccessKey",
   "cobaltApiKey",
   "openweathermapApiKey",
+  "apiFootballApiKey",
   "whatsappBridgeSecret",
   "blobReadWriteToken",
 ] as const;

@@ -462,7 +462,7 @@ export function ApiIntegrationsPanel({
         </section>
 
         <section className="space-y-4 rounded-xl border border-border/40 bg-card/30 p-4">
-          <h2 className="text-sm font-semibold">Cuaca & WhatsApp</h2>
+          <h2 className="text-sm font-semibold">Cuaca, Olahraga & WhatsApp</h2>
           <SecretKeyField
             clearKey="openweathermapApiKey"
             configured={secrets.openweathermapApiKey}
@@ -482,6 +482,26 @@ export function ApiIntegrationsPanel({
             }
             placeholder="owm key…"
             value={draftSecrets.openweathermapApiKey}
+          />
+          <SecretKeyField
+            clearKey="apiFootballApiKey"
+            configured={secrets.apiFootballApiKey}
+            description="Skor live, jadwal, klasemen sepak bola (api-football.com). Fallback env: API_FOOTBALL_KEY."
+            label="API-Football key"
+            minLength={16}
+            onChange={(v) => onDraftChange("apiFootballApiKey", v)}
+            onClear={() =>
+              onSaveSecrets({ clearExtraSecrets: ["apiFootballApiKey"] })
+            }
+            onSave={() =>
+              onSaveSecrets({
+                extraSecrets: {
+                  apiFootballApiKey: draftSecrets.apiFootballApiKey,
+                },
+              })
+            }
+            placeholder="x-apisports-key…"
+            value={draftSecrets.apiFootballApiKey}
           />
           <SecretKeyField
             clearKey="whatsappBridgeSecret"

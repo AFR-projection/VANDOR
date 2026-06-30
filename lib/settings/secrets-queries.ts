@@ -195,6 +195,10 @@ export async function getSecretsPublicView(
     extra.openweathermapApiKey,
     process.env.OPENWEATHERMAP_API_KEY
   );
+  const apiFootball = secretFieldFromValues(
+    extra.apiFootballApiKey,
+    process.env.API_FOOTBALL_KEY ?? process.env.APISPORTS_KEY
+  );
   const bridge = secretFieldFromValues(
     extra.whatsappBridgeSecret,
     process.env.WHATSAPP_BRIDGE_SECRET
@@ -232,6 +236,7 @@ export async function getSecretsPublicView(
     r2SecretAccessKey: r2Secret,
     cobaltApiKey: cobaltKey,
     openweathermapApiKey: owm,
+    apiFootballApiKey: apiFootball,
     whatsappBridgeSecret: bridge,
     blobReadWriteToken: blob,
     storage: {

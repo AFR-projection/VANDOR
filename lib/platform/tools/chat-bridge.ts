@@ -13,6 +13,8 @@ import {
   saveMemory,
   searchAllUserData,
 } from "@/lib/memory/queries";
+import { runFootballTool } from "@/lib/football/service";
+import type { FootballToolAction } from "@/lib/football/types";
 import { runWebSearch } from "@/lib/search/engine";
 import type {
   PlatformToolContext,
@@ -94,6 +96,29 @@ export async function executeChatToolForPlatform(
         ok: true,
         data: result,
         summary: `${count} sumber untuk "${query.slice(0, 80)}"`,
+      };
+    }
+    case "footballApi": {
+      const action = String(
+        input.action ?? "smart_query"
+      ) as FootballToolAction;
+      const result = await runFootballTool({
+        userId: ctx.userId,
+        action,
+        query: pickQuery(input) || undefined,
+        date: input.date ? String(input.date) : undefined,
+        leagueId: input.leagueId ? Number(input.leagueId) : undefined,
+        leagueName: input.leagueName ? String(input.leagueName) : undefined,
+        teamId: input.teamId ? Number(input.teamId) : undefined,
+        teamName: input.teamName ? String(input.teamName) : undefined,
+        fixtureId: input.fixtureId ? Number(input.fixtureId) : undefined,
+        season: input.season ? Number(input.season) : undefined,
+      });
+      return {
+        ok: result.ok,
+        data: result,
+        summary: result.summary,
+        error: result.error,
       };
     }
     case "searchDb": {

@@ -16,6 +16,7 @@ export type SecretsPublicView = {
   r2SecretAccessKey: SecretFieldView;
   cobaltApiKey: SecretFieldView;
   openweathermapApiKey: SecretFieldView;
+  apiFootballApiKey: SecretFieldView;
   whatsappBridgeSecret: SecretFieldView;
   blobReadWriteToken: SecretFieldView;
   storage: {

@@ -1,5 +1,6 @@
 const TOOL_LABELS: Record<string, string> = {
   webSearch: "Mencari di web",
+  footballApi: "Mengambil data sepak bola",
   getWeather: "Mengecek cuaca",
   getCurrentTime: "Mengecek waktu",
   getLocation: "Mendeteksi lokasi",
@@ -51,6 +52,9 @@ export function toolEventMessage(
     if (toolName === "webSearch") {
       return detail ? `Menemukan sumber: ${detail}` : "Pencarian web selesai";
     }
+    if (toolName === "footballApi") {
+      return detail ? `Data bola: ${detail}` : "Data sepak bola siap";
+    }
     return `${label} selesai`;
   }
   if (state === "output-error") {
@@ -59,6 +63,9 @@ export function toolEventMessage(
   if (state === "input-available" || state === "input-streaming") {
     if (toolName === "webSearch") {
       return "Membuka situs & membaca sumber";
+    }
+    if (toolName === "footballApi") {
+      return "Memuat skor & statistik bola";
     }
     return `${label}…`;
   }

@@ -7,6 +7,7 @@ import { runCodeScan, type CodeScanResult } from "@/lib/autonomous/coding-agent/
 import { runCliCommand, resolveAgentCwd } from "@/lib/autonomous/cli/runner";
 import { runAutoFixCommand } from "@/lib/autonomous/auto-fix";
 import { canAutoFixCommand } from "@/lib/autonomous/rule-engine";
+import { detectFootballNeed } from "@/lib/football/detect";
 import type {
   AgentExecutionContext,
   AgentExecutionResult,
@@ -223,6 +224,20 @@ export async function browserAgentExecute(
   const query = userText(ctx);
   if (query.length < 2) {
     return { ok: false, error: "Browser agent: query riset kosong" };
+  }
+
+  if (detectFootballNeed(query).needed) {
+    const football = await runAgentTool(ctx, "footballApi", {
+      action: "smart_query",
+      query,
+    });
+    if (football.ok) {
+      return {
+        ok: true,
+        output: football.data as Record<string, unknown>,
+        summary: football.summary ?? "Data sepak bola dari API-Football",
+      };
+    }
   }
 
   const result = await runAgentTool(ctx, "webSearch", {

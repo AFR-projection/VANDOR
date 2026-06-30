@@ -7,6 +7,7 @@ const TOOL_BLURBS: Partial<Record<VandorChatToolName, string>> = {
   getWeather: "cuaca",
   showMap: "peta",
   webSearch: "data live (jika belum di konteks)",
+  footballApi: "skor/jadwal/klasemen sepak bola (API-Football)",
   saveMemory: "simpan memori",
   getMemory: "ambil memori",
   searchDb: "cari memori/tasks (TIDAK termasuk Vault)",
@@ -56,6 +57,12 @@ Jangan panggil tool di luar daftar. UI menampilkan kartu/map/sumber — jangan u
     ...lines,
     "- Memori/task: jangan webSearch.",
     "- Web search sudah di konteks → jangan panggil webSearch lagi.",
+    "- Data sepak bola sudah di konteks → jangan panggil footballApi lagi.",
+    ...(activeTools.includes("footballApi")
+      ? [
+          "- Pertanyaan skor/jadwal/klasemen bola: WAJIB footballApi atau pakai konteks API-FOOTBALL — jangan tebak skor.",
+        ]
+      : []),
     ...(activeTools.includes("webSearch")
       ? [
           "- Minta link/tautan/URL/playlist: WAJIB webSearch atau pakai konteks WEB SEARCH — jangan bilang tidak bisa akses internet.",

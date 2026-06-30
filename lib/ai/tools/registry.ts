@@ -12,6 +12,7 @@ export const VANDOR_CHAT_TOOLS = [
   "getWeather",
   "showMap",
   "webSearch",
+  "footballApi",
   "saveMemory",
   "getMemory",
   "searchDb",

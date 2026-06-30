@@ -61,6 +61,7 @@ import {
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { showMap } from "@/lib/ai/tools/show-map";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { makeFootballApi } from "@/lib/ai/tools/football-api";
 import { makeWebSearch } from "@/lib/ai/tools/web-search";
 import {
   getCachedResponse,
@@ -109,6 +110,9 @@ import { toolActivityLabel } from "@/lib/agent-activity/labels";
 import { parseToolRunsFromMessage } from "@/lib/observability/parse-message-tools";
 import { recordActivityLog, recordToolEvent } from "@/lib/observability/record";
 import { checkIpRateLimit } from "@/lib/ratelimit";
+import { detectFootballNeed } from "@/lib/football/detect";
+import { buildFootballContextBlock } from "@/lib/football/format";
+import { preloadFootballContext } from "@/lib/football/service";
 import { getWebSearchSynthesisModel } from "@/lib/search/config";
 import {
   buildWebSearchContextBlock,
@@ -547,10 +551,16 @@ export async function POST(request: Request) {
       };
     }
 
+    const footballDetection =
+      !isToolApprovalFlow && lastUserText.trim()
+        ? detectFootballNeed(lastUserText)
+        : { needed: false as const, reason: "skipped", confidence: "low" as const };
+
     const v4Intent = resolveVandorIntent({
       userText: lastUserText,
       attachmentKinds,
       webSearchActive: webSearchDetection.needed,
+      footballActive: footballDetection.needed,
     });
 
     const explicitRemember = isExplicitRememberRequest(lastUserText);
@@ -913,12 +923,45 @@ export async function POST(request: Request) {
 
         let webSearchContextBlock = "";
         let webSearchRetryHint = "";
+        let footballContextBlock = "";
         let relatedPromise: Promise<string[]> | null = null;
 
         if (
           !isToolApprovalFlow &&
           lastUserText.trim() &&
-          webSearchDetection.needed
+          footballDetection.needed
+        ) {
+          agentStepStart(dataStream, "football-api", "Mengambil data sepak bola");
+          agentStatus(dataStream, "Mengambil data sepak bola");
+          const footballResult = await preloadFootballContext(
+            session.user.id,
+            lastUserText
+          );
+          if (footballResult?.ok) {
+            footballContextBlock = buildFootballContextBlock(
+              footballResult.formatted
+            );
+            agentEvent(
+              dataStream,
+              footballResult.summary,
+              "success"
+            );
+          }
+          agentStepComplete(dataStream, "football-api");
+          agentProgress(dataStream, 24);
+        }
+
+        const skipWebForFootball =
+          footballContextBlock.length > 0 &&
+          !/\b(berita|news|transfer|rumor|viral|highlight)\b/i.test(
+            lastUserText
+          );
+
+        if (
+          !isToolApprovalFlow &&
+          lastUserText.trim() &&
+          webSearchDetection.needed &&
+          !skipWebForFootball
         ) {
           const detection = webSearchDetection;
           if (detection.needed) {
@@ -1076,9 +1119,18 @@ export async function POST(request: Request) {
           }
         }
 
+        const liveDataContextBlock = [
+          footballContextBlock,
+          webSearchContextBlock,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+
         const webSearchToolOff =
           webSearchContextBlock.length > 0 ||
           shouldDisableWebSearchTool(lastUserText);
+
+        const footballToolOff = footballContextBlock.length > 0;
 
         const instantLabels: Record<string, string> = {
           search: "Mencari di web",
@@ -1120,12 +1172,16 @@ export async function POST(request: Request) {
           hasAttachments: attachedFiles.length > 0,
           webSearchPreloaded: webSearchContextBlock.length > 0,
           webSearchDisabled: webSearchToolOff,
+          footballPreloaded: footballContextBlock.length > 0,
           supportsTools,
           userText: lastUserText,
         });
 
         if (webSearchToolOff) {
           activeTools = activeTools.filter((t) => t !== "webSearch");
+        }
+        if (footballToolOff) {
+          activeTools = activeTools.filter((t) => t !== "footballApi");
         }
 
         if (
@@ -1173,7 +1229,7 @@ export async function POST(request: Request) {
           : activeTools;
 
         const synthesisModelId =
-          webSearchContextBlock.length > 0
+          liveDataContextBlock.length > 0
             ? getWebSearchSynthesisModel(
                 chatModel,
                 integrationModels.researchModel
@@ -1206,7 +1262,7 @@ export async function POST(request: Request) {
                 supportsTools,
                 memoryContext,
                 filesContext: filesBlock,
-                webSearchContext: webSearchContextBlock,
+                webSearchContext: liveDataContextBlock,
                 webSearchRetryHint,
                 responseMode,
                 persona: userSettings.persona,
@@ -1230,9 +1286,9 @@ export async function POST(request: Request) {
             messages: modelMessages,
             maxOutputTokens: maxOutputTokensForTurn({
               responseMode,
-              webSearchPreloaded: webSearchContextBlock.length > 0,
+              webSearchPreloaded: liveDataContextBlock.length > 0,
             }),
-            temperature: webSearchContextBlock.length > 0 ? 0.4 : undefined,
+            temperature: liveDataContextBlock.length > 0 ? 0.4 : undefined,
             stopWhen: stepCountIs(V4_MAX_AGENT_STEPS),
             experimental_activeTools:
               isReasoningModel && !supportsTools ? [] : allActiveTools,
@@ -1242,6 +1298,7 @@ export async function POST(request: Request) {
               getWeather,
               showMap,
               webSearch: makeWebSearch(session.user.id),
+              footballApi: makeFootballApi(session.user.id),
               downloadMedia: makeDownloadMediaTool(),
               ...assistantTools,
               ...skillTools,
@@ -1382,7 +1439,7 @@ export async function POST(request: Request) {
           data: estimateTurnUsage({
             memoryContextChars: memoryContext.length,
             filesContextChars: filesBlock.length,
-            webContextChars: webSearchContextBlock.length,
+            webContextChars: liveDataContextBlock.length,
             userTextChars: lastUserText.length,
             messageCount: trimmedUi.length,
             maxOutputTokens: maxOutputThisTurn,

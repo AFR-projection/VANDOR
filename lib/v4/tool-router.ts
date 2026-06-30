@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { VandorChatToolName } from "@/lib/ai/tools/registry";
+import { detectFootballNeed } from "@/lib/football/detect";
 import { detectWebSearchNeed } from "@/lib/search/detect";
 import { V4_MAX_ACTIVE_TOOLS } from "@/lib/v4/constants";
 import type { VandorIntent } from "@/lib/v4/intent";
@@ -14,7 +15,7 @@ const BY_INTENT: Record<VandorIntent, VandorChatToolName[]> = {
   memory: ["saveMemory", "getMemory", "searchDb"],
   weather: ["getLocation", "getWeather", "getCurrentTime"],
   time: ["getCurrentTime", "getLocation"],
-  search: ["webSearch"],
+  search: ["webSearch", "footballApi"],
   map: ["showMap", "getLocation"],
   media: ["downloadMedia"],
   document: [
@@ -36,6 +37,7 @@ export function selectActiveTools(input: {
   hasAttachments: boolean;
   webSearchPreloaded: boolean;
   webSearchDisabled: boolean;
+  footballPreloaded?: boolean;
   supportsTools: boolean;
   /** Pesan user saat ini — untuk link follow-up saat intent belum `search`. */
   userText?: string;
@@ -58,6 +60,15 @@ export function selectActiveTools(input: {
     set.add("createPdf");
     set.add("createDocx");
     set.add("editImage");
+  }
+
+  if (input.footballPreloaded) {
+    set.delete("footballApi");
+  } else if (
+    input.userText?.trim() &&
+    detectFootballNeed(input.userText).needed
+  ) {
+    set.add("footballApi");
   }
 
   if (input.webSearchPreloaded) {

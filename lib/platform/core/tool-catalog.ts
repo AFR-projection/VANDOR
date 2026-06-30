@@ -12,6 +12,7 @@ const CHAT_TOOL_DESCRIPTIONS: Record<string, string> = {
   getWeather: "Cuaca lokasi",
   showMap: "Tampilkan peta",
   webSearch: "Pencarian web & berita",
+  footballApi: "Data sepak bola live (API-Football)",
   saveMemory: "Simpan memori jangka panjang",
   getMemory: "Ambil memori user",
   searchDb: "Cari data user (task, memori, catatan)",
@@ -89,7 +90,7 @@ const AGENT_TOOL_MAP: Record<PlatformAgentId, string[]> = {
     "requestSuggestions",
     "shell.run",
   ],
-  browser: ["webSearch", "showMap"],
+  browser: ["webSearch", "footballApi", "showMap"],
   document: ["createPdf", "createDocx", "createSpreadsheet", "createDocument"],
   memory: ["saveMemory", "getMemory", "searchDb"],
   tool: [

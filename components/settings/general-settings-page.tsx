@@ -104,6 +104,7 @@ const emptyDraftSecrets = {
   r2SecretAccessKey: "",
   cobaltApiKey: "",
   openweathermapApiKey: "",
+  apiFootballApiKey: "",
   whatsappBridgeSecret: "",
   blobReadWriteToken: "",
 } as const;

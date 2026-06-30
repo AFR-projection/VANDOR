@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { FileKind } from "@/lib/files/mime";
+import { detectFootballNeed } from "@/lib/football/detect";
 import { detectWebSearchNeed } from "@/lib/search/detect";
 
 export type VandorIntent =
@@ -66,6 +67,7 @@ export function resolveVandorIntent(input: {
   userText: string;
   attachmentKinds: FileKind[];
   webSearchActive: boolean;
+  footballActive?: boolean;
   isSlashCommand?: boolean;
 }): ResolvedIntent {
   const text = input.userText.trim();
@@ -78,7 +80,12 @@ export function resolveVandorIntent(input: {
     return { intent: "image", needsLargeModel: true, bypassLlm: false };
   }
 
-  if (input.webSearchActive || detectWebSearchNeed(text).needed) {
+  if (
+    input.webSearchActive ||
+    input.footballActive ||
+    detectWebSearchNeed(text).needed ||
+    detectFootballNeed(text).needed
+  ) {
     return { intent: "search", needsLargeModel: false, bypassLlm: false };
   }
 
