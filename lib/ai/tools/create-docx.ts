@@ -11,8 +11,12 @@ export const createDocx = tool({
     title: z.string().min(1).max(160),
     body: z.string().min(1).max(60_000),
   }),
-  execute: async ({ title, body }) => {
-    try {
+  execute: async ({ title, body }) => buildDocxExport({ title, body }),
+});
+
+export async function buildDocxExport(input: { title: string; body: string }) {
+  const { title, body } = input;
+  try {
       const { Document, Packer, Paragraph, HeadingLevel, TextRun } =
         await import("docx");
 
@@ -95,5 +99,4 @@ export const createDocx = tool({
       }
       throw e;
     }
-  },
-});
+}

@@ -55,7 +55,7 @@ const CODE_RE =
 const IMAGE_RE =
   /\b(gambar|generate\s+image|buatkan\s+gambar|edit\s+(?:foto|gambar)|logo|ilustrasi)\b/i;
 
-const PDF_RE = /\b(pdf|docx|xlsx|spreadsheet|excel)\b/i;
+const PDF_RE = /\b(pdf|docx|word|xlsx|xls|spreadsheet|excel|csv|file\s+excel)\b/i;
 
 const OPERATOR_RE =
   /\b(aman\s+(?:ga|gak|tidak|nggak)?|status\s+(?:server|sistem|vps|agent|operator)|server\s+(?:aman|down|up|sehat)|sistem\s+(?:aman|sehat|gimana|bagaimana)|operator|health\s+score|kesehatan\s+sistem|cek\s+(?:server|sistem|status|vps)|pm2|deploy|cpu|ram\s+(?:penuh|usage)|disk\s+(?:penuh|usage)|vps|uptime|worker\s+(?:agent|online))\b/i;
@@ -132,7 +132,7 @@ export function resolveVandorIntent(input: {
   }
 
   if (PDF_RE.test(text)) {
-    return { intent: "pdf", needsLargeModel: false, bypassLlm: false };
+    return { intent: "document", needsLargeModel: false, bypassLlm: false };
   }
 
   if (IMAGE_RE.test(text)) {

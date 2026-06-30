@@ -18,6 +18,15 @@ import type {
 import { readAgentMemoryPack } from "../memory/types";
 import { runAgentTool } from "../tools/run-agent-tool";
 import {
+  detectDocumentExportFormat,
+  documentFormatLabel,
+} from "../document/detect-format";
+import {
+  buildDefaultSpreadsheet,
+  buildMarkdownDocumentBody,
+  inferDocumentTitle,
+} from "../document/generate-content";
+import {
   summarizeStepOutput,
   synthesizeChatFromWorkflowSteps,
 } from "../chat/format-response";
@@ -276,7 +285,7 @@ export async function documentAgentExecute(
   ctx: AgentExecutionContext
 ): Promise<AgentExecutionResult> {
   const text = userText(ctx);
-  const intent = String(ctx.input.intent ?? "");
+  const format = detectDocumentExportFormat(text, ctx.input);
 
   const priorBody = (ctx.priorSteps ?? [])
     .map((prior) => {
@@ -289,27 +298,54 @@ export async function documentAgentExecute(
     .filter(Boolean)
     .join("\n\n");
 
-  if (/\bpdf\b/i.test(text) || intent === "pdf" || ctx.input.format === "pdf") {
-    const body = String(ctx.input.body ?? (priorBody || text)).slice(0, 40_000);
-    const result = await runAgentTool(ctx, "createPdf", {
-      title: String(ctx.input.title ?? "Laporan VANDOR").slice(0, 160),
-      body,
+  const title = inferDocumentTitle(
+    text,
+    format === "csv" ? "xlsx" : format
+  );
+
+  if (format === "xlsx" || format === "csv") {
+    const spreadsheet = buildDefaultSpreadsheet({ userText: text, title });
+    const result = await runAgentTool(ctx, "createSpreadsheet", {
+      title: spreadsheet.title,
+      format,
+      sheets: spreadsheet.sheets,
     });
     return {
       ok: result.ok,
-      output: { document: result.data },
-      summary: result.summary ?? "Document agent: PDF dibuat",
+      output: { document: result.data, format },
+      summary:
+        result.summary ??
+        `${documentFormatLabel(format)} "${spreadsheet.title}"`,
       error: result.error,
     };
   }
 
+  if (format === "docx") {
+    const body = buildMarkdownDocumentBody({
+      userText: text,
+      priorBody,
+      title,
+    });
+    const result = await runAgentTool(ctx, "createDocx", { title, body });
+    return {
+      ok: result.ok,
+      output: { document: result.data, format },
+      summary: result.summary ?? `Word "${title}" dibuat`,
+      error: result.error,
+    };
+  }
+
+  const body = buildMarkdownDocumentBody({
+    userText: text,
+    priorBody,
+    title,
+  });
+  const result = await runAgentTool(ctx, "createPdf", { title, body });
   return {
-    ok: true,
-    output: {
-      note: "Format dokumen belum didukung — minta PDF eksplisit",
-      userRequest: text.slice(0, 500),
-    },
-    summary: "Document agent: analisis permintaan dokumen",
+    ok: result.ok,
+    output: { document: result.data, format: "pdf" },
+    summary: result.summary ?? `PDF "${title}" dibuat`,
+    error: result.error,
   };
 }
 

@@ -14,6 +14,8 @@ chat, planner, orchestrator, coding, browser, document, memory, tool, testing, f
 
 Aturan:
 - Akhiri dengan step agent "chat" untuk merangkum ke user (stepKey: respond).
+- Permintaan file: agent "document" dengan input.format = pdf | xlsx | csv | docx sesuai permintaan user.
+- Excel/spreadsheet → format "xlsx". Word → "docx". PDF → "pdf".
 - Maks 8 step. stepKey unik, snake-case.
 - Jangan sertakan orchestrator kecuali koordinasi khusus.
 - Bahasa summary: Indonesia, singkat.`;

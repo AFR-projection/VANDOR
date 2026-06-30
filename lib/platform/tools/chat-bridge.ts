@@ -224,6 +224,70 @@ export async function executeChatToolForPlatform(
         };
       }
     }
+    case "createSpreadsheet": {
+      const title = String(input.title ?? "Spreadsheet VANDOR").slice(0, 120);
+      const rawSheets = input.sheets;
+      if (!Array.isArray(rawSheets) || rawSheets.length === 0) {
+        return { ok: false, error: "sheets spreadsheet kosong" };
+      }
+      try {
+        const { buildSpreadsheetExport } = await import(
+          "@/lib/ai/tools/create-spreadsheet"
+        );
+        const result = await buildSpreadsheetExport({
+          title,
+          format: (input.format === "csv" ? "csv" : "xlsx") as "csv" | "xlsx",
+          sheets: rawSheets as Array<{
+            name: string;
+            rows: Array<Array<string | number | boolean | null>>;
+          }>,
+        });
+        const ok = Boolean((result as { ok?: boolean }).ok);
+        const kind = (result as { kind?: string }).kind ?? "xlsx";
+        return {
+          ok,
+          data: result,
+          summary: ok
+            ? `Excel "${title}" dibuat (${kind.toUpperCase()})`
+            : "Gagal buat spreadsheet",
+          error: ok
+            ? undefined
+            : String((result as { error?: string }).error ?? ""),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+    case "createDocx": {
+      const title = String(input.title ?? "Dokumen VANDOR").slice(0, 160);
+      const body = String(
+        input.body ?? input.userRequest ?? input.content ?? ""
+      ).slice(0, 60_000);
+      if (body.length < 1) {
+        return { ok: false, error: "body DOCX kosong" };
+      }
+      try {
+        const { buildDocxExport } = await import("@/lib/ai/tools/create-docx");
+        const result = await buildDocxExport({ title, body });
+        const ok = Boolean((result as { ok?: boolean }).ok);
+        return {
+          ok,
+          data: result,
+          summary: ok ? `Word "${title}" dibuat` : "Gagal buat DOCX",
+          error: ok
+            ? undefined
+            : String((result as { error?: string }).error ?? ""),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
     default:
       return {
         ok: false,

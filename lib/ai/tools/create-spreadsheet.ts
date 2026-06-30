@@ -22,7 +22,20 @@ export const createSpreadsheet = tool({
     sheets: z.array(SheetSchema).min(1).max(20),
   }),
   execute: async ({ title, format, sheets }) => {
-    try {
+    return buildSpreadsheetExport({ title, format, sheets });
+  },
+});
+
+export async function buildSpreadsheetExport(input: {
+  title: string;
+  format?: "xlsx" | "csv";
+  sheets: Array<{
+    name: string;
+    rows: Array<Array<string | number | boolean | null>>;
+  }>;
+}) {
+  const { title, format = "xlsx", sheets } = input;
+  try {
       const XLSX = await import("xlsx");
       const wb = XLSX.utils.book_new();
 
@@ -86,5 +99,4 @@ export const createSpreadsheet = tool({
       }
       throw e;
     }
-  },
-});
+}

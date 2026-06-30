@@ -17,11 +17,21 @@ export function summarizeStepOutput(
   if (typeof out.message === "string" && out.message.trim()) {
     return out.message.trim().slice(0, 500);
   }
-  const document = out.document as { url?: string; filename?: string } | undefined;
+  const document = out.document as
+    | { url?: string; filename?: string; kind?: string; title?: string }
+    | undefined;
   if (document?.url) {
-    return document.filename
-      ? `PDF siap: ${document.filename}`
-      : "PDF berhasil dibuat";
+    const label =
+      document.filename ??
+      document.title ??
+      (document.kind === "xlsx"
+        ? "spreadsheet.xlsx"
+        : document.kind === "docx"
+          ? "document.docx"
+          : document.kind === "csv"
+            ? "data.csv"
+            : "document.pdf");
+    return `📎 [Unduh ${label}](${document.url})`;
   }
   const scan = out.scan as { summary?: string } | undefined;
   if (scan?.summary) {

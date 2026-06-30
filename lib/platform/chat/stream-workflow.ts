@@ -205,6 +205,7 @@ export function createPlatformWorkflowStreamResponse(input: {
 
       agentStepComplete(dataStream, "respond");
       agentProgress(dataStream, 100);
+      agentStatus(dataStream, "Multi-Agent Workflow selesai");
 
       dataStream.write({
         type: "data-agent-activity",
