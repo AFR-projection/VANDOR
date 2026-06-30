@@ -19,6 +19,10 @@ function stepResultSummary(out: Record<string, unknown> | null): string {
   if (dispatch?.message) {
     return dispatch.message;
   }
+  const deployDispatch = out.dispatch as { taskId?: string; jobType?: string } | undefined;
+  if (deployDispatch?.taskId && out.approvalRequired) {
+    return `Deploy diantre (${deployDispatch.taskId.slice(0, 8)}…) — tunggu approval`;
+  }
   if (dispatch?.taskId) {
     return `Task worker ${dispatch.taskId.slice(0, 8)}…`;
   }

@@ -1,6 +1,7 @@
 import type { AgentDefinition } from "../core/agent-definition";
 import { defineAgent } from "../core/agent-definition";
 import { AGENT_TOOL_MAP } from "../core/tool-catalog";
+import { deployAgentExecute } from "../deploy/service";
 import {
   browserAgentExecute,
   chatAgentExecute,
@@ -11,12 +12,11 @@ import {
   monitoringAgentExecute,
   orchestratorAgentExecute,
   plannerAgentExecute,
-  stubAgentExecute,
   testingAgentExecute,
   toolAgentExecute,
 } from "./executors";
 
-/** Definisi 12 agent V2 — Fase 4: testing + fix loop (deploy = fase 5). */
+/** Definisi 12 agent V2 — Fase 5: deploy agent + approval gate. */
 export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
   defineAgent({
     id: "chat",
@@ -131,7 +131,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["deploy", "rollback", "backup", "health"],
     tools: AGENT_TOOL_MAP.deploy,
     memoryScopes: ["project", "short_term"],
-    execute: stubAgentExecute("deploy"),
+    execute: deployAgentExecute,
   }),
   defineAgent({
     id: "monitoring",

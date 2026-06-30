@@ -10,10 +10,11 @@ export type DeployResult = {
 export function buildDeployCommands(): string[] {
   const path = autonomousConfig.deployPath;
   const branch = autonomousConfig.deployBranch;
+  const installCmd = "pnpm install --no-frozen-lockfile && pnpm run build";
   return [
     `cd ${path} && git rev-parse HEAD`,
     `cd ${path} && git fetch origin ${branch} && git pull origin ${branch}`,
-    `cd ${path} && npm ci && npm run build`,
+    `cd ${path} && ${installCmd}`,
     `cd ${path} && pm2 startOrReload deploy/hostinger/ecosystem.config.cjs --update-env && pm2 save`,
   ];
 }
@@ -24,5 +25,5 @@ export function buildDeployApprovalSummary(): string {
 
 export function buildRollbackCommand(previousCommit: string): string {
   const path = autonomousConfig.deployPath;
-  return `cd ${path} && git checkout ${previousCommit} && npm ci && npm run build && pm2 startOrReload deploy/hostinger/ecosystem.config.cjs --update-env && pm2 save`;
+  return `cd ${path} && git checkout ${previousCommit} && pnpm install --no-frozen-lockfile && pnpm run build && pm2 startOrReload deploy/hostinger/ecosystem.config.cjs --update-env && pm2 save`;
 }

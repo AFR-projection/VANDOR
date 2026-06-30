@@ -12,6 +12,8 @@ function step(
 const SCAN_CODEBASE_RE =
   /\b(scan\s+(?:code|codebase|repo)|perbaiki\s+(?:error|code|codebase)|cek\s+log)\b/i;
 const FIX_RE = /\b(perbaiki|fix|auto-?fix|error|bug)\b/i;
+const DEPLOY_RE =
+  /\b(deploy(?:\s+(?:ke\s+)?(?:prod|production|vps|server))?|push\s+ke\s+(prod|vps|server)|release\s+(?:ke\s+)?prod|git\s+pull\s+(?:dan\s+)?build|pm2\s+reload)\b/i;
 
 /** Fallback planner tanpa LLM — intent → agent pipeline deterministik. */
 export function buildHeuristicPlan(input: {
@@ -22,6 +24,7 @@ export function buildHeuristicPlan(input: {
   const base = { userRequest: text, intent: input.intent };
   const wantsCodeScan = SCAN_CODEBASE_RE.test(text);
   const wantsFix = FIX_RE.test(text);
+  const wantsDeploy = DEPLOY_RE.test(text);
 
   switch (input.intent) {
     case "code": {
@@ -38,6 +41,11 @@ export function buildHeuristicPlan(input: {
           })
         );
       }
+      if (wantsDeploy) {
+        steps.push(
+          step("deploy", "deploy", { action: "dispatch", userRequest: text })
+        );
+      }
       steps.push(
         step("respond", "chat", { message: text, formatWorkflow: true })
       );
@@ -49,6 +57,19 @@ export function buildHeuristicPlan(input: {
       };
     }
     case "operator": {
+      if (wantsDeploy && !wantsCodeScan) {
+        return {
+          summary: "Rencana deploy: preflight sistem → antre deploy (approval)",
+          steps: [
+            step("preflight", "monitoring", {
+              action: "check_system",
+              userRequest: text,
+            }),
+            step("deploy", "deploy", { action: "dispatch", userRequest: text }),
+            step("respond", "chat", { message: text, formatWorkflow: true }),
+          ],
+        };
+      }
       const steps = [
         step("monitor", "monitoring", {
           action: "check_system",

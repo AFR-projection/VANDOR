@@ -529,16 +529,3 @@ export async function orchestratorAgentExecute(
     summary: `Orchestrator handled action: ${action}`,
   };
 }
-
-export function stubAgentExecute(agentId: PlatformAgentId) {
-  return async (ctx: AgentExecutionContext): Promise<AgentExecutionResult> => ({
-    ok: true,
-    output: {
-      agentId,
-      phase: 3,
-      deferred: true,
-      received: ctx.input,
-    },
-    summary: `${agentId} — fase 4/5 (belum diimplementasi)`,
-  });
-}
