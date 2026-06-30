@@ -426,8 +426,23 @@ export async function POST(request: Request) {
       });
     }
 
-    // HARD ISOLATION: in Vault session, NO LLM calls, NO memory, NO retrieval.
-    // Even if directCmd is null (e.g. user typed random text), reject it.
+    // HARD ISOLATION: vault session — jalankan command vault langsung (tanpa LLM).
+    if (vaultModeActive && !isToolApprovalFlow && directCmd) {
+      if (directCmd.kind !== "vault_exit") {
+        const executed = await executeDirectCommand(directCmd, {
+          userId: session.user.id,
+          chatId: id,
+        });
+        return createFastTextStreamResponse({
+          chatId: id,
+          instant: { label: executed.instantLabel, phase: "start" },
+          text: executed.text,
+          extraParts: executed.extraParts,
+          consumeSseStream,
+        });
+      }
+    }
+
     if (vaultModeActive && !isToolApprovalFlow) {
       const { vaultDeniedDataPart } = await import("@/lib/vault/notice");
       return createFastTextStreamResponse({
@@ -635,7 +650,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (directCmd && directCmd.kind !== "media") {
+    if (directCmd && directCmd.kind !== "media" && !vaultModeActive) {
       const executed = await executeDirectCommand(directCmd, {
         userId: session.user.id,
         chatId: id,

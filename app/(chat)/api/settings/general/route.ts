@@ -29,6 +29,7 @@ const extraSecretsPatchSchema = z
     r2SecretAccessKey: z.string().min(8).optional(),
     cobaltApiKey: z.string().min(4).optional(),
     openweathermapApiKey: z.string().min(8).optional(),
+    apiFootballApiKey: z.string().min(16).optional(),
     whatsappBridgeSecret: z.string().min(8).optional(),
     blobReadWriteToken: z.string().min(10).optional(),
   })
