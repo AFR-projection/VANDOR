@@ -6,6 +6,7 @@ import {
   chatAgentExecute,
   codingAgentExecute,
   documentAgentExecute,
+  fixAgentExecute,
   memoryAgentExecute,
   monitoringAgentExecute,
   orchestratorAgentExecute,
@@ -15,7 +16,7 @@ import {
   toolAgentExecute,
 } from "./executors";
 
-/** Definisi 12 agent V2 — Fase 3: specialist core (fix/deploy/testing penuh = fase 4–5). */
+/** Definisi 12 agent V2 — Fase 4: testing + fix loop (deploy = fase 5). */
 export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
   defineAgent({
     id: "chat",
@@ -121,7 +122,7 @@ export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
     capabilities: ["diagnose", "patch", "verify"],
     tools: AGENT_TOOL_MAP.fix,
     memoryScopes: ["project", "knowledge"],
-    execute: stubAgentExecute("fix"),
+    execute: fixAgentExecute,
   }),
   defineAgent({
     id: "deploy",

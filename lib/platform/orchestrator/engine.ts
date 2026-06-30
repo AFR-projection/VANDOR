@@ -5,7 +5,7 @@ import {
 } from "../core/agent-registry";
 import type { AgentExecutionResult, PlatformAgentId } from "../core/types";
 import { publishPlatformEvent } from "../events/bus";
-import { appendAgentRunLog } from "../queue/queries";
+import { appendAgentRunLog, listStepsForRun } from "../queue/queries";
 import {
   allStepsCompleted,
   claimNextRunnableStep,
@@ -25,6 +25,17 @@ export type ProcessWorkflowResult = {
   lastError?: string;
 };
 
+async function loadPriorCompletedSteps(runId: string) {
+  const steps = await listStepsForRun(runId);
+  return steps
+    .filter((s) => s.status === "completed")
+    .map((s) => ({
+      stepKey: s.stepKey,
+      agentId: s.agentId as PlatformAgentId,
+      output: (s.output as Record<string, unknown>) ?? {},
+    }));
+}
+
 async function executeAgentStep(input: {
   runId: string;
   stepId: string;
@@ -33,6 +44,11 @@ async function executeAgentStep(input: {
   agentId: PlatformAgentId;
   stepInput: Record<string, unknown>;
   attempt: number;
+  priorSteps: Array<{
+    stepKey: string;
+    agentId: PlatformAgentId;
+    output: Record<string, unknown>;
+  }>;
 }): Promise<AgentExecutionResult> {
   const agent = requireAgent(input.agentId);
   const execute = () =>
@@ -44,6 +60,7 @@ async function executeAgentStep(input: {
       agentId: input.agentId,
       input: input.stepInput,
       attempt: input.attempt,
+      priorSteps: input.priorSteps,
     });
 
   try {
@@ -109,6 +126,8 @@ export async function processWorkflowRun(
       metadata: { stepKey: step.stepKey },
     });
 
+    const priorSteps = await loadPriorCompletedSteps(runId);
+
     const result = await executeAgentStep({
       runId,
       stepId: step.id,
@@ -117,6 +136,7 @@ export async function processWorkflowRun(
       agentId,
       stepInput: (step.input as Record<string, unknown>) ?? {},
       attempt: step.attempt + 1,
+      priorSteps,
     });
 
     if (result.ok) {

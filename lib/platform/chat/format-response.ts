@@ -26,6 +26,14 @@ function stepResultSummary(out: Record<string, unknown> | null): string {
   if (search?.sources) {
     return `${search.sources.length} sumber web`;
   }
+  const analysis = out.analysis as { diagnosis?: string } | undefined;
+  if (analysis?.diagnosis) {
+    return analysis.diagnosis.slice(0, 240);
+  }
+  const platformTests = out.platformTests as { summary?: string } | undefined;
+  if (platformTests?.summary) {
+    return platformTests.summary;
+  }
   return JSON.stringify(out).slice(0, 200);
 }
 

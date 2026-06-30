@@ -119,6 +119,12 @@ export type AgentExecutionContext = {
   agentId: PlatformAgentId;
   input: Record<string, unknown>;
   attempt: number;
+  /** Output langkah selesai sebelumnya dalam run yang sama (Fase 4). */
+  priorSteps?: Array<{
+    stepKey: string;
+    agentId: PlatformAgentId;
+    output: Record<string, unknown>;
+  }>;
 };
 
 export type AgentExecutionResult = {

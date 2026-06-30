@@ -11,6 +11,7 @@ function step(
 
 const SCAN_CODEBASE_RE =
   /\b(scan\s+(?:code|codebase|repo)|perbaiki\s+(?:error|code|codebase)|cek\s+log)\b/i;
+const FIX_RE = /\b(perbaiki|fix|auto-?fix|error|bug)\b/i;
 
 /** Fallback planner tanpa LLM — intent → agent pipeline deterministik. */
 export function buildHeuristicPlan(input: {
@@ -20,17 +21,33 @@ export function buildHeuristicPlan(input: {
   const text = input.userText.trim();
   const base = { userRequest: text, intent: input.intent };
   const wantsCodeScan = SCAN_CODEBASE_RE.test(text);
+  const wantsFix = FIX_RE.test(text);
 
   switch (input.intent) {
-    case "code":
+    case "code": {
+      const steps = [
+        step("implement", "coding", base),
+        step("verify", "testing", { scope: "full", userRequest: text }),
+      ];
+      if (wantsFix) {
+        steps.push(
+          step("diagnose", "fix", {
+            ...base,
+            mode: "autofix",
+            autoFix: true,
+          })
+        );
+      }
+      steps.push(
+        step("respond", "chat", { message: text, formatWorkflow: true })
+      );
       return {
-        summary: "Rencana kode: implementasi → testing",
-        steps: [
-          step("implement", "coding", base),
-          step("verify", "testing", { scope: "code", userRequest: text }),
-          step("respond", "chat", { message: text, formatWorkflow: true }),
-        ],
+        summary: wantsFix
+          ? "Rencana kode: scan → test → auto-fix"
+          : "Rencana kode: scan → test → verifikasi",
+        steps,
       };
+    }
     case "operator": {
       const steps = [
         step("monitor", "monitoring", {
@@ -42,6 +59,11 @@ export function buildHeuristicPlan(input: {
         steps.push(
           step("scan", "coding", { ...base, action: "scan_codebase" })
         );
+        if (wantsFix) {
+          steps.push(
+            step("diagnose", "fix", { ...base, mode: "autofix", autoFix: true })
+          );
+        }
       }
       steps.push(
         step("respond", "chat", { message: text, formatWorkflow: true })

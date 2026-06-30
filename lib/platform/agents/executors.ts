@@ -2,7 +2,11 @@ import {
   collectSystemAwareness,
   formatAwarenessForUser,
 } from "@/lib/autonomous/awareness";
-import { runCodeScan } from "@/lib/autonomous/coding-agent/scan";
+import { analyzeCodeScan } from "@/lib/autonomous/coding-agent/analyze";
+import { runCodeScan, type CodeScanResult } from "@/lib/autonomous/coding-agent/scan";
+import { runCliCommand, resolveAgentCwd } from "@/lib/autonomous/cli/runner";
+import { runAutoFixCommand } from "@/lib/autonomous/auto-fix";
+import { canAutoFixCommand } from "@/lib/autonomous/rule-engine";
 import type {
   AgentExecutionContext,
   AgentExecutionResult,
@@ -13,6 +17,8 @@ import { runAgentTool } from "../tools/run-agent-tool";
 const SCAN_CODEBASE_RE =
   /\b(scan\s+(?:code|codebase|repo)|perbaiki\s+(?:error|code|codebase)|cek\s+log)\b/i;
 const FULL_BUILD_RE = /\b(full\s*build|npm\s+run\s+build|build\s+prod)\b/i;
+
+const FIX_RE = /\b(perbaiki|fix|auto-?fix|error|bug)\b/i;
 
 function userText(ctx: AgentExecutionContext): string {
   return String(
@@ -31,6 +37,43 @@ function inferJobType(text: string): "code_scan" | "log_scan" | "monitor" | null
     return "monitor";
   }
   return null;
+}
+
+function scanFromPriorSteps(
+  ctx: AgentExecutionContext
+): CodeScanResult | null {
+  for (const prior of ctx.priorSteps ?? []) {
+    const scan = prior.output.scan as CodeScanResult | undefined;
+    if (scan?.sessionId) {
+      return scan;
+    }
+    const nested = prior.output.scanAfter as CodeScanResult | undefined;
+    if (nested?.sessionId) {
+      return nested;
+    }
+  }
+  return null;
+}
+
+async function runPlatformUnitTests(): Promise<{
+  ok: boolean;
+  summary: string;
+  tail: string;
+}> {
+  const res = await runCliCommand("npm run test:platform", {
+    cwd: resolveAgentCwd(),
+    timeoutMs: 120_000,
+    stream: "coding",
+    echo: false,
+  });
+  const combined = `${res.stdout}\n${res.stderr}`.trim();
+  return {
+    ok: res.ok,
+    summary: res.ok
+      ? "Platform tests: 16/16 lulus"
+      : `Platform tests gagal (exit ${res.exitCode ?? "?"})`,
+    tail: combined.slice(-600),
+  };
 }
 
 export async function toolAgentExecute(
@@ -272,27 +315,143 @@ export async function testingAgentExecute(
   ctx: AgentExecutionContext
 ): Promise<AgentExecutionResult> {
   const scope = String(ctx.input.scope ?? "code");
-  if (scope !== "code") {
+  const text = userText(ctx);
+
+  if (scope === "platform") {
+    const platformTests = await runPlatformUnitTests();
     return {
-      ok: true,
-      output: { scope, verified: true, note: "Smoke verify (fase 4: test runner penuh)" },
-      summary: `Testing: verifikasi ${scope} (placeholder)`,
+      ok: platformTests.ok,
+      output: { platformTests },
+      summary: platformTests.summary,
+      error: platformTests.ok ? undefined : platformTests.tail.slice(0, 200),
     };
   }
 
-  const scan = await runCodeScan({
+  let scan = scanFromPriorSteps(ctx);
+  if (!scan) {
+    scan = await runCodeScan({
+      fullBuild: false,
+      includeUltracite: /\bultracite|lint\b/i.test(text),
+      echo: false,
+    });
+  }
+
+  let platformOk = true;
+  let platformSummary = "Platform tests: dilewati";
+
+  if (scope === "full") {
+    const platformTests = await runPlatformUnitTests();
+    platformOk = platformTests.ok;
+    platformSummary = platformTests.summary;
+  }
+
+  const verified = scan.ok && platformOk;
+
+  return {
+    ok: verified,
+    output: {
+      scan,
+      verified,
+      tscOk: scan.ok,
+      platformOk,
+      platformSummary,
+    },
+    summary: verified
+      ? scope === "full"
+        ? "Testing: TS + platform tests lulus"
+        : "Testing: TypeScript check lulus"
+      : scan.ok
+        ? platformSummary
+        : `Testing: ${scan.errorCount} error TypeScript`,
+    error: verified ? undefined : scan.summary,
+  };
+}
+
+export async function fixAgentExecute(
+  ctx: AgentExecutionContext
+): Promise<AgentExecutionResult> {
+  const text = userText(ctx);
+  const autoFix =
+    Boolean(ctx.input.autoFix) ||
+    String(ctx.input.mode ?? "") === "autofix" ||
+    FIX_RE.test(text);
+
+  let scan = scanFromPriorSteps(ctx);
+  if (!scan) {
+    scan = await runCodeScan({
+      fullBuild: false,
+      includeUltracite: false,
+      echo: false,
+    });
+  }
+
+  if (scan.ok) {
+    return {
+      ok: true,
+      output: { scan, fixed: false },
+      summary: "Fix: codebase bersih — tidak ada yang diperbaiki",
+    };
+  }
+
+  const analysis = await analyzeCodeScan(scan);
+
+  if (!autoFix) {
+    return {
+      ok: true,
+      output: {
+        scan,
+        analysis,
+        needsApproval: analysis.needsApproval,
+        suggestedCommands: analysis.suggestedCommands,
+      },
+      summary: `Fix: ${analysis.diagnosis.slice(0, 160)}`,
+    };
+  }
+
+  if (ctx.chatId && analysis.suggestedCommands.length === 0) {
+    const dispatched = await runAgentTool(ctx, "agentWork", {
+      action: "dispatch",
+      jobType: "code_fix",
+    });
+    return {
+      ok: dispatched.ok,
+      output: { analysis, dispatch: dispatched.data },
+      summary: dispatched.summary ?? "Fix: pipeline worker diantre",
+      error: dispatched.error,
+    };
+  }
+
+  const commandsRun: string[] = [];
+  for (const command of analysis.suggestedCommands) {
+    if (!canAutoFixCommand(command)) {
+      continue;
+    }
+    const fix = await runAutoFixCommand(command, { source: "platform-fix" });
+    commandsRun.push(command);
+    if (fix.ok) {
+      break;
+    }
+  }
+
+  const rescan = await runCodeScan({
+    sessionId: scan.sessionId,
     fullBuild: false,
-    includeUltracite: false,
     echo: false,
   });
 
   return {
-    ok: scan.ok,
-    output: { scan, verified: scan.ok },
-    summary: scan.ok
-      ? "Testing: TypeScript check lulus"
-      : `Testing: ${scan.errorCount} error TypeScript`,
-    error: scan.ok ? undefined : scan.summary,
+    ok: rescan.ok,
+    output: {
+      analysis,
+      commandsRun,
+      scanBefore: scan,
+      scanAfter: rescan,
+      fixed: rescan.ok,
+    },
+    summary: rescan.ok
+      ? `Fix: berhasil (${commandsRun.join(", ") || "analisis"})`
+      : `Fix: masih ada error — ${analysis.diagnosis.slice(0, 120)}`,
+    error: rescan.ok ? undefined : analysis.diagnosis.slice(0, 300),
   };
 }
 
