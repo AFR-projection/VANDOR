@@ -18,7 +18,7 @@ if [[ -d .git ]]; then
 fi
 
 echo "==> Install"
-pnpm install --frozen-lockfile
+pnpm install --no-frozen-lockfile
 
 echo "==> Build"
 pnpm run build
