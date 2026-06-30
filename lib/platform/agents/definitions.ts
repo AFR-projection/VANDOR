@@ -16,7 +16,7 @@ import {
   toolAgentExecute,
 } from "./executors";
 
-/** Definisi 12 agent V2 — Fase 5: deploy agent + approval gate. */
+/** Definisi 12 agent V2 — Fase 6: live workflow dashboard. */
 export const PLATFORM_AGENT_DEFINITIONS: AgentDefinition[] = [
   defineAgent({
     id: "chat",

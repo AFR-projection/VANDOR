@@ -19,6 +19,7 @@ import {
   TargetIcon,
   TerminalIcon,
   TimerIcon,
+  WorkflowIcon,
   XIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -28,10 +29,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiBasePath } from "@/lib/app-url";
 import { cn } from "@/lib/utils";
+import { PlatformWorkflowPanel } from "@/components/settings/platform-workflow-panel";
 
 const base = apiBasePath;
 
-type Tab = "overview" | "goals" | "rules" | "schedules";
+type Tab = "overview" | "workflow" | "goals" | "rules" | "schedules";
 
 type Overview = {
   state: {
@@ -552,6 +554,7 @@ export function OperatorPanel() {
 
   const tabs: { id: Tab; label: string; icon: typeof BotIcon }[] = [
     { id: "overview", label: "Overview", icon: ActivityIcon },
+    { id: "workflow", label: "Workflow", icon: WorkflowIcon },
     { id: "goals", label: "Goals", icon: TargetIcon },
     { id: "rules", label: "Rules", icon: ShieldAlertIcon },
     { id: "schedules", label: "Jadwal", icon: TimerIcon },
@@ -845,6 +848,8 @@ export function OperatorPanel() {
           </ul>
         </div>
       )}
+
+      {tab === "workflow" && <PlatformWorkflowPanel />}
 
       {tab === "overview" && (
         <>

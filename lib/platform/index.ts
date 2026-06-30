@@ -20,3 +20,15 @@ export { processWorkflowRun } from "./orchestrator/engine";
 export { runPlatformOrchestratorTick } from "./orchestrator/tick";
 export { computeRetryDelayMs } from "./orchestrator/retry";
 export { runPingWorkflow } from "./smoke/ping-workflow";
+export {
+  getPlatformDashboardSnapshot,
+  listWorkflowRunsForUser,
+  getWorkflowRunDetailForUser,
+  listRecentEventsForUser,
+  pollPlatformEventsForUser,
+} from "./dashboard/service";
+export type {
+  WorkflowRunListItem,
+  WorkflowRunDetail,
+  PlatformDashboardSnapshot,
+} from "./dashboard/service";
